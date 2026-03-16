@@ -38,12 +38,12 @@
 - [x] **Playwright MCP**: Screenshot — snake visible, green, glowing, smooth
 
 ### 1.3 — Input System
-- [ ] Create `src/game/Input.ts` — unified input handler
-- [ ] Keyboard controls (Arrow keys + WASD)
-- [ ] Touch swipe detection (touchstart/touchend delta → direction)
-- [ ] Input buffering: queue one direction change ahead of current tick
-- [ ] Block 180-degree reversal
-- [ ] Test: rapid direction changes feel responsive, no missed inputs
+- [x] Create `src/game/Input.ts` — unified input handler
+- [x] Keyboard controls (Arrow keys + WASD)
+- [x] Touch swipe detection (touchstart/touchend delta → direction)
+- [x] Input buffering: queue one direction change ahead of current tick
+- [x] Block 180-degree reversal
+- [x] Test: rapid direction changes feel responsive, no missed inputs
 
 ### 1.4 — Game Loop
 - [ ] Create `src/game/Game.ts` — main game class with state machine

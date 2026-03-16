@@ -1,15 +1,19 @@
 import { Renderer } from './rendering/Renderer';
 import { SnakeRenderer } from './rendering/SnakeRenderer';
 import { Snake } from './game/Snake';
+import { InputManager } from './game/Input';
 import { BASE_TICK_RATE, GRID_SIZE, MAX_DELTA } from './utils/constants';
 
 function setup(): void {
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
   const renderer = new Renderer(canvas);
   const snakeRenderer = new SnakeRenderer();
+  const input = new InputManager();
 
   const center = { x: 10, y: 10 };
   const snake = new Snake(center);
+
+  input.onDirectionInput((dir) => snake.queueDirection(dir));
 
   let lastTimestamp = 0;
   let tickAccumulator = 0;
