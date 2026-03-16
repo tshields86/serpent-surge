@@ -3,6 +3,7 @@ import { Grid } from './Grid';
 import { InputManager } from './Input';
 import { Arena } from './Arena';
 import { FoodItem, spawnFood, checkFoodCollision } from './Food';
+import { HazardType, HazardInstance, spawnHazards, updateHazards, checkHazardCollision } from './Hazard';
 import { Renderer } from '../rendering/Renderer';
 import { SnakeRenderer } from '../rendering/SnakeRenderer';
 import { ParticleSystem } from '../rendering/ParticleSystem';
@@ -39,6 +40,7 @@ export class Game {
   private snake: Snake;
   private arena: Arena;
   private foods: FoodItem[] = [];
+  private hazards: HazardInstance[] = [];
   private currentTick = 0;
 
   private lastTimestamp = 0;
@@ -71,7 +73,7 @@ export class Game {
     this.arena = new Arena();
 
     this.snake = this.createSnake();
-    this.foods.push(spawnFood(this.snake, this.foods, this.currentTick));
+    this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards));
     this.input.onDirectionInput((dir) => this.onDirection(dir));
 
     canvas.addEventListener('click', (e) => this.onClick(e));
@@ -98,7 +100,8 @@ export class Game {
     this.snake = this.createSnake();
     this.arena.reset();
     this.foods = [];
-    this.foods.push(spawnFood(this.snake, this.foods, 0));
+    this.hazards = [];
+    this.foods.push(spawnFood(this.snake, this.foods, 0, this.hazards));
     this.score = 0;
     this.totalFoodEaten = 0;
     this.deathLength = 0;
@@ -223,6 +226,16 @@ export class Game {
       return;
     }
 
+    // Update hazards (toggle spikes, decay poison)
+    this.hazards = updateHazards(this.hazards, this.currentTick);
+
+    // Check hazard collision
+    const hitHazard = checkHazardCollision(head, this.hazards);
+    if (hitHazard) {
+      this.die();
+      return;
+    }
+
     const eatenFood = checkFoodCollision(head, this.foods);
     if (eatenFood) {
       this.snake.grow(1);
@@ -253,7 +266,7 @@ export class Game {
         this.onWaveClear();
       } else {
         // Spawn next food
-        this.foods.push(spawnFood(this.snake, this.foods, this.currentTick));
+        this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards));
       }
     }
   }
@@ -288,16 +301,30 @@ export class Game {
       this.arena.advanceArena();
       this.snake = this.createSnake();
       this.foods = [];
-      this.foods.push(spawnFood(this.snake, this.foods, this.currentTick));
+      this.hazards = [];
+      this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards));
       this.currentTickRate = this.arena.getWaveConfig().tickRate;
       this.tickAccumulator = 0;
       this.interpolation = 0;
     } else {
-      // Wave transition — just spawn new food and continue
+      // Wave transition — spawn new food and hazards
       this.foods = [];
-      this.foods.push(spawnFood(this.snake, this.foods, this.currentTick));
+      this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards));
       this.currentTickRate = this.arena.getWaveConfig().tickRate;
     }
+
+    // Spawn hazards for new wave
+    const waveConfig = this.arena.getWaveConfig();
+    const newHazards = spawnHazards(
+      waveConfig.hazardCount,
+      this.arena.currentWave,
+      this.snake,
+      this.foods,
+      this.hazards,
+      this.currentTick,
+    );
+    this.hazards.push(...newHazards);
+
     this.state = GameState.PLAYING;
   }
 
@@ -311,6 +338,7 @@ export class Game {
     this.renderer.clear();
     this.renderer.drawGrid();
 
+    this.drawHazards();
     this.drawFood();
 
     this.snakeRenderer.draw(
@@ -376,6 +404,88 @@ export class Game {
     ctx.shadowBlur = 15;
     ctx.fillText(this.transitionMessage, width / 2, height / 2);
     ctx.restore();
+  }
+
+  private drawHazards(): void {
+    const ctx = this.renderer.ctx;
+    const { cellSize } = this.renderer.layout;
+    const padding = Math.max(1, Math.floor(cellSize * 0.1));
+
+    for (const hazard of this.hazards) {
+      const pixel = this.renderer.gridToPixel(hazard.position.x, hazard.position.y);
+      const x = pixel.x + padding;
+      const y = pixel.y + padding;
+      const size = cellSize - padding * 2;
+
+      ctx.save();
+
+      if (hazard.type === HazardType.WALL_BLOCK) {
+        // Solid dark red/brown block
+        ctx.fillStyle = '#8b0000';
+        ctx.shadowColor = '#ff0040';
+        ctx.shadowBlur = 4;
+        ctx.fillRect(x, y, size, size);
+        // Inner border for depth
+        ctx.strokeStyle = '#ff0040';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 2, y + 2, size - 4, size - 4);
+      } else if (hazard.type === HazardType.SPIKE_TRAP) {
+        if (hazard.state === 'active') {
+          // Bright red spikes
+          ctx.fillStyle = '#ff0040';
+          ctx.shadowColor = '#ff0040';
+          ctx.shadowBlur = 8;
+          // Draw X pattern for spikes
+          const cx = pixel.x + cellSize / 2;
+          const cy = pixel.y + cellSize / 2;
+          const r = size / 2;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy - r);
+          ctx.lineTo(cx + r * 0.3, cy - r * 0.3);
+          ctx.lineTo(cx + r, cy);
+          ctx.lineTo(cx + r * 0.3, cy + r * 0.3);
+          ctx.lineTo(cx, cy + r);
+          ctx.lineTo(cx - r * 0.3, cy + r * 0.3);
+          ctx.lineTo(cx - r, cy);
+          ctx.lineTo(cx - r * 0.3, cy - r * 0.3);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          // Dim inactive spikes
+          ctx.globalAlpha = 0.3;
+          ctx.fillStyle = '#660020';
+          const cx = pixel.x + cellSize / 2;
+          const cy = pixel.y + cellSize / 2;
+          const r = size / 2;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy - r);
+          ctx.lineTo(cx + r * 0.3, cy - r * 0.3);
+          ctx.lineTo(cx + r, cy);
+          ctx.lineTo(cx + r * 0.3, cy + r * 0.3);
+          ctx.lineTo(cx, cy + r);
+          ctx.lineTo(cx - r * 0.3, cy + r * 0.3);
+          ctx.lineTo(cx - r, cy);
+          ctx.lineTo(cx - r * 0.3, cy - r * 0.3);
+          ctx.closePath();
+          ctx.fill();
+        }
+      } else if (hazard.type === HazardType.POISON_TRAIL) {
+        // Purple-green poison with fade based on remaining ticks
+        const fade = hazard.ticksRemaining !== null ? hazard.ticksRemaining / 8 : 1;
+        ctx.globalAlpha = 0.4 + fade * 0.4;
+        ctx.fillStyle = '#7b00ff';
+        ctx.shadowColor = '#7b00ff';
+        ctx.shadowBlur = 6;
+        const cx = pixel.x + cellSize / 2;
+        const cy = pixel.y + cellSize / 2;
+        const r = (size / 2) * (0.5 + fade * 0.5);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
   }
 
   private drawFood(): void {

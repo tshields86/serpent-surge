@@ -12,14 +12,20 @@ export interface FoodItem {
   spawnTick: number;
 }
 
+export interface OccupiedCell {
+  position: Vec2;
+}
+
 export function spawnFood(
   snake: Snake,
   existingFoods: readonly FoodItem[],
   currentTick: number,
+  hazards: readonly OccupiedCell[] = [],
 ): FoodItem {
   const occupied = new Set<string>();
   for (const seg of snake.segments) occupied.add(`${seg.x},${seg.y}`);
   for (const f of existingFoods) occupied.add(`${f.position.x},${f.position.y}`);
+  for (const h of hazards) occupied.add(`${h.position.x},${h.position.y}`);
 
   const emptyCells: Vec2[] = [];
   for (let x = 0; x < GRID_SIZE; x++) {

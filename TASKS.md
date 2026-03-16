@@ -134,14 +134,14 @@
 - [x] Arena counter in HUD
 
 ### 2.3 — Hazard System
-- [ ] Create `src/game/Hazard.ts` + `src/data/hazards.ts`
-- [ ] **Wall Block**: static 1x1, spawns Wave 2+
-- [ ] **Spike Trap**: toggles on/off every 4 ticks, red when active / dim when off
-- [ ] **Poison Trail**: kills on contact, fades after 8 ticks
-- [ ] Hazards spawn at wave start, count increases with arena
-- [ ] Collision detection: snake vs hazards
-- [ ] Unit tests for hazard behaviors
-- [ ] **Playwright MCP**: Screenshot each hazard type — visually distinct, clearly dangerous
+- [x] Create `src/game/Hazard.ts` + `src/data/hazards.ts`
+- [x] **Wall Block**: static 1x1, spawns Wave 2+
+- [x] **Spike Trap**: toggles on/off every 4 ticks, red when active / dim when off
+- [x] **Poison Trail**: kills on contact, fades after 8 ticks
+- [x] Hazards spawn at wave start, count increases with arena
+- [x] Collision detection: snake vs hazards
+- [x] Unit tests for hazard behaviors
+- [x] **Playwright MCP**: Screenshot each hazard type — visually distinct, clearly dangerous
 
 ### 2.4 — Extended Food Types
 - [ ] **Golden Apple**: 15% replace chance, +50 pts, pulsing gold (#ffd700 ↔ #ffaa00)
