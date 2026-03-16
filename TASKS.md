@@ -160,17 +160,17 @@
 
 ### 2.6 — Implement Core Power-Ups (10)
 Implement one at a time, test each:
-- [ ] **Ghost Mode** (Common): phase through tail 3s after eating — body turns translucent
-- [ ] **Wall Wrap** (Common): exit one side → enter opposite — warp effect at edges
-- [ ] **Venom Trail** (Common): tail leaves poison 3 ticks — green trail
-- [ ] **Head Bash** (Common): destroy 1 wall block on contact, 1x per wave — shatter particles
-- [ ] **Iron Gut** (Common): +2 length per food — thicker growth pulse
-- [ ] **Scavenger** (Common): 2 food on grid simultaneously
-- [ ] **Dash** (Uncommon): double-tap to skip 3 cells — motion blur trail
-- [ ] **Time Dilation** (Uncommon): 30% slowdown 2s on near-miss — screen tint
-- [ ] **Rewind** (Rare): undo death, rewind 3s, 1x per arena — VHS static effect
-- [ ] **Singularity** (Rare): food within 3 cells drifts toward head — pull lines
-- [ ] Unit tests for each power-up effect
+- [x] **Ghost Mode** (Common): phase through tail 3s after eating — body turns translucent
+- [x] **Wall Wrap** (Common): exit one side → enter opposite — warp effect at edges
+- [x] **Venom Trail** (Common): tail leaves poison 3 ticks — green trail
+- [x] **Head Bash** (Common): destroy 1 wall block on contact, 1x per wave — shatter particles
+- [x] **Iron Gut** (Common): +2 length per food — thicker growth pulse
+- [x] **Scavenger** (Common): 2 food on grid simultaneously
+- [x] **Dash** (Uncommon): double-tap to skip 3 cells — motion blur trail
+- [x] **Time Dilation** (Uncommon): 30% slowdown 2s on near-miss — screen tint
+- [x] **Rewind** (Rare): undo death, rewind 3s, 1x per arena — VHS static effect
+- [x] **Singularity** (Rare): food within 3 cells drifts toward head — pull lines
+- [x] Unit tests for each power-up effect
 - [ ] **Playwright MCP**: Screenshot each power-up active — visual effects match descriptions
 
 ### 2.7 — Power-Up Stacking & HUD

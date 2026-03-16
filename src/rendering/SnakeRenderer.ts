@@ -9,6 +9,7 @@ export class SnakeRenderer {
     snake: Snake,
     layout: Layout,
     interpolation: number,
+    isGhosting = false,
   ): void {
     const { cellSize } = layout;
     const padding = Math.max(1, Math.floor(cellSize * 0.08));
@@ -57,6 +58,12 @@ export class SnakeRenderer {
 
       const isHead = i === 0;
       ctx.fillStyle = isHead ? COLORS.snakeHead : COLORS.snakeBody;
+      // Ghost mode: body segments are translucent
+      if (isGhosting && !isHead) {
+        ctx.globalAlpha = 0.4;
+      } else {
+        ctx.globalAlpha = 1;
+      }
 
       ctx.beginPath();
       ctx.roundRect(

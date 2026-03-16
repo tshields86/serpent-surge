@@ -13,9 +13,9 @@ import { DeathScreen } from '../screens/DeathScreen';
 import { TitleScreen } from '../screens/TitleScreen';
 import { PowerUpScreen } from '../screens/PowerUpScreen';
 import { AudioManager } from '../audio/AudioManager';
-import { PowerUpInstance, acquirePowerUp, rollPowerUpOfferings } from './PowerUp';
+import { PowerUpId, PowerUpInstance, acquirePowerUp, hasPowerUp, getStackCount, rollPowerUpOfferings } from './PowerUp';
 import { checkWallCollision, checkSelfCollision } from './Collision';
-import { BASE_TICK_RATE, COLORS, MAX_DELTA } from '../utils/constants';
+import { BASE_TICK_RATE, COLORS, GRID_SIZE, MAX_DELTA } from '../utils/constants';
 
 export enum GameState {
   TITLE = 'TITLE',
@@ -57,6 +57,14 @@ export class Game {
   private transitionTimer = 0;
   private transitionMessage = '';
 
+  // Power-up effect state
+  private ghostTimer = 0;           // Ghost Mode: ticks remaining of phasing
+  private headBashUsed = false;     // Head Bash: used this wave?
+  private timeDilationTimer = 0;    // Time Dilation: seconds remaining of slowdown
+  private rewindUsed = false;       // Rewind: used this arena?
+  private rewindSnapshots: { segments: { x: number; y: number }[]; direction: Direction }[] = [];
+  private lastDirectionInput: { dir: Direction; tick: number } | null = null; // Dash detection
+
   // Run stats
   score = 0;
   totalFoodEaten = 0;
@@ -96,7 +104,51 @@ export class Game {
       return;
     }
     if (this.state === GameState.PLAYING) {
-      this.snake.queueDirection(dir);
+      // Dash: double-tap same direction to skip 3 cells
+      if (hasPowerUp(this.heldPowerUps, PowerUpId.DASH) &&
+          this.lastDirectionInput &&
+          this.lastDirectionInput.dir === dir &&
+          this.currentTick - this.lastDirectionInput.tick <= 3) {
+        this.performDash(dir);
+        this.lastDirectionInput = null;
+      } else {
+        this.snake.queueDirection(dir);
+        this.lastDirectionInput = { dir, tick: this.currentTick };
+      }
+    }
+  }
+
+  private performDash(dir: Direction): void {
+    const skipCells = 2 + getStackCount(this.heldPowerUps, PowerUpId.DASH);
+    const head = this.snake.head;
+    const dx = dir === Direction.LEFT ? -1 : dir === Direction.RIGHT ? 1 : 0;
+    const dy = dir === Direction.UP ? -1 : dir === Direction.DOWN ? 1 : 0;
+    const newHead = { x: head.x + dx * skipCells, y: head.y + dy * skipCells };
+
+    // Check if dash destination is valid
+    if (hasPowerUp(this.heldPowerUps, PowerUpId.WALL_WRAP)) {
+      newHead.x = ((newHead.x % GRID_SIZE) + GRID_SIZE) % GRID_SIZE;
+      newHead.y = ((newHead.y % GRID_SIZE) + GRID_SIZE) % GRID_SIZE;
+    }
+
+    if (newHead.x >= 0 && newHead.x < GRID_SIZE &&
+        newHead.y >= 0 && newHead.y < GRID_SIZE) {
+      this.snake.segments.unshift(newHead);
+      this.snake.segments.pop();
+      // Motion blur particles along dash path
+      const cellSize = this.renderer.layout.cellSize;
+      for (let i = 1; i <= skipCells; i++) {
+        const mx = head.x + dx * i;
+        const my = head.y + dy * i;
+        const pixel = this.renderer.gridToPixel(mx, my);
+        this.particles.emit(pixel.x + cellSize / 2, pixel.y + cellSize / 2, {
+          count: 3,
+          speed: 50,
+          lifetime: 0.2,
+          color: COLORS.snakeGlow,
+          size: 2,
+        });
+      }
     }
   }
 
@@ -117,6 +169,12 @@ export class Game {
     this.currentTickRate = this.arena.getWaveConfig().tickRate;
     this.screenFlashTimer = 0;
     this.transitionTimer = 0;
+    this.ghostTimer = 0;
+    this.headBashUsed = false;
+    this.timeDilationTimer = 0;
+    this.rewindUsed = false;
+    this.rewindSnapshots = [];
+    this.lastDirectionInput = null;
     this.ui.reset();
     this.deathScreen.reset();
     this.state = GameState.PLAYING;
@@ -189,7 +247,12 @@ export class Game {
     this.lastTimestamp = timestamp;
 
     if (this.state === GameState.PLAYING) {
-      const tickInterval = 1000 / this.currentTickRate;
+      // Time Dilation: slow down tick rate during active effect
+      let effectiveTickRate = this.currentTickRate;
+      if (this.timeDilationTimer > 0) {
+        effectiveTickRate *= 0.7; // 30% slowdown
+      }
+      const tickInterval = 1000 / effectiveTickRate;
       this.tickAccumulator += delta;
 
       while (this.tickAccumulator >= tickInterval) {
@@ -209,6 +272,10 @@ export class Game {
 
     if (this.screenFlashTimer > 0) {
       this.screenFlashTimer = Math.max(0, this.screenFlashTimer - dtSec);
+    }
+
+    if (this.timeDilationTimer > 0) {
+      this.timeDilationTimer = Math.max(0, this.timeDilationTimer - dtSec);
     }
 
     // Handle transition timers
@@ -245,17 +312,58 @@ export class Game {
   }
 
   private update(): void {
+    // Save snapshot for Rewind (keep last 24 ticks = ~3s at 8 ticks/sec)
+    if (hasPowerUp(this.heldPowerUps, PowerUpId.REWIND)) {
+      this.rewindSnapshots.push({
+        segments: this.snake.segments.map(s => ({ x: s.x, y: s.y })),
+        direction: this.snake.direction,
+      });
+      if (this.rewindSnapshots.length > 24) {
+        this.rewindSnapshots.shift();
+      }
+    }
+
     this.snake.move();
     this.currentTick++;
 
-    const head = this.snake.head;
+    // Decrement ghost timer
+    if (this.ghostTimer > 0) this.ghostTimer--;
 
-    if (checkWallCollision(head, this.grid.size)) {
-      this.die();
-      return;
+    // Venom Trail: leave poison at tail's previous position
+    if (hasPowerUp(this.heldPowerUps, PowerUpId.VENOM_TRAIL)) {
+      const prevTail = this.snake.previousSegments[this.snake.previousSegments.length - 1];
+      if (prevTail && this.snake.growthPending === 0) {
+        const trailTicks = 3 * getStackCount(this.heldPowerUps, PowerUpId.VENOM_TRAIL);
+        this.hazards.push({
+          position: { x: prevTail.x, y: prevTail.y },
+          type: HazardType.POISON_TRAIL,
+          state: 'active',
+          ticksRemaining: trailTicks,
+          spawnTick: this.currentTick,
+        });
+      }
     }
 
-    if (checkSelfCollision(this.snake.segments)) {
+    const head = this.snake.head;
+
+    // Wall collision — Wall Wrap overrides
+    if (checkWallCollision(head, this.grid.size)) {
+      if (hasPowerUp(this.heldPowerUps, PowerUpId.WALL_WRAP)) {
+        // Wrap to opposite side
+        const wrapped = {
+          x: ((head.x % GRID_SIZE) + GRID_SIZE) % GRID_SIZE,
+          y: ((head.y % GRID_SIZE) + GRID_SIZE) % GRID_SIZE,
+        };
+        this.snake.segments[0] = wrapped;
+      } else {
+        this.die();
+        return;
+      }
+    }
+
+    // Self collision — Ghost Mode overrides
+    const isGhosting = this.ghostTimer > 0;
+    if (!isGhosting && checkSelfCollision(this.snake.segments)) {
       this.die();
       return;
     }
@@ -266,8 +374,52 @@ export class Game {
     // Check hazard collision
     const hitHazard = checkHazardCollision(head, this.hazards);
     if (hitHazard) {
-      this.die();
-      return;
+      // Head Bash: destroy wall block instead of dying
+      if (hitHazard.type === HazardType.WALL_BLOCK &&
+          hasPowerUp(this.heldPowerUps, PowerUpId.HEAD_BASH) &&
+          !this.headBashUsed) {
+        this.headBashUsed = true;
+        this.hazards = this.hazards.filter(h => h !== hitHazard);
+        // Shatter particles
+        const cellSize = this.renderer.layout.cellSize;
+        const pixel = this.renderer.gridToPixel(hitHazard.position.x, hitHazard.position.y);
+        this.particles.emit(pixel.x + cellSize / 2, pixel.y + cellSize / 2, {
+          count: 16,
+          speed: 250,
+          lifetime: 0.4,
+          color: '#ff0040',
+          size: 4,
+        });
+      } else {
+        this.die();
+        return;
+      }
+    }
+
+    // Singularity: drift food toward head
+    if (hasPowerUp(this.heldPowerUps, PowerUpId.SINGULARITY)) {
+      for (const food of this.foods) {
+        const dx = head.x - food.position.x;
+        const dy = head.y - food.position.y;
+        const dist = Math.abs(dx) + Math.abs(dy); // manhattan
+        if (dist > 0 && dist <= 3) {
+          // Move food 1 cell toward head
+          const newX = food.position.x + Math.sign(dx);
+          const newY = food.position.y + Math.sign(dy);
+          // Only move if target cell is valid and not occupied by snake or hazard
+          if (newX >= 0 && newX < GRID_SIZE && newY >= 0 && newY < GRID_SIZE) {
+            food.position = { x: newX, y: newY };
+          }
+        }
+      }
+    }
+
+    // Time Dilation: check near-miss (head adjacent to hazard or wall)
+    if (hasPowerUp(this.heldPowerUps, PowerUpId.TIME_DILATION) && this.timeDilationTimer <= 0) {
+      const isNearMiss = this.checkNearMiss(head);
+      if (isNearMiss) {
+        this.timeDilationTimer = 2.0;
+      }
     }
 
     const eatenFood = checkFoodCollision(head, this.foods);
@@ -276,7 +428,17 @@ export class Game {
       if (eatenFood.type === FoodType.SHRINK_PELLET) {
         this.snake.shrink(2);
       } else {
-        this.snake.grow(1);
+        // Iron Gut: +2 per stack instead of +1
+        const growAmount = hasPowerUp(this.heldPowerUps, PowerUpId.IRON_GUT)
+          ? 1 + getStackCount(this.heldPowerUps, PowerUpId.IRON_GUT)
+          : 1;
+        this.snake.grow(growAmount);
+      }
+
+      // Ghost Mode: activate on eat
+      if (hasPowerUp(this.heldPowerUps, PowerUpId.GHOST_MODE)) {
+        const ghostTicks = Math.round(3 * this.currentTickRate); // 3 seconds worth of ticks
+        this.ghostTimer = ghostTicks;
       }
 
       this.score += FOOD_SCORES[eatenFood.type];
@@ -313,8 +475,32 @@ export class Game {
       } else {
         // Spawn next food
         this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards, this.arena.currentWave));
+
+        // Scavenger: keep 2 foods on grid per stack
+        if (hasPowerUp(this.heldPowerUps, PowerUpId.SCAVENGER)) {
+          const targetFoods = 1 + getStackCount(this.heldPowerUps, PowerUpId.SCAVENGER);
+          while (this.foods.length < targetFoods) {
+            this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards, this.arena.currentWave));
+          }
+        }
       }
     }
+  }
+
+  private checkNearMiss(head: { x: number; y: number }): boolean {
+    // Check adjacent cells for hazards
+    const dirs = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
+    for (const d of dirs) {
+      const nx = head.x + d.x;
+      const ny = head.y + d.y;
+      // Near wall
+      if (nx < 0 || nx >= GRID_SIZE || ny < 0 || ny >= GRID_SIZE) return true;
+      // Near active hazard
+      for (const h of this.hazards) {
+        if (h.position.x === nx && h.position.y === ny && h.state === 'active') return true;
+      }
+    }
+    return false;
   }
 
   private onWaveClear(): void {
@@ -352,6 +538,7 @@ export class Game {
     if (this.state === GameState.ARENA_TRANSITION) {
       // Advance arena, reset snake and grid
       this.arena.advanceArena();
+      this.rewindUsed = false;
       this.snake = this.createSnake();
       this.foods = [];
       this.hazards = [];
@@ -365,6 +552,9 @@ export class Game {
       this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards, this.arena.currentWave));
       this.currentTickRate = this.arena.getWaveConfig().tickRate;
     }
+
+    // Reset per-wave power-up state
+    this.headBashUsed = false;
 
     // Spawn hazards for new wave
     const waveConfig = this.arena.getWaveConfig();
@@ -399,6 +589,7 @@ export class Game {
       this.snake,
       this.renderer.layout,
       this.interpolation,
+      this.ghostTimer > 0,
     );
 
     this.particles.render(this.renderer.ctx);
@@ -414,6 +605,16 @@ export class Game {
     if ((this.state === GameState.WAVE_TRANSITION || this.state === GameState.ARENA_TRANSITION)
         && this.transitionMessage) {
       this.drawTransitionOverlay();
+    }
+
+    // Time Dilation tint
+    if (this.timeDilationTimer > 0) {
+      const ctx = this.renderer.ctx;
+      ctx.save();
+      ctx.globalAlpha = 0.1;
+      ctx.fillStyle = '#0044ff';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.restore();
     }
 
     // Screen flash
@@ -598,6 +799,34 @@ export class Game {
   }
 
   die(): void {
+    // Rewind: undo death, restore snake to 3s ago
+    if (hasPowerUp(this.heldPowerUps, PowerUpId.REWIND) &&
+        !this.rewindUsed &&
+        this.rewindSnapshots.length > 0) {
+      this.rewindUsed = true;
+      const snapshot = this.rewindSnapshots[0]!; // earliest snapshot
+      this.snake.segments = snapshot.segments.map(s => ({ x: s.x, y: s.y }));
+      this.snake.direction = snapshot.direction;
+      this.snake.queuedDirection = null;
+      this.snake.previousSegments = snapshot.segments.map(s => ({ x: s.x, y: s.y }));
+      this.rewindSnapshots = [];
+      this.screenFlashTimer = 0.3;
+      // VHS static particles
+      const { playArea } = this.renderer.layout;
+      for (let i = 0; i < 30; i++) {
+        const px = playArea.x + Math.random() * playArea.size;
+        const py = playArea.y + Math.random() * playArea.size;
+        this.particles.emit(px, py, {
+          count: 1,
+          speed: 30,
+          lifetime: 0.5,
+          color: '#ffffff',
+          size: 2,
+        });
+      }
+      return;
+    }
+
     this.state = GameState.DEATH;
     this.deathLength = this.snake.segments.length;
     this.screenFlashTimer = 0.2;
