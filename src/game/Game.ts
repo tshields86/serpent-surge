@@ -16,6 +16,7 @@ import { AudioManager } from '../audio/AudioManager';
 import { PowerUpId, PowerUpInstance, acquirePowerUp, hasPowerUp, getStackCount, rollPowerUpOfferings } from './PowerUp';
 import { checkWallCollision, checkSelfCollision } from './Collision';
 import { BASE_TICK_RATE, COLORS, GRID_SIZE, MAX_DELTA } from '../utils/constants';
+import { loadData, saveData, PersistedData } from '../utils/storage';
 
 export enum GameState {
   TITLE = 'TITLE',
@@ -71,6 +72,7 @@ export class Game {
   totalFoodEaten = 0;
   private deathLength = 0;
   private highScore = 0;
+  private persistedData: PersistedData | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
@@ -241,6 +243,13 @@ export class Game {
 
   start(): void {
     this.lastTimestamp = performance.now();
+    loadData().then(data => {
+      this.persistedData = data;
+      this.highScore = data.highScore;
+      if (data.settings.muted && !this.audio.isMuted) {
+        this.audio.toggleMute();
+      }
+    });
     requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -877,6 +886,14 @@ export class Game {
     this.audio.playDeath();
     if (this.score > this.highScore) {
       this.highScore = this.score;
+    }
+
+    // Persist stats
+    if (this.persistedData) {
+      this.persistedData.highScore = this.highScore;
+      this.persistedData.totalRuns++;
+      this.persistedData.totalScales += Math.floor(this.score / 10);
+      saveData(this.persistedData);
     }
 
     const cellSize = this.renderer.layout.cellSize;

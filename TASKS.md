@@ -198,10 +198,10 @@ Implement one at a time, test each:
 - [x] Hazard spawn warning pulse, near-miss whoosh
 
 ### 2.11 — Persistence
-- [ ] Install `idb-keyval`
-- [ ] Create `src/utils/storage.ts`
-- [ ] Persist: high score, total scales, settings
-- [ ] Load on startup, save on run end
+- [x] Install `idb-keyval`
+- [x] Create `src/utils/storage.ts`
+- [x] Persist: high score, total scales, settings
+- [x] Load on startup, save on run end
 
 ### 2.12 — Phase 2 Polish & Playtest
 - [ ] Play 15+ runs with power-up variety
