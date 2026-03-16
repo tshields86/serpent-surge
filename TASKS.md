@@ -67,12 +67,12 @@
 - [x] **Playwright MCP**: Screenshot with snake + food — food clearly red, distinct from snake
 
 ### 1.7 — Score & HUD
-- [ ] Create `src/rendering/UI.ts` — HUD rendering on canvas
-- [ ] Load pixel font (Press Start 2P, bundled woff2 or Google Fonts)
-- [ ] Top HUD: score (left), arena/wave info (right)
-- [ ] Bottom HUD: length, power-up icon slots (empty for now)
-- [ ] Score counter animates briefly on change (scale pulse)
-- [ ] **Playwright MCP**: Screenshot — HUD readable, positioned correctly, no overlap with play area
+- [x] Create `src/rendering/UI.ts` — HUD rendering on canvas
+- [x] Load pixel font (Press Start 2P, bundled woff2 or Google Fonts)
+- [x] Top HUD: score (left), arena/wave info (right)
+- [x] Bottom HUD: length, power-up icon slots (empty for now)
+- [x] Score counter animates briefly on change (scale pulse)
+- [x] **Playwright MCP**: Screenshot — HUD readable, positioned correctly, no overlap with play area
 
 ### 1.8 — Death & Restart
 - [ ] Death animation: segments scatter outward + screen flash (white, 200ms fade)

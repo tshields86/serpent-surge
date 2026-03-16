@@ -5,6 +5,7 @@ import { FoodItem, spawnFood, checkFoodCollision } from './Food';
 import { Renderer } from '../rendering/Renderer';
 import { SnakeRenderer } from '../rendering/SnakeRenderer';
 import { ParticleSystem } from '../rendering/ParticleSystem';
+import { UI } from '../rendering/UI';
 import { checkWallCollision, checkSelfCollision } from './Collision';
 import { BASE_TICK_RATE, COLORS, MAX_DELTA } from '../utils/constants';
 
@@ -23,6 +24,7 @@ export class Game {
   private renderer: Renderer;
   private snakeRenderer: SnakeRenderer;
   private particles: ParticleSystem;
+  private ui: UI;
   private input: InputManager;
   private grid: Grid;
   private snake: Snake;
@@ -42,6 +44,7 @@ export class Game {
     this.renderer = new Renderer(canvas);
     this.snakeRenderer = new SnakeRenderer();
     this.particles = new ParticleSystem();
+    this.ui = new UI();
     this.input = new InputManager();
     this.grid = new Grid();
 
@@ -85,8 +88,10 @@ export class Game {
       }
     }
 
-    // Update particles every frame (they use real time)
-    this.particles.update(delta / 1000);
+    // Update particles and UI every frame (they use real time)
+    const dtSec = delta / 1000;
+    this.particles.update(dtSec);
+    this.ui.update(dtSec, this.score);
 
     this.render();
     requestAnimationFrame((t) => this.loop(t));
@@ -116,6 +121,7 @@ export class Game {
       this.snake.grow(1);
       this.score += 10;
       this.totalFoodEaten++;
+      this.ui.triggerScorePulse();
 
       // Remove eaten food and spawn new one
       this.foods = this.foods.filter(f => f !== eatenFood);
@@ -154,6 +160,14 @@ export class Game {
 
     // Draw particles on top
     this.particles.render(this.renderer.ctx);
+
+    // Draw HUD
+    this.ui.drawHUD(
+      this.renderer.ctx,
+      this.renderer.layout,
+      this.score,
+      this.snake.segments.length,
+    );
   }
 
   private drawFood(): void {
@@ -195,6 +209,7 @@ export class Game {
     this.tickAccumulator = 0;
     this.interpolation = 0;
     this.currentTickRate = BASE_TICK_RATE;
+    this.ui.reset();
     this.state = GameState.PLAYING;
   }
 }
