@@ -89,11 +89,11 @@
 - [x] **Playwright MCP**: Screenshot — polished, retro, inviting
 
 ### 1.10 — CRT Visual Effects
-- [ ] Create `src/rendering/Effects.ts` — post-processing
-- [ ] CRT scanlines: horizontal lines, 50% opacity, 2px spacing, cached on offscreen canvas
-- [ ] Vignette: radial gradient darkening at edges
-- [ ] Screen flash effect (death, wave clear)
-- [ ] **Playwright MCP**: Screenshot — scanlines visible but not distracting, vignette subtle
+- [x] Create `src/rendering/Effects.ts` — post-processing
+- [x] CRT scanlines: horizontal lines, 50% opacity, 2px spacing, cached on offscreen canvas
+- [x] Vignette: radial gradient darkening at edges
+- [x] Screen flash effect (death, wave clear)
+- [x] **Playwright MCP**: Screenshot — scanlines visible but not distracting, vignette subtle
 
 ### 1.11 — Basic Audio
 - [ ] Install Tone.js: `npm install tone`

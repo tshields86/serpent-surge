@@ -6,6 +6,7 @@ import { Renderer } from '../rendering/Renderer';
 import { SnakeRenderer } from '../rendering/SnakeRenderer';
 import { ParticleSystem } from '../rendering/ParticleSystem';
 import { UI } from '../rendering/UI';
+import { Effects } from '../rendering/Effects';
 import { DeathScreen } from '../screens/DeathScreen';
 import { TitleScreen } from '../screens/TitleScreen';
 import { checkWallCollision, checkSelfCollision } from './Collision';
@@ -27,6 +28,7 @@ export class Game {
   private snakeRenderer: SnakeRenderer;
   private particles: ParticleSystem;
   private ui: UI;
+  private effects: Effects;
   private deathScreen: DeathScreen;
   private titleScreen: TitleScreen;
   private input: InputManager;
@@ -54,6 +56,7 @@ export class Game {
     this.snakeRenderer = new SnakeRenderer();
     this.particles = new ParticleSystem();
     this.ui = new UI();
+    this.effects = new Effects();
     this.deathScreen = new DeathScreen();
     this.titleScreen = new TitleScreen();
     this.input = new InputManager();
@@ -238,6 +241,7 @@ export class Game {
   private render(): void {
     if (this.state === GameState.TITLE) {
       this.titleScreen.draw(this.renderer.ctx, this.highScore);
+      this.effects.drawCRT(this.renderer.ctx);
       return;
     }
 
@@ -276,7 +280,10 @@ export class Game {
       ctx.restore();
     }
 
-    // Death screen overlay
+    // CRT post-processing
+    this.effects.drawCRT(this.renderer.ctx);
+
+    // Death screen overlay (on top of CRT)
     if (this.state === GameState.DEATH) {
       this.deathScreen.draw(
         this.renderer.ctx,
