@@ -103,10 +103,10 @@
 - [x] Mute toggle persisted to storage
 
 ### 1.12 — PWA Setup
-- [ ] `public/manifest.json`: name, icons, theme #0a0a0a, display: standalone
-- [ ] Basic service worker for offline caching
-- [ ] PWA icons (16, 32, 192, 512px)
-- [ ] Verify: installable on mobile, launches full-screen
+- [x] `public/manifest.json`: name, icons, theme #0a0a0a, display: standalone
+- [x] Basic service worker for offline caching
+- [x] PWA icons (16, 32, 192, 512px)
+- [x] Verify: installable on mobile, launches full-screen
 
 ### 1.13 — Phase 1 Polish & Playtest
 - [ ] Play 10 full games — note feel issues
