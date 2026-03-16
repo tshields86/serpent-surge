@@ -15,7 +15,7 @@
 - [x] Verify: page loads with black (#0a0a0a) background, canvas centered — **Playwright MCP screenshot**
 - [x] Install dev dependencies: `vitest`
 - [x] Create initial `.gitignore` (node_modules, dist, .DS_Store)
-- [ ] `git init` + initial commit
+- [x] `git init` + initial commit
 
 ---
 
