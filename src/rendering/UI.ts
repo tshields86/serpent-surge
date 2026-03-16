@@ -1,5 +1,6 @@
 import { COLORS } from '../utils/constants';
 import { Layout } from './Renderer';
+import { PowerUpInstance, getPowerUpDef } from '../game/PowerUp';
 
 const FONT_FAMILY = '"Press Start 2P", monospace';
 
@@ -8,6 +9,9 @@ export interface HUDData {
   snakeLength: number;
   waveProgress: string;
   arenaNumber: number;
+  heldPowerUps: readonly PowerUpInstance[];
+  ghostTimer?: number;
+  timeDilationTimer?: number;
 }
 
 export class UI {
@@ -110,6 +114,43 @@ export class UI {
 
     ctx.textAlign = 'left';
     ctx.fillText(`LENGTH ${data.snakeLength}`, padding, centerY);
+
+    // Power-up icons (right side)
+    if (data.heldPowerUps.length > 0) {
+      const iconSize = Math.min(20, Math.floor(hudBottom.height * 0.6));
+      const iconGap = 4;
+      let iconX = hudBottom.width - padding;
+
+      ctx.textAlign = 'center';
+
+      for (let i = data.heldPowerUps.length - 1; i >= 0; i--) {
+        const pu = data.heldPowerUps[i]!;
+        const def = getPowerUpDef(pu.id);
+
+        iconX -= iconSize;
+
+        // Icon background
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(iconX, centerY - iconSize / 2, iconSize, iconSize);
+        ctx.restore();
+
+        // Emoji icon
+        ctx.font = `${Math.floor(iconSize * 0.7)}px serif`;
+        ctx.fillText(def.icon, iconX + iconSize / 2, centerY);
+
+        // Stack count
+        if (pu.stackCount > 1) {
+          ctx.font = `${Math.floor(iconSize * 0.35)}px ${FONT_FAMILY}`;
+          ctx.fillStyle = COLORS.score;
+          ctx.fillText(`${pu.stackCount}`, iconX + iconSize - 2, centerY + iconSize / 2 - 2);
+          ctx.fillStyle = COLORS.uiText;
+        }
+
+        iconX -= iconGap;
+      }
+    }
 
     ctx.restore();
   }

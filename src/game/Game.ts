@@ -599,6 +599,9 @@ export class Game {
       snakeLength: this.state === GameState.DEATH ? this.deathLength : this.snake.segments.length,
       waveProgress: this.arena.waveProgress,
       arenaNumber: this.arena.currentArena,
+      heldPowerUps: this.heldPowerUps,
+      ghostTimer: this.ghostTimer,
+      timeDilationTimer: this.timeDilationTimer,
     });
 
     // Transition overlay
