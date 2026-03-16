@@ -53,10 +53,10 @@
 - [x] Verify: snake speed is consistent regardless of frame rate
 
 ### 1.5 — Collision Detection
-- [ ] Create `src/game/Collision.ts` — collision helpers
-- [ ] Wall collision: head hits boundary → death
-- [ ] Self-collision: head overlaps body segment → death
-- [ ] Unit tests for edge cases (boundary, U-turn at short length, exact corner)
+- [x] Create `src/game/Collision.ts` — collision helpers
+- [x] Wall collision: head hits boundary → death
+- [x] Self-collision: head overlaps body segment → death
+- [x] Unit tests for edge cases (boundary, U-turn at short length, exact corner)
 
 ### 1.6 — Food System (Basic)
 - [ ] Create `src/game/Food.ts` — food spawning and management

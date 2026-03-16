@@ -3,7 +3,8 @@ import { Grid } from './Grid';
 import { InputManager } from './Input';
 import { Renderer } from '../rendering/Renderer';
 import { SnakeRenderer } from '../rendering/SnakeRenderer';
-import { BASE_TICK_RATE, GRID_SIZE, MAX_DELTA } from '../utils/constants';
+import { checkWallCollision, checkSelfCollision } from './Collision';
+import { BASE_TICK_RATE, MAX_DELTA } from '../utils/constants';
 
 export enum GameState {
   TITLE = 'TITLE',
@@ -81,10 +82,18 @@ export class Game {
   private update(): void {
     this.snake.move();
 
-    // Temporary: wrap at grid boundaries
-    for (const seg of this.snake.segments) {
-      seg.x = ((seg.x % GRID_SIZE) + GRID_SIZE) % GRID_SIZE;
-      seg.y = ((seg.y % GRID_SIZE) + GRID_SIZE) % GRID_SIZE;
+    const head = this.snake.head;
+
+    // Check wall collision
+    if (checkWallCollision(head, this.grid.size)) {
+      this.die();
+      return;
+    }
+
+    // Check self collision
+    if (checkSelfCollision(this.snake.segments)) {
+      this.die();
+      return;
     }
   }
 
