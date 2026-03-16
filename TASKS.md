@@ -144,10 +144,10 @@
 - [x] **Playwright MCP**: Screenshot each hazard type — visually distinct, clearly dangerous
 
 ### 2.4 — Extended Food Types
-- [ ] **Golden Apple**: 15% replace chance, +50 pts, pulsing gold (#ffd700 ↔ #ffaa00)
-- [ ] **Shrink Pellet**: 10% after wave 3, -2 length (min 3), +25 pts, blue (#00bfff), smaller
-- [ ] Distinct eat particles per food type
-- [ ] **Playwright MCP**: Screenshot all food types on grid
+- [x] **Golden Apple**: 15% replace chance, +50 pts, pulsing gold (#ffd700 ↔ #ffaa00)
+- [x] **Shrink Pellet**: 10% after wave 3, -2 length (min 3), +25 pts, blue (#00bfff), smaller
+- [x] Distinct eat particles per food type
+- [x] **Playwright MCP**: Screenshot all food types on grid
 
 ### 2.5 — Power-Up Selection Screen
 - [ ] Create `src/screens/PowerUpScreen.ts`

@@ -2,7 +2,7 @@ import { Snake, Direction } from './Snake';
 import { Grid } from './Grid';
 import { InputManager } from './Input';
 import { Arena } from './Arena';
-import { FoodItem, spawnFood, checkFoodCollision } from './Food';
+import { FoodType, FoodItem, FOOD_SCORES, spawnFood, checkFoodCollision } from './Food';
 import { HazardType, HazardInstance, spawnHazards, updateHazards, checkHazardCollision } from './Hazard';
 import { Renderer } from '../rendering/Renderer';
 import { SnakeRenderer } from '../rendering/SnakeRenderer';
@@ -73,7 +73,7 @@ export class Game {
     this.arena = new Arena();
 
     this.snake = this.createSnake();
-    this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards));
+    this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards, this.arena.currentWave));
     this.input.onDirectionInput((dir) => this.onDirection(dir));
 
     canvas.addEventListener('click', (e) => this.onClick(e));
@@ -101,7 +101,7 @@ export class Game {
     this.arena.reset();
     this.foods = [];
     this.hazards = [];
-    this.foods.push(spawnFood(this.snake, this.foods, 0, this.hazards));
+    this.foods.push(spawnFood(this.snake, this.foods, 0, this.hazards, this.arena.currentWave));
     this.score = 0;
     this.totalFoodEaten = 0;
     this.deathLength = 0;
@@ -238,25 +238,37 @@ export class Game {
 
     const eatenFood = checkFoodCollision(head, this.foods);
     if (eatenFood) {
-      this.snake.grow(1);
-      this.score += 10;
+      // Apply food effect
+      if (eatenFood.type === FoodType.SHRINK_PELLET) {
+        this.snake.shrink(2);
+      } else {
+        this.snake.grow(1);
+      }
+
+      this.score += FOOD_SCORES[eatenFood.type];
       this.totalFoodEaten++;
       this.ui.triggerScorePulse();
       this.audio.playEat();
 
       this.foods = this.foods.filter(f => f !== eatenFood);
 
-      // Emit eat particles
+      // Emit eat particles (color per food type)
       const pixel = this.renderer.gridToPixel(
         eatenFood.position.x,
         eatenFood.position.y,
       );
       const cellSize = this.renderer.layout.cellSize;
+      const particleColor = eatenFood.type === FoodType.GOLDEN_APPLE
+        ? COLORS.goldenApple
+        : eatenFood.type === FoodType.SHRINK_PELLET
+          ? COLORS.shrinkPellet
+          : COLORS.apple;
+      const particleCount = eatenFood.type === FoodType.GOLDEN_APPLE ? 18 : 12;
       this.particles.emit(pixel.x + cellSize / 2, pixel.y + cellSize / 2, {
-        count: 12,
+        count: particleCount,
         speed: 150,
         lifetime: 0.3,
-        color: COLORS.apple,
+        color: particleColor,
         size: 3,
       });
 
@@ -266,7 +278,7 @@ export class Game {
         this.onWaveClear();
       } else {
         // Spawn next food
-        this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards));
+        this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards, this.arena.currentWave));
       }
     }
   }
@@ -302,14 +314,14 @@ export class Game {
       this.snake = this.createSnake();
       this.foods = [];
       this.hazards = [];
-      this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards));
+      this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards, this.arena.currentWave));
       this.currentTickRate = this.arena.getWaveConfig().tickRate;
       this.tickAccumulator = 0;
       this.interpolation = 0;
     } else {
       // Wave transition — spawn new food and hazards
       this.foods = [];
-      this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards));
+      this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards, this.arena.currentWave));
       this.currentTickRate = this.arena.getWaveConfig().tickRate;
     }
 
@@ -495,19 +507,42 @@ export class Game {
 
     for (const food of this.foods) {
       const pixel = this.renderer.gridToPixel(food.position.x, food.position.y);
-
-      ctx.save();
-      ctx.shadowColor = COLORS.apple;
-      ctx.shadowBlur = cellSize * 0.4;
-      ctx.fillStyle = COLORS.apple;
-
       const cx = pixel.x + cellSize / 2;
       const cy = pixel.y + cellSize / 2;
-      const r = (cellSize - padding * 2) / 2;
 
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.save();
+
+      if (food.type === FoodType.GOLDEN_APPLE) {
+        // Pulsing gold
+        const pulse = Math.sin(performance.now() / 200) * 0.5 + 0.5;
+        const r = (cellSize - padding * 2) / 2;
+        ctx.shadowColor = COLORS.goldenApple;
+        ctx.shadowBlur = cellSize * 0.6;
+        // Interpolate between gold and pulse color
+        ctx.fillStyle = pulse > 0.5 ? COLORS.goldenApple : COLORS.goldenApplePulse;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (food.type === FoodType.SHRINK_PELLET) {
+        // Smaller blue circle
+        const r = (cellSize - padding * 2) / 2 * 0.7;
+        ctx.shadowColor = COLORS.shrinkPellet;
+        ctx.shadowBlur = cellSize * 0.4;
+        ctx.fillStyle = COLORS.shrinkPellet;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Standard apple
+        const r = (cellSize - padding * 2) / 2;
+        ctx.shadowColor = COLORS.apple;
+        ctx.shadowBlur = cellSize * 0.4;
+        ctx.fillStyle = COLORS.apple;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       ctx.restore();
     }
   }

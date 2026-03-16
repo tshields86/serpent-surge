@@ -84,6 +84,14 @@ export class Snake {
     this.growthPending += amount;
   }
 
+  shrink(amount = 1): void {
+    const minLength = 3;
+    const toRemove = Math.min(amount, this.segments.length - minLength);
+    if (toRemove > 0) {
+      this.segments.splice(this.segments.length - toRemove, toRemove);
+    }
+  }
+
   queueDirection(dir: Direction): void {
     // Allow queuing if not opposite to current and not same as current
     const effectiveDir = this.queuedDirection ?? this.direction;
