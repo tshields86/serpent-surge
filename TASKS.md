@@ -46,11 +46,11 @@
 - [x] Test: rapid direction changes feel responsive, no missed inputs
 
 ### 1.4 — Game Loop
-- [ ] Create `src/game/Game.ts` — main game class with state machine
-- [ ] Fixed timestep: 8 ticks/sec game logic, 60fps render with interpolation
-- [ ] Game states enum: `TITLE`, `PLAYING`, `WAVE_TRANSITION`, `POWER_UP_SELECT`, `PAUSED`, `DEATH`
-- [ ] Wire up: `main.ts` → Game instance → loop starts
-- [ ] Verify: snake speed is consistent regardless of frame rate
+- [x] Create `src/game/Game.ts` — main game class with state machine
+- [x] Fixed timestep: 8 ticks/sec game logic, 60fps render with interpolation
+- [x] Game states enum: `TITLE`, `PLAYING`, `WAVE_TRANSITION`, `POWER_UP_SELECT`, `PAUSED`, `DEATH`
+- [x] Wire up: `main.ts` → Game instance → loop starts
+- [x] Verify: snake speed is consistent regardless of frame rate
 
 ### 1.5 — Collision Detection
 - [ ] Create `src/game/Collision.ts` — collision helpers
