@@ -1,23 +1,16 @@
-import { COLORS } from './utils/constants';
+import { Renderer } from './rendering/Renderer';
 
 function setup(): void {
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Failed to get 2D context');
+  const renderer = new Renderer(canvas);
 
-  function resize(): void {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    draw(ctx!);
+  function draw(): void {
+    renderer.clear();
+    renderer.drawGrid();
   }
 
-  function draw(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = COLORS.background;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-
-  window.addEventListener('resize', resize);
-  resize();
+  window.addEventListener('resize', () => draw());
+  draw();
 }
 
 setup();

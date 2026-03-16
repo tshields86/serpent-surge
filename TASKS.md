@@ -22,12 +22,12 @@
 ## Phase 1 — Core Snake (MVP)
 
 ### 1.1 — Grid & Canvas
-- [ ] Create `src/rendering/Renderer.ts` — main renderer class that owns the canvas context
-- [ ] Implement responsive canvas sizing: square play area, centered horizontally, fills height minus HUD space
-- [ ] Create `src/game/Grid.ts` — 20x20 grid model, cell-to-pixel coordinate mapping
-- [ ] Render faint grid lines (#1a1a1a) on the canvas
-- [ ] Handle window resize: recalculate cell size, re-center canvas
-- [ ] **Playwright MCP**: Screenshot at 390x844 (mobile) and 1920x1080 (desktop) — grid visible, square, centered
+- [x] Create `src/rendering/Renderer.ts` — main renderer class that owns the canvas context
+- [x] Implement responsive canvas sizing: square play area, centered horizontally, fills height minus HUD space
+- [x] Create `src/game/Grid.ts` — 20x20 grid model, cell-to-pixel coordinate mapping
+- [x] Render faint grid lines (#1a1a1a) on the canvas
+- [x] Handle window resize: recalculate cell size, re-center canvas
+- [x] **Playwright MCP**: Screenshot at 390x844 (mobile) and 1920x1080 (desktop) — grid visible, square, centered
 
 ### 1.2 — Snake Movement
 - [ ] Create `src/game/Snake.ts` — segments array, direction, nextDirection
