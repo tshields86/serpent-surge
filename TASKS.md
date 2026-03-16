@@ -150,13 +150,13 @@
 - [x] **Playwright MCP**: Screenshot all food types on grid
 
 ### 2.5 — Power-Up Selection Screen
-- [ ] Create `src/screens/PowerUpScreen.ts`
-- [ ] Create `src/game/PowerUp.ts` + `src/data/powerups.ts`
-- [ ] 3 cards: icon, name, rarity border, 1-line description
-- [ ] Rarity borders: Common=white, Uncommon=blue, Rare=purple, Legendary=gold
-- [ ] Tap to select: card zooms + sparkle, then resume gameplay
-- [ ] Current held power-ups shown at bottom
-- [ ] **Playwright MCP**: Screenshot — polished cards, readable, rarity clear
+- [x] Create `src/screens/PowerUpScreen.ts`
+- [x] Create `src/game/PowerUp.ts` + `src/data/powerups.ts`
+- [x] 3 cards: icon, name, rarity border, 1-line description
+- [x] Rarity borders: Common=white, Uncommon=blue, Rare=purple, Legendary=gold
+- [x] Tap to select: card zooms + sparkle, then resume gameplay
+- [x] Current held power-ups shown at bottom
+- [x] **Playwright MCP**: Screenshot — polished cards, readable, rarity clear
 
 ### 2.6 — Implement Core Power-Ups (10)
 Implement one at a time, test each:

@@ -11,7 +11,9 @@ import { UI } from '../rendering/UI';
 import { Effects } from '../rendering/Effects';
 import { DeathScreen } from '../screens/DeathScreen';
 import { TitleScreen } from '../screens/TitleScreen';
+import { PowerUpScreen } from '../screens/PowerUpScreen';
 import { AudioManager } from '../audio/AudioManager';
+import { PowerUpInstance, acquirePowerUp, rollPowerUpOfferings } from './PowerUp';
 import { checkWallCollision, checkSelfCollision } from './Collision';
 import { BASE_TICK_RATE, COLORS, MAX_DELTA } from '../utils/constants';
 
@@ -34,6 +36,7 @@ export class Game {
   private effects: Effects;
   private deathScreen: DeathScreen;
   private titleScreen: TitleScreen;
+  private powerUpScreen: PowerUpScreen;
   private audio: AudioManager;
   private input: InputManager;
   private grid: Grid;
@@ -41,6 +44,7 @@ export class Game {
   private arena: Arena;
   private foods: FoodItem[] = [];
   private hazards: HazardInstance[] = [];
+  private heldPowerUps: PowerUpInstance[] = [];
   private currentTick = 0;
 
   private lastTimestamp = 0;
@@ -67,6 +71,7 @@ export class Game {
     this.effects = new Effects();
     this.deathScreen = new DeathScreen();
     this.titleScreen = new TitleScreen();
+    this.powerUpScreen = new PowerUpScreen();
     this.audio = new AudioManager();
     this.input = new InputManager();
     this.grid = new Grid();
@@ -101,6 +106,7 @@ export class Game {
     this.arena.reset();
     this.foods = [];
     this.hazards = [];
+    this.heldPowerUps = [];
     this.foods.push(spawnFood(this.snake, this.foods, 0, this.hazards, this.arena.currentWave));
     this.score = 0;
     this.totalFoodEaten = 0;
@@ -121,6 +127,10 @@ export class Game {
       this.startRun();
       return;
     }
+    if (this.state === GameState.POWER_UP_SELECT) {
+      this.powerUpScreen.handleClick(e.offsetX, e.offsetY);
+      return;
+    }
     if (this.state === GameState.DEATH && this.deathScreen.isReady()) {
       const bounds = this.deathScreen.getButtonBounds(
         this.renderer.canvas.width,
@@ -138,6 +148,16 @@ export class Game {
   private onTap(e: TouchEvent): void {
     if (this.state === GameState.TITLE) {
       this.startRun();
+      return;
+    }
+    if (this.state === GameState.POWER_UP_SELECT) {
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+      const rect = this.renderer.canvas.getBoundingClientRect();
+      this.powerUpScreen.handleClick(
+        touch.clientX - rect.left,
+        touch.clientY - rect.top,
+      );
       return;
     }
     if (this.state === GameState.DEATH && this.deathScreen.isReady()) {
@@ -204,6 +224,20 @@ export class Game {
     }
     if (this.state === GameState.DEATH) {
       this.deathScreen.update(dtSec);
+    }
+    if (this.state === GameState.POWER_UP_SELECT) {
+      this.powerUpScreen.update(dtSec);
+      if (this.powerUpScreen.isSelectionComplete()) {
+        const selected = this.powerUpScreen.getSelectedPowerUp();
+        if (selected) {
+          acquirePowerUp(this.heldPowerUps, selected.id);
+        }
+        this.powerUpScreen.reset();
+        // Transition to arena transition
+        this.transitionMessage = `ARENA ${this.arena.currentArena} CLEAR!`;
+        this.transitionTimer = 1.5;
+        this.state = GameState.ARENA_TRANSITION;
+      }
     }
 
     this.render();
@@ -295,10 +329,17 @@ export class Game {
     const isArenaCleared = this.arena.advanceWave();
 
     if (isArenaCleared) {
-      // Arena cleared — show transition then advance
-      this.transitionMessage = `ARENA ${this.arena.currentArena} CLEAR!`;
-      this.transitionTimer = 1.5;
-      this.state = GameState.ARENA_TRANSITION;
+      // Arena cleared — show power-up selection
+      const offerings = rollPowerUpOfferings(this.heldPowerUps);
+      if (offerings.length > 0) {
+        this.powerUpScreen.setOfferings(offerings);
+        this.state = GameState.POWER_UP_SELECT;
+      } else {
+        // No power-ups available, skip to arena transition
+        this.transitionMessage = `ARENA ${this.arena.currentArena} CLEAR!`;
+        this.transitionTimer = 1.5;
+        this.state = GameState.ARENA_TRANSITION;
+      }
     } else {
       // Wave cleared — brief pause then continue
       this.transitionMessage = '';
@@ -386,6 +427,15 @@ export class Game {
     }
 
     this.effects.drawCRT(this.renderer.ctx);
+
+    if (this.state === GameState.POWER_UP_SELECT) {
+      this.powerUpScreen.draw(
+        this.renderer.ctx,
+        this.renderer.canvas.width,
+        this.renderer.canvas.height,
+        this.heldPowerUps,
+      );
+    }
 
     if (this.state === GameState.DEATH) {
       this.deathScreen.draw(
