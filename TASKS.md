@@ -171,14 +171,14 @@ Implement one at a time, test each:
 - [x] **Rewind** (Rare): undo death, rewind 3s, 1x per arena — VHS static effect
 - [x] **Singularity** (Rare): food within 3 cells drifts toward head — pull lines
 - [x] Unit tests for each power-up effect
-- [ ] **Playwright MCP**: Screenshot each power-up active — visual effects match descriptions
+- [x] **Playwright MCP**: Screenshot each power-up active — visual effects match descriptions
 
 ### 2.7 — Power-Up Stacking & HUD
 - [x] Power-ups accumulate across arenas within a run
 - [x] Icons in bottom HUD for active power-ups
 - [x] Temporary effects show countdown timer on icon
 - [x] Duplicate power-ups stack (2x Scavenger = 3 food)
-- [ ] **Playwright MCP**: Screenshot HUD with multiple icons
+- [x] **Playwright MCP**: Screenshot HUD with multiple icons
 
 ### 2.8 — Particle System
 - [x] Create `src/rendering/ParticleSystem.ts` — object-pooled (200 particles)
@@ -204,12 +204,12 @@ Implement one at a time, test each:
 - [x] Load on startup, save on run end
 
 ### 2.12 — Phase 2 Polish & Playtest
-- [ ] Play 15+ runs with power-up variety
-- [ ] Tune: hazard rates, food quotas, tick scaling, power-up balance
-- [ ] Verify: runs feel different based on power-up choices
-- [ ] Mobile performance with particles active
-- [ ] **Playwright MCP**: Full visual regression
-- [ ] Git tag: `v0.2.0-roguelike-core`
+- [x] Play 15+ runs with power-up variety
+- [x] Tune: hazard rates, food quotas, tick scaling, power-up balance
+- [x] Verify: runs feel different based on power-up choices
+- [x] Mobile performance with particles active
+- [x] **Playwright MCP**: Full visual regression
+- [x] Git tag: `v0.2.0-roguelike-core`
 
 ---
 
