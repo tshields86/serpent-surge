@@ -75,10 +75,10 @@
 - [x] **Playwright MCP**: Screenshot — HUD readable, positioned correctly, no overlap with play area
 
 ### 1.8 — Death & Restart
-- [ ] Death animation: segments scatter outward + screen flash (white, 200ms fade)
-- [ ] Create `src/screens/DeathScreen.ts` — overlay with final score, length, food eaten
-- [ ] "Try Again" button resets state, starts new run
-- [ ] **Playwright MCP**: Screenshot death screen — text readable, button clear
+- [x] Death animation: segments scatter outward + screen flash (white, 200ms fade)
+- [x] Create `src/screens/DeathScreen.ts` — overlay with final score, length, food eaten
+- [x] "Try Again" button resets state, starts new run
+- [x] **Playwright MCP**: Screenshot death screen — text readable, button clear
 
 ### 1.9 — Title Screen
 - [ ] Create `src/screens/TitleScreen.ts`
