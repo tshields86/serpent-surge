@@ -109,12 +109,12 @@
 - [x] Verify: installable on mobile, launches full-screen
 
 ### 1.13 — Phase 1 Polish & Playtest
-- [ ] Play 10 full games — note feel issues
-- [ ] Tune: tick rate, swipe sensitivity, death feel
-- [ ] Mobile performance check (throttled CPU in devtools)
-- [ ] `npm run build` — bundle < 200KB
-- [ ] **Playwright MCP**: Full screenshot suite at mobile + desktop
-- [ ] Git tag: `v0.1.0-mvp`
+- [x] Play 10 full games — note feel issues
+- [x] Tune: tick rate, swipe sensitivity, death feel
+- [x] Mobile performance check (throttled CPU in devtools)
+- [x] `npm run build` — bundle < 200KB (17KB game code + 64KB gzip Tone.js)
+- [x] **Playwright MCP**: Full screenshot suite at mobile + desktop
+- [x] Git tag: `v0.1.0-mvp`
 
 ---
 
