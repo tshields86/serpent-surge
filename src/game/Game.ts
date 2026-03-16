@@ -9,6 +9,7 @@ import { UI } from '../rendering/UI';
 import { Effects } from '../rendering/Effects';
 import { DeathScreen } from '../screens/DeathScreen';
 import { TitleScreen } from '../screens/TitleScreen';
+import { AudioManager } from '../audio/AudioManager';
 import { checkWallCollision, checkSelfCollision } from './Collision';
 import { BASE_TICK_RATE, COLORS, MAX_DELTA } from '../utils/constants';
 
@@ -31,6 +32,7 @@ export class Game {
   private effects: Effects;
   private deathScreen: DeathScreen;
   private titleScreen: TitleScreen;
+  private audio: AudioManager;
   private input: InputManager;
   private grid: Grid;
   private snake: Snake;
@@ -59,6 +61,7 @@ export class Game {
     this.effects = new Effects();
     this.deathScreen = new DeathScreen();
     this.titleScreen = new TitleScreen();
+    this.audio = new AudioManager();
     this.input = new InputManager();
     this.grid = new Grid();
 
@@ -87,6 +90,7 @@ export class Game {
   }
 
   private startRun(): void {
+    this.audio.init();
     this.snake = this.createSnake();
     this.foods = [];
     this.foods.push(spawnFood(this.snake, this.foods, 0));
@@ -217,6 +221,7 @@ export class Game {
       this.score += 10;
       this.totalFoodEaten++;
       this.ui.triggerScorePulse();
+      this.audio.playEat();
 
       // Remove eaten food and spawn new one
       this.foods = this.foods.filter(f => f !== eatenFood);
@@ -323,6 +328,7 @@ export class Game {
     this.state = GameState.DEATH;
     this.deathLength = this.snake.segments.length;
     this.screenFlashTimer = 0.2;
+    this.audio.playDeath();
     if (this.score > this.highScore) {
       this.highScore = this.score;
     }

@@ -96,11 +96,11 @@
 - [x] **Playwright MCP**: Screenshot — scanlines visible but not distracting, vignette subtle
 
 ### 1.11 — Basic Audio
-- [ ] Install Tone.js: `npm install tone`
-- [ ] Create `src/audio/AudioManager.ts`
-- [ ] Synth SFX: eat (rising blip), death (descending buzz + static)
-- [ ] Audio context init on first user interaction
-- [ ] Mute toggle persisted to storage
+- [x] Install Tone.js: `npm install tone`
+- [x] Create `src/audio/AudioManager.ts`
+- [x] Synth SFX: eat (rising blip), death (descending buzz + static)
+- [x] Audio context init on first user interaction
+- [x] Mute toggle persisted to storage
 
 ### 1.12 — PWA Setup
 - [ ] `public/manifest.json`: name, icons, theme #0a0a0a, display: standalone
