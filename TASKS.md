@@ -193,9 +193,9 @@ Implement one at a time, test each:
 - [x] **Playwright MCP**: Screenshot each transition
 
 ### 2.10 — Extended Audio
-- [ ] Per-food-type eat sounds (blip, sparkle chord, descending tone)
-- [ ] Wave clear fanfare, arena clear chord, power-up chime
-- [ ] Hazard spawn warning pulse, near-miss whoosh
+- [x] Per-food-type eat sounds (blip, sparkle chord, descending tone)
+- [x] Wave clear fanfare, arena clear chord, power-up chime
+- [x] Hazard spawn warning pulse, near-miss whoosh
 
 ### 2.11 — Persistence
 - [ ] Install `idb-keyval`

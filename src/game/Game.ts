@@ -304,6 +304,7 @@ export class Game {
         const selected = this.powerUpScreen.getSelectedPowerUp();
         if (selected) {
           acquirePowerUp(this.heldPowerUps, selected.id);
+          this.audio.playPowerUpChime();
         }
         this.powerUpScreen.reset();
         // Transition to arena transition
@@ -425,6 +426,7 @@ export class Game {
       const isNearMiss = this.checkNearMiss(head);
       if (isNearMiss) {
         this.timeDilationTimer = 2.0;
+        this.audio.playNearMiss();
       }
     }
 
@@ -450,7 +452,13 @@ export class Game {
       this.score += FOOD_SCORES[eatenFood.type];
       this.totalFoodEaten++;
       this.ui.triggerScorePulse();
-      this.audio.playEat();
+      if (eatenFood.type === FoodType.GOLDEN_APPLE) {
+        this.audio.playGoldenEat();
+      } else if (eatenFood.type === FoodType.SHRINK_PELLET) {
+        this.audio.playShrinkEat();
+      } else {
+        this.audio.playEat();
+      }
 
       this.foods = this.foods.filter(f => f !== eatenFood);
 
@@ -511,6 +519,7 @@ export class Game {
 
   private onWaveClear(): void {
     this.screenFlashTimer = 0.15;
+    this.audio.playWaveClear();
 
     // Float up score tally
     const { playArea } = this.renderer.layout;
@@ -526,6 +535,7 @@ export class Game {
       if (offerings.length > 0) {
         this.powerUpScreen.setOfferings(offerings);
         this.state = GameState.POWER_UP_SELECT;
+        this.audio.playArenaClear();
       } else {
         // No power-ups available, skip to arena transition
         this.transitionMessage = `ARENA ${this.arena.currentArena} CLEAR!`;
