@@ -181,16 +181,16 @@ Implement one at a time, test each:
 - [ ] **Playwright MCP**: Screenshot HUD with multiple icons
 
 ### 2.8 — Particle System
-- [ ] Create `src/rendering/ParticleSystem.ts` — object-pooled (200 particles)
-- [ ] Types: burst (eat), scatter (death), sparkle (power-up), trail (venom), shatter (wall bash)
-- [ ] Per particle: position, velocity, lifetime, color, size, alpha decay
-- [ ] **Playwright MCP**: Screenshot each particle type
+- [x] Create `src/rendering/ParticleSystem.ts` — object-pooled (200 particles)
+- [x] Types: burst (eat), scatter (death), sparkle (power-up), trail (venom), shatter (wall bash)
+- [x] Per particle: position, velocity, lifetime, color, size, alpha decay
+- [x] **Playwright MCP**: Screenshot each particle type
 
 ### 2.9 — Transitions
-- [ ] Wave clear: score float-up, flash, 500ms pause
-- [ ] Arena clear: "ARENA CLEAR" text + scales earned, fade to power-up screen
-- [ ] Arena start: fade in, snake at center, countdown "3, 2, 1, GO"
-- [ ] **Playwright MCP**: Screenshot each transition
+- [x] Wave clear: score float-up, flash, 500ms pause
+- [x] Arena clear: "ARENA CLEAR" text + scales earned, fade to power-up screen
+- [x] Arena start: fade in, snake at center, countdown "3, 2, 1, GO"
+- [x] **Playwright MCP**: Screenshot each transition
 
 ### 2.10 — Extended Audio
 - [ ] Per-food-type eat sounds (blip, sparkle chord, descending tone)

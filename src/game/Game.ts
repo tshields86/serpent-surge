@@ -56,6 +56,7 @@ export class Game {
   private screenFlashTimer = 0;
   private transitionTimer = 0;
   private transitionMessage = '';
+  private countdownTimer = 0; // Arena start countdown
 
   // Power-up effect state
   private ghostTimer = 0;           // Ghost Mode: ticks remaining of phasing
@@ -175,6 +176,7 @@ export class Game {
     this.rewindUsed = false;
     this.rewindSnapshots = [];
     this.lastDirectionInput = null;
+    this.countdownTimer = 0;
     this.ui.reset();
     this.deathScreen.reset();
     this.state = GameState.PLAYING;
@@ -246,7 +248,7 @@ export class Game {
     const delta = Math.min(timestamp - this.lastTimestamp, MAX_DELTA);
     this.lastTimestamp = timestamp;
 
-    if (this.state === GameState.PLAYING) {
+    if (this.state === GameState.PLAYING && this.countdownTimer <= 0) {
       // Time Dilation: slow down tick rate during active effect
       let effectiveTickRate = this.currentTickRate;
       if (this.timeDilationTimer > 0) {
@@ -276,6 +278,10 @@ export class Game {
 
     if (this.timeDilationTimer > 0) {
       this.timeDilationTimer = Math.max(0, this.timeDilationTimer - dtSec);
+    }
+
+    if (this.countdownTimer > 0) {
+      this.countdownTimer = Math.max(0, this.countdownTimer - dtSec);
     }
 
     // Handle transition timers
@@ -546,6 +552,7 @@ export class Game {
       this.currentTickRate = this.arena.getWaveConfig().tickRate;
       this.tickAccumulator = 0;
       this.interpolation = 0;
+      this.countdownTimer = 2.0; // 2s countdown before play resumes
     } else {
       // Wave transition — spawn new food and hazards
       this.foods = [];
@@ -610,6 +617,11 @@ export class Game {
       this.drawTransitionOverlay();
     }
 
+    // Countdown overlay
+    if (this.countdownTimer > 0 && this.state === GameState.PLAYING) {
+      this.drawCountdown();
+    }
+
     // Time Dilation tint
     if (this.timeDilationTimer > 0) {
       const ctx = this.renderer.ctx;
@@ -669,6 +681,25 @@ export class Game {
     ctx.shadowColor = COLORS.snakeGlow;
     ctx.shadowBlur = 15;
     ctx.fillText(this.transitionMessage, width / 2, height / 2);
+    ctx.restore();
+  }
+
+  private drawCountdown(): void {
+    const ctx = this.renderer.ctx;
+    const { width, height } = ctx.canvas;
+    const count = Math.ceil(this.countdownTimer / 0.65);
+    const text = count > 0 ? `${count}` : 'GO!';
+    const scale = 1 + (this.countdownTimer % 0.65) * 0.5;
+
+    ctx.save();
+    ctx.font = `${Math.floor(40 * scale)}px "Press Start 2P", monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = COLORS.uiAccent;
+    ctx.shadowColor = COLORS.snakeGlow;
+    ctx.shadowBlur = 20;
+    ctx.globalAlpha = Math.min(1, this.countdownTimer * 3);
+    ctx.fillText(text, width / 2, height / 2);
     ctx.restore();
   }
 
