@@ -7,6 +7,7 @@ import { SnakeRenderer } from '../rendering/SnakeRenderer';
 import { ParticleSystem } from '../rendering/ParticleSystem';
 import { UI } from '../rendering/UI';
 import { DeathScreen } from '../screens/DeathScreen';
+import { TitleScreen } from '../screens/TitleScreen';
 import { checkWallCollision, checkSelfCollision } from './Collision';
 import { BASE_TICK_RATE, COLORS, MAX_DELTA } from '../utils/constants';
 
@@ -21,12 +22,13 @@ export enum GameState {
 }
 
 export class Game {
-  private state: GameState = GameState.PLAYING;
+  private state: GameState = GameState.TITLE;
   private renderer: Renderer;
   private snakeRenderer: SnakeRenderer;
   private particles: ParticleSystem;
   private ui: UI;
   private deathScreen: DeathScreen;
+  private titleScreen: TitleScreen;
   private input: InputManager;
   private grid: Grid;
   private snake: Snake;
@@ -45,6 +47,7 @@ export class Game {
   score = 0;
   totalFoodEaten = 0;
   private deathLength = 0;
+  private highScore = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
@@ -52,6 +55,7 @@ export class Game {
     this.particles = new ParticleSystem();
     this.ui = new UI();
     this.deathScreen = new DeathScreen();
+    this.titleScreen = new TitleScreen();
     this.input = new InputManager();
     this.grid = new Grid();
 
@@ -70,12 +74,37 @@ export class Game {
   }
 
   private onDirection(dir: Direction): void {
+    if (this.state === GameState.TITLE) {
+      this.startRun();
+      return;
+    }
     if (this.state === GameState.PLAYING) {
       this.snake.queueDirection(dir);
     }
   }
 
+  private startRun(): void {
+    this.snake = this.createSnake();
+    this.foods = [];
+    this.foods.push(spawnFood(this.snake, this.foods, 0));
+    this.score = 0;
+    this.totalFoodEaten = 0;
+    this.deathLength = 0;
+    this.currentTick = 0;
+    this.tickAccumulator = 0;
+    this.interpolation = 0;
+    this.currentTickRate = BASE_TICK_RATE;
+    this.screenFlashTimer = 0;
+    this.ui.reset();
+    this.deathScreen.reset();
+    this.state = GameState.PLAYING;
+  }
+
   private onClick(e: MouseEvent): void {
+    if (this.state === GameState.TITLE) {
+      this.startRun();
+      return;
+    }
     if (this.state === GameState.DEATH && this.deathScreen.isReady()) {
       const bounds = this.deathScreen.getButtonBounds(
         this.renderer.canvas.width,
@@ -91,6 +120,10 @@ export class Game {
   }
 
   private onTap(e: TouchEvent): void {
+    if (this.state === GameState.TITLE) {
+      this.startRun();
+      return;
+    }
     if (this.state === GameState.DEATH && this.deathScreen.isReady()) {
       const touch = e.changedTouches[0];
       if (!touch) return;
@@ -144,7 +177,10 @@ export class Game {
       this.screenFlashTimer = Math.max(0, this.screenFlashTimer - dtSec);
     }
 
-    // Update death screen
+    // Update screens
+    if (this.state === GameState.TITLE) {
+      this.titleScreen.update(dtSec);
+    }
     if (this.state === GameState.DEATH) {
       this.deathScreen.update(dtSec);
     }
@@ -200,6 +236,11 @@ export class Game {
   }
 
   private render(): void {
+    if (this.state === GameState.TITLE) {
+      this.titleScreen.draw(this.renderer.ctx, this.highScore);
+      return;
+    }
+
     this.renderer.clear();
     this.renderer.drawGrid();
 
@@ -275,6 +316,9 @@ export class Game {
     this.state = GameState.DEATH;
     this.deathLength = this.snake.segments.length;
     this.screenFlashTimer = 0.2;
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+    }
 
     // Emit death particles from each segment
     const cellSize = this.renderer.layout.cellSize;
@@ -291,19 +335,6 @@ export class Game {
   }
 
   restart(): void {
-    this.snake = this.createSnake();
-    this.foods = [];
-    this.foods.push(spawnFood(this.snake, this.foods, 0));
-    this.score = 0;
-    this.totalFoodEaten = 0;
-    this.deathLength = 0;
-    this.currentTick = 0;
-    this.tickAccumulator = 0;
-    this.interpolation = 0;
-    this.currentTickRate = BASE_TICK_RATE;
-    this.screenFlashTimer = 0;
-    this.ui.reset();
-    this.deathScreen.reset();
-    this.state = GameState.PLAYING;
+    this.startRun();
   }
 }

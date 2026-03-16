@@ -81,12 +81,12 @@
 - [x] **Playwright MCP**: Screenshot death screen — text readable, button clear
 
 ### 1.9 — Title Screen
-- [ ] Create `src/screens/TitleScreen.ts`
-- [ ] "SERPENT SURGE" in pixel font, green with glow
-- [ ] Pulsing "TAP TO START" / "PRESS ENTER"
-- [ ] Show high score below title
-- [ ] Any input → transition to PLAYING
-- [ ] **Playwright MCP**: Screenshot — polished, retro, inviting
+- [x] Create `src/screens/TitleScreen.ts`
+- [x] "SERPENT SURGE" in pixel font, green with glow
+- [x] Pulsing "TAP TO START" / "PRESS ENTER"
+- [x] Show high score below title
+- [x] Any input → transition to PLAYING
+- [x] **Playwright MCP**: Screenshot — polished, retro, inviting
 
 ### 1.10 — CRT Visual Effects
 - [ ] Create `src/rendering/Effects.ts` — post-processing
