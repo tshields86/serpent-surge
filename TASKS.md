@@ -30,12 +30,12 @@
 - [x] **Playwright MCP**: Screenshot at 390x844 (mobile) and 1920x1080 (desktop) — grid visible, square, centered
 
 ### 1.2 — Snake Movement
-- [ ] Create `src/game/Snake.ts` — segments array, direction, nextDirection
-- [ ] Implement tick-based movement: head moves in direction, body segments follow
-- [ ] Create `src/rendering/SnakeRenderer.ts` — green (#00ff41) rounded rects, brighter head (#39ff14)
-- [ ] Add glow effect (shadowBlur, 20% opacity #00ff41)
-- [ ] Implement smooth lerp interpolation between ticks
-- [ ] **Playwright MCP**: Screenshot — snake visible, green, glowing, smooth
+- [x] Create `src/game/Snake.ts` — segments array, direction, nextDirection
+- [x] Implement tick-based movement: head moves in direction, body segments follow
+- [x] Create `src/rendering/SnakeRenderer.ts` — green (#00ff41) rounded rects, brighter head (#39ff14)
+- [x] Add glow effect (shadowBlur, 20% opacity #00ff41)
+- [x] Implement smooth lerp interpolation between ticks
+- [x] **Playwright MCP**: Screenshot — snake visible, green, glowing, smooth
 
 ### 1.3 — Input System
 - [ ] Create `src/game/Input.ts` — unified input handler
