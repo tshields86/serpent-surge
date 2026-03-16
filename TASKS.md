@@ -59,12 +59,12 @@
 - [x] Unit tests for edge cases (boundary, U-turn at short length, exact corner)
 
 ### 1.6 — Food System (Basic)
-- [ ] Create `src/game/Food.ts` — food spawning and management
-- [ ] Spawn one apple at random empty cell
-- [ ] Snake head reaches food → eat: grow +1, new food spawns, +10 score
-- [ ] Render apple as red (#ff073a) circle/cluster
-- [ ] Eat particle burst: colored particles expand outward, fade over ~300ms
-- [ ] **Playwright MCP**: Screenshot with snake + food — food clearly red, distinct from snake
+- [x] Create `src/game/Food.ts` — food spawning and management
+- [x] Spawn one apple at random empty cell
+- [x] Snake head reaches food → eat: grow +1, new food spawns, +10 score
+- [x] Render apple as red (#ff073a) circle/cluster
+- [x] Eat particle burst: colored particles expand outward, fade over ~300ms
+- [x] **Playwright MCP**: Screenshot with snake + food — food clearly red, distinct from snake
 
 ### 1.7 — Score & HUD
 - [ ] Create `src/rendering/UI.ts` — HUD rendering on canvas
