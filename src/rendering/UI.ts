@@ -3,12 +3,19 @@ import { Layout } from './Renderer';
 
 const FONT_FAMILY = '"Press Start 2P", monospace';
 
+export interface HUDData {
+  score: number;
+  snakeLength: number;
+  waveProgress: string;
+  arenaNumber: number;
+}
+
 export class UI {
   private scoreDisplay = 0;
   private scorePulseTimer = 0;
+  private floatingTexts: { text: string; x: number; y: number; life: number; maxLife: number }[] = [];
 
   update(dt: number, targetScore: number): void {
-    // Animate score counting up
     if (this.scoreDisplay < targetScore) {
       this.scoreDisplay = Math.min(
         targetScore,
@@ -16,30 +23,36 @@ export class UI {
       );
     }
 
-    // Pulse timer decay
     if (this.scorePulseTimer > 0) {
       this.scorePulseTimer = Math.max(0, this.scorePulseTimer - dt);
     }
+
+    // Update floating texts
+    for (const ft of this.floatingTexts) {
+      ft.life -= dt;
+      ft.y -= 40 * dt; // float upward
+    }
+    this.floatingTexts = this.floatingTexts.filter(ft => ft.life > 0);
   }
 
   triggerScorePulse(): void {
     this.scorePulseTimer = 0.15;
   }
 
-  drawHUD(
-    ctx: CanvasRenderingContext2D,
-    layout: Layout,
-    score: number,
-    snakeLength: number,
-  ): void {
-    this.drawTopHUD(ctx, layout, score);
-    this.drawBottomHUD(ctx, layout, snakeLength);
+  addFloatingText(text: string, x: number, y: number, duration = 1.0): void {
+    this.floatingTexts.push({ text, x, y, life: duration, maxLife: duration });
+  }
+
+  drawHUD(ctx: CanvasRenderingContext2D, layout: Layout, data: HUDData): void {
+    this.drawTopHUD(ctx, layout, data);
+    this.drawBottomHUD(ctx, layout, data);
+    this.drawFloatingTexts(ctx);
   }
 
   private drawTopHUD(
     ctx: CanvasRenderingContext2D,
     layout: Layout,
-    _score: number,
+    data: HUDData,
   ): void {
     const { hudTop } = layout;
     const padding = 16;
@@ -49,12 +62,12 @@ export class UI {
     ctx.font = `${fontSize}px ${FONT_FAMILY}`;
     ctx.textBaseline = 'middle';
 
-    // Score (left side)
-    const scorePulseScale = 1 + this.scorePulseTimer * 2;
     const centerY = hudTop.y + hudTop.height / 2;
 
+    // Score (left side) with pulse
     ctx.save();
     if (this.scorePulseTimer > 0) {
+      const scorePulseScale = 1 + this.scorePulseTimer * 2;
       const scoreText = `SCORE ${this.scoreDisplay.toLocaleString()}`;
       const metrics = ctx.measureText(scoreText);
       const textCenterX = padding + metrics.width / 2;
@@ -67,13 +80,22 @@ export class UI {
     ctx.fillText(`SCORE ${this.scoreDisplay.toLocaleString()}`, padding, centerY);
     ctx.restore();
 
+    // Arena + Wave info (right side)
+    const smallSize = Math.min(10, Math.floor(hudTop.width / 45));
+    ctx.font = `${smallSize}px ${FONT_FAMILY}`;
+    ctx.fillStyle = COLORS.uiText;
+    ctx.textAlign = 'right';
+    ctx.fillText(`ARENA ${data.arenaNumber}`, hudTop.width - padding, centerY - smallSize);
+    ctx.fillStyle = COLORS.uiAccent;
+    ctx.fillText(data.waveProgress, hudTop.width - padding, centerY + smallSize);
+
     ctx.restore();
   }
 
   private drawBottomHUD(
     ctx: CanvasRenderingContext2D,
     layout: Layout,
-    snakeLength: number,
+    data: HUDData,
   ): void {
     const { hudBottom } = layout;
     const padding = 16;
@@ -86,15 +108,32 @@ export class UI {
 
     const centerY = hudBottom.y + hudBottom.height / 2;
 
-    // Length (left side)
     ctx.textAlign = 'left';
-    ctx.fillText(`LENGTH ${snakeLength}`, padding, centerY);
+    ctx.fillText(`LENGTH ${data.snakeLength}`, padding, centerY);
 
+    ctx.restore();
+  }
+
+  private drawFloatingTexts(ctx: CanvasRenderingContext2D): void {
+    const fontSize = 12;
+    ctx.save();
+    ctx.font = `${fontSize}px ${FONT_FAMILY}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (const ft of this.floatingTexts) {
+      ctx.globalAlpha = ft.life / ft.maxLife;
+      ctx.fillStyle = COLORS.score;
+      ctx.fillText(ft.text, ft.x, ft.y);
+    }
+
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 
   reset(): void {
     this.scoreDisplay = 0;
     this.scorePulseTimer = 0;
+    this.floatingTexts = [];
   }
 }

@@ -1,6 +1,7 @@
 import { Snake, Direction } from './Snake';
 import { Grid } from './Grid';
 import { InputManager } from './Input';
+import { Arena } from './Arena';
 import { FoodItem, spawnFood, checkFoodCollision } from './Food';
 import { Renderer } from '../rendering/Renderer';
 import { SnakeRenderer } from '../rendering/SnakeRenderer';
@@ -36,6 +37,7 @@ export class Game {
   private input: InputManager;
   private grid: Grid;
   private snake: Snake;
+  private arena: Arena;
   private foods: FoodItem[] = [];
   private currentTick = 0;
 
@@ -44,8 +46,10 @@ export class Game {
   private interpolation = 0;
   private currentTickRate = BASE_TICK_RATE;
 
-  // Death animation
+  // Timers
   private screenFlashTimer = 0;
+  private transitionTimer = 0;
+  private transitionMessage = '';
 
   // Run stats
   score = 0;
@@ -64,12 +68,12 @@ export class Game {
     this.audio = new AudioManager();
     this.input = new InputManager();
     this.grid = new Grid();
+    this.arena = new Arena();
 
     this.snake = this.createSnake();
     this.foods.push(spawnFood(this.snake, this.foods, this.currentTick));
     this.input.onDirectionInput((dir) => this.onDirection(dir));
 
-    // Click/tap handler for death screen restart
     canvas.addEventListener('click', (e) => this.onClick(e));
     canvas.addEventListener('touchend', (e) => this.onTap(e));
   }
@@ -92,6 +96,7 @@ export class Game {
   private startRun(): void {
     this.audio.init();
     this.snake = this.createSnake();
+    this.arena.reset();
     this.foods = [];
     this.foods.push(spawnFood(this.snake, this.foods, 0));
     this.score = 0;
@@ -100,8 +105,9 @@ export class Game {
     this.currentTick = 0;
     this.tickAccumulator = 0;
     this.interpolation = 0;
-    this.currentTickRate = BASE_TICK_RATE;
+    this.currentTickRate = this.arena.getWaveConfig().tickRate;
     this.screenFlashTimer = 0;
+    this.transitionTimer = 0;
     this.ui.reset();
     this.deathScreen.reset();
     this.state = GameState.PLAYING;
@@ -174,17 +180,22 @@ export class Game {
       }
     }
 
-    // Update particles and UI every frame
     const dtSec = delta / 1000;
     this.particles.update(dtSec);
     this.ui.update(dtSec, this.score);
 
-    // Update screen flash
     if (this.screenFlashTimer > 0) {
       this.screenFlashTimer = Math.max(0, this.screenFlashTimer - dtSec);
     }
 
-    // Update screens
+    // Handle transition timers
+    if (this.state === GameState.WAVE_TRANSITION || this.state === GameState.ARENA_TRANSITION) {
+      this.transitionTimer -= dtSec;
+      if (this.transitionTimer <= 0) {
+        this.finishTransition();
+      }
+    }
+
     if (this.state === GameState.TITLE) {
       this.titleScreen.update(dtSec);
     }
@@ -202,19 +213,16 @@ export class Game {
 
     const head = this.snake.head;
 
-    // Check wall collision
     if (checkWallCollision(head, this.grid.size)) {
       this.die();
       return;
     }
 
-    // Check self collision
     if (checkSelfCollision(this.snake.segments)) {
       this.die();
       return;
     }
 
-    // Check food collision
     const eatenFood = checkFoodCollision(head, this.foods);
     if (eatenFood) {
       this.snake.grow(1);
@@ -223,9 +231,7 @@ export class Game {
       this.ui.triggerScorePulse();
       this.audio.playEat();
 
-      // Remove eaten food and spawn new one
       this.foods = this.foods.filter(f => f !== eatenFood);
-      this.foods.push(spawnFood(this.snake, this.foods, this.currentTick));
 
       // Emit eat particles
       const pixel = this.renderer.gridToPixel(
@@ -240,7 +246,59 @@ export class Game {
         color: COLORS.apple,
         size: 3,
       });
+
+      // Check wave progression
+      const waveCleared = this.arena.eatFood();
+      if (waveCleared) {
+        this.onWaveClear();
+      } else {
+        // Spawn next food
+        this.foods.push(spawnFood(this.snake, this.foods, this.currentTick));
+      }
     }
+  }
+
+  private onWaveClear(): void {
+    this.screenFlashTimer = 0.15;
+
+    // Float up score tally
+    const { playArea } = this.renderer.layout;
+    const centerX = playArea.x + playArea.size / 2;
+    const centerY = playArea.y + playArea.size / 2;
+    this.ui.addFloatingText(`WAVE ${this.arena.currentWave} CLEAR!`, centerX, centerY, 1.5);
+
+    const isArenaCleared = this.arena.advanceWave();
+
+    if (isArenaCleared) {
+      // Arena cleared — show transition then advance
+      this.transitionMessage = `ARENA ${this.arena.currentArena} CLEAR!`;
+      this.transitionTimer = 1.5;
+      this.state = GameState.ARENA_TRANSITION;
+    } else {
+      // Wave cleared — brief pause then continue
+      this.transitionMessage = '';
+      this.transitionTimer = 0.5;
+      this.state = GameState.WAVE_TRANSITION;
+    }
+  }
+
+  private finishTransition(): void {
+    if (this.state === GameState.ARENA_TRANSITION) {
+      // Advance arena, reset snake and grid
+      this.arena.advanceArena();
+      this.snake = this.createSnake();
+      this.foods = [];
+      this.foods.push(spawnFood(this.snake, this.foods, this.currentTick));
+      this.currentTickRate = this.arena.getWaveConfig().tickRate;
+      this.tickAccumulator = 0;
+      this.interpolation = 0;
+    } else {
+      // Wave transition — just spawn new food and continue
+      this.foods = [];
+      this.foods.push(spawnFood(this.snake, this.foods, this.currentTick));
+      this.currentTickRate = this.arena.getWaveConfig().tickRate;
+    }
+    this.state = GameState.PLAYING;
   }
 
   private render(): void {
@@ -253,10 +311,8 @@ export class Game {
     this.renderer.clear();
     this.renderer.drawGrid();
 
-    // Draw food
     this.drawFood();
 
-    // Draw snake (still visible during death)
     this.snakeRenderer.draw(
       this.renderer.ctx,
       this.snake,
@@ -264,31 +320,33 @@ export class Game {
       this.interpolation,
     );
 
-    // Draw particles on top
     this.particles.render(this.renderer.ctx);
 
-    // Draw HUD
-    this.ui.drawHUD(
-      this.renderer.ctx,
-      this.renderer.layout,
-      this.score,
-      this.state === GameState.DEATH ? this.deathLength : this.snake.segments.length,
-    );
+    this.ui.drawHUD(this.renderer.ctx, this.renderer.layout, {
+      score: this.score,
+      snakeLength: this.state === GameState.DEATH ? this.deathLength : this.snake.segments.length,
+      waveProgress: this.arena.waveProgress,
+      arenaNumber: this.arena.currentArena,
+    });
 
-    // Screen flash effect
+    // Transition overlay
+    if ((this.state === GameState.WAVE_TRANSITION || this.state === GameState.ARENA_TRANSITION)
+        && this.transitionMessage) {
+      this.drawTransitionOverlay();
+    }
+
+    // Screen flash
     if (this.screenFlashTimer > 0) {
       const ctx = this.renderer.ctx;
       ctx.save();
-      ctx.globalAlpha = this.screenFlashTimer * 5; // fade from 1 to 0 over 0.2s
+      ctx.globalAlpha = this.screenFlashTimer * 5;
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.restore();
     }
 
-    // CRT post-processing
     this.effects.drawCRT(this.renderer.ctx);
 
-    // Death screen overlay (on top of CRT)
     if (this.state === GameState.DEATH) {
       this.deathScreen.draw(
         this.renderer.ctx,
@@ -298,6 +356,26 @@ export class Game {
         this.totalFoodEaten,
       );
     }
+  }
+
+  private drawTransitionOverlay(): void {
+    const ctx = this.renderer.ctx;
+    const { width, height } = ctx.canvas;
+
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalAlpha = 1;
+
+    ctx.font = `${Math.min(24, Math.floor(width / 18))}px "Press Start 2P", monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = COLORS.uiAccent;
+    ctx.shadowColor = COLORS.snakeGlow;
+    ctx.shadowBlur = 15;
+    ctx.fillText(this.transitionMessage, width / 2, height / 2);
+    ctx.restore();
   }
 
   private drawFood(): void {
@@ -333,7 +411,6 @@ export class Game {
       this.highScore = this.score;
     }
 
-    // Emit death particles from each segment
     const cellSize = this.renderer.layout.cellSize;
     for (const seg of this.snake.segments) {
       const pixel = this.renderer.gridToPixel(seg.x, seg.y);

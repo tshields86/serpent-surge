@@ -121,17 +121,17 @@
 ## Phase 2 — Roguelike Core
 
 ### 2.1 — Wave System
-- [ ] Create `src/game/Arena.ts` — arena/wave progression
-- [ ] Wave food quotas: W1=5, W2=8, W3=10
-- [ ] HUD shows wave progress ("WAVE 2/3 — 4/8")
-- [ ] Wave clear: 500ms pause, score tally floats up
-- [ ] **Playwright MCP**: Screenshot wave HUD
+- [x] Create `src/game/Arena.ts` — arena/wave progression
+- [x] Wave food quotas: W1=5, W2=7, W3=9 (base + arena scaling)
+- [x] HUD shows wave progress ("WAVE 1/3 — 0/5")
+- [x] Wave clear: 500ms pause, score tally floats up
+- [x] **Playwright MCP**: Screenshot wave HUD
 
 ### 2.2 — Arena Progression
-- [ ] 3 waves = 1 arena. Arena clear resets grid, snake to length 3 at center
-- [ ] Difficulty scaling: +2 food quota, +0.5 tick/sec per arena
-- [ ] Power-ups retained across arenas
-- [ ] Arena counter in HUD
+- [x] 3 waves = 1 arena. Arena clear resets grid, snake to length 3 at center
+- [x] Difficulty scaling: +2 food quota, +0.5 tick/sec per arena
+- [x] Power-ups retained across arenas
+- [x] Arena counter in HUD
 
 ### 2.3 — Hazard System
 - [ ] Create `src/game/Hazard.ts` + `src/data/hazards.ts`
