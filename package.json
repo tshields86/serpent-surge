@@ -16,6 +16,7 @@
     "vitest": "^4.1.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.2",
     "idb-keyval": "^6.2.2",
     "tone": "^15.1.22"
   }
