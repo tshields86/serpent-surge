@@ -337,6 +337,7 @@ export class Game {
     const dtSec = delta / 1000;
     this.particles.update(dtSec);
     this.ui.update(dtSec, this.score);
+    this.effects.updateShake(dtSec);
 
     if (this.screenFlashTimer > 0) {
       this.screenFlashTimer = Math.max(0, this.screenFlashTimer - dtSec);
@@ -658,6 +659,7 @@ export class Game {
           this.score += destroyed * 10;
         }
         if (destroyed >= 3) this.achievements.tryUnlock('BOMB_CLEAR');
+        if (destroyed > 0) this.effects.triggerShake(0.15, 4);
         this.snake.grow(1);
       } else {
         // Iron Gut: +2 per stack instead of +1
@@ -942,6 +944,12 @@ export class Game {
     }
 
     this.renderer.clear();
+
+    // Apply screen shake
+    const ctx = this.renderer.ctx;
+    ctx.save();
+    this.effects.applyShake(ctx);
+
     this.renderer.drawGrid();
 
     this.drawHazards();
@@ -1019,6 +1027,9 @@ export class Game {
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.restore();
     }
+
+    // Restore shake transform before overlays
+    ctx.restore();
 
     // Synergy discovery toast
     if (this.synergyToast) {
@@ -1422,6 +1433,7 @@ export class Game {
     this.screenFlashTimer = 0.2;
     this.audio.playDeath();
     this.music.transition('death');
+    this.effects.triggerShake(0.3, 8);
     if (this.score > this.highScore) {
       this.highScore = this.score;
     }
