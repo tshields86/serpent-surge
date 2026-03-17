@@ -342,7 +342,7 @@ Implement one at a time, test each:
 - [ ] Test on real devices
 
 ### 4.6 — App Store Prep
-- [ ] Icons, screenshots, description, privacy policy, age rating
+- [x] Icons, screenshots, description, privacy policy, age rating
 
 ### 4.7 — Analytics
 - [ ] Minimal tracking via Supabase: runs, arenas reached, popular power-ups, daily challenge participation
