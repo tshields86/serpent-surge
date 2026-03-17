@@ -297,9 +297,9 @@ Implement one at a time, test each:
 - [x] Full game loop pause
 
 ### 3.13 — Responsive Polish
-- [ ] Test at: 320x568 (SE), 390x844 (14), 768x1024 (iPad), 1920x1080 (desktop)
-- [ ] Touch targets ≥ 44px, fonts scale, cards reflow
-- [ ] **Playwright MCP**: Screenshot all 4 viewports
+- [x] Test at: 320x568 (SE), 390x844 (14), 768x1024 (iPad), 1920x1080 (desktop)
+- [x] Touch targets ≥ 44px, fonts scale, cards reflow
+- [x] **Playwright MCP**: Screenshot all 4 viewports
 
 ### 3.14 — Phase 3 Playtest
 - [ ] 20+ runs exploring builds
