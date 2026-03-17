@@ -302,14 +302,14 @@ Implement one at a time, test each:
 - [x] **Playwright MCP**: Screenshot all 4 viewports
 
 ### 3.14 — Phase 3 Playtest
-- [ ] 20+ runs exploring builds
-- [ ] Verify synergy discovery feels rewarding
-- [ ] Verify meta progression pacing (unlocks feel earned)
-- [ ] Daily challenge determinism verified
-- [ ] 60fps with all effects on mobile
-- [ ] Bundle < 500KB
-- [ ] **Playwright MCP**: Complete visual regression
-- [ ] Git tag: `v0.3.0-full-game`
+- [x] 20+ runs exploring builds
+- [x] Verify synergy discovery feels rewarding
+- [x] Verify meta progression pacing (unlocks feel earned)
+- [x] Daily challenge determinism verified
+- [x] 60fps with all effects on mobile
+- [x] Bundle < 500KB
+- [x] **Playwright MCP**: Complete visual regression
+- [x] Git tag: `v0.3.0-full-game`
 
 ---
 
