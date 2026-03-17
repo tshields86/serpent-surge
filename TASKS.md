@@ -250,11 +250,11 @@ Implement one at a time, test each:
 - [x] **Playwright MCP**: Screenshot collection screen
 
 ### 3.6 — Snake Skins
-- [ ] 6-8 skins: Default, Crimson, Cyan, Solar, Phantom, Toxic, Ember, Void
-- [ ] Cost 50-500 scales, cosmetic only
-- [ ] Skin changes: body color, head color, glow, particle colors
-- [ ] Selection in Collection screen, persisted
-- [ ] **Playwright MCP**: Screenshot 3-4 skins in gameplay
+- [x] 6-8 skins: Default, Crimson, Cyan, Solar, Phantom, Toxic, Ember, Void
+- [x] Cost 50-500 scales, cosmetic only
+- [x] Skin changes: body color, head color, glow, particle colors
+- [x] Selection in Collection screen, persisted
+- [x] **Playwright MCP**: Screenshot 3-4 skins in gameplay
 
 ### 3.7 — Achievements
 - [ ] Create `src/meta/Achievements.ts` + `src/data/achievements.ts`
