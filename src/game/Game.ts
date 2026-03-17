@@ -20,6 +20,7 @@ import { BASE_TICK_RATE, COLORS, GRID_SIZE, MAX_DELTA } from '../utils/constants
 import { loadData, saveData, PersistedData } from '../utils/storage';
 import { calculateScales } from '../meta/Progression';
 import { SKIN_DEFS } from '../data/skins';
+import { AchievementTracker } from '../meta/Achievements';
 import { SkinColors } from '../rendering/SnakeRenderer';
 
 export enum GameState {
@@ -78,6 +79,8 @@ export class Game {
   private synergyToast: { text: string; timer: number } | null = null;
   private warpSpeedTimer = 0; // Warp Speed synergy: invincibility after wall dash
   private speedBoostTimer = 0; // Speed Fruit: 1.5x speed for 3s
+  private achievements = new AchievementTracker();
+  private achievementToast: { icon: string; name: string; timer: number } | null = null;
 
   // Run stats
   score = 0;
@@ -282,6 +285,10 @@ export class Game {
       if (data.settings.muted && !this.audio.isMuted) {
         this.audio.toggleMute();
       }
+      // Load achievements
+      if (data.achievementIds) {
+        this.achievements.loadState({ unlockedIds: data.achievementIds });
+      }
       // Load selected skin
       const skinDef = SKIN_DEFS.find(s => s.id === data.selectedSkin);
       if (skinDef) {
@@ -356,6 +363,24 @@ export class Game {
       this.countdownTimer = Math.max(0, this.countdownTimer - dtSec);
     }
 
+    // Achievement toast timer
+    if (this.achievementToast) {
+      this.achievementToast.timer -= dtSec;
+      if (this.achievementToast.timer <= 0) {
+        this.achievementToast = null;
+        // Check for next queued toast
+        const next = this.achievements.popToast();
+        if (next) {
+          this.achievementToast = { icon: next.icon, name: next.name, timer: 3.0 };
+        }
+      }
+    } else if (this.achievements.hasToasts()) {
+      const next = this.achievements.popToast();
+      if (next) {
+        this.achievementToast = { icon: next.icon, name: next.name, timer: 3.0 };
+      }
+    }
+
     // Synergy toast timer
     if (this.synergyToast) {
       this.synergyToast.timer -= dtSec;
@@ -393,6 +418,8 @@ export class Game {
           if (newSynergies.length > 0) {
             const syn = newSynergies[0]!;
             this.synergyToast = { text: `SYNERGY: ${syn.name} — ${syn.description}`, timer: 3.0 };
+            this.achievements.tryUnlock('SYNERGY_FOUND');
+            if (afterSynergies.length >= 4) this.achievements.tryUnlock('ALL_SYNERGIES');
           }
         }
         this.powerUpScreen.reset();
@@ -480,6 +507,7 @@ export class Game {
       if (hasPowerUp(this.heldPowerUps, PowerUpId.OUROBOROS) && !this.ouroborosUsed) {
         // Eat own tail: remove segments from collision point onward
         this.ouroborosUsed = true;
+        this.achievements.tryUnlock('OUROBOROS_HEAL');
         const head = this.snake.head;
         const hitIdx = this.snake.segments.findIndex(
           (s, i) => i > 0 && s.x === head.x && s.y === head.y,
@@ -624,6 +652,7 @@ export class Game {
         if (destroyed > 0) {
           this.score += destroyed * 10;
         }
+        if (destroyed >= 3) this.achievements.tryUnlock('BOMB_CLEAR');
         this.snake.grow(1);
       } else {
         // Iron Gut: +2 per stack instead of +1
@@ -642,6 +671,16 @@ export class Game {
       this.score += FOOD_SCORES[eatenFood.type];
       this.totalFoodEaten++;
       this.ui.triggerScorePulse();
+
+      // Achievement triggers on eat
+      this.achievements.tryUnlock('FIRST_BITE');
+      if (eatenFood.type === FoodType.GOLDEN_APPLE) this.achievements.tryUnlock('GOLDEN_TONGUE');
+      if (this.snake.segments.length >= 20) this.achievements.tryUnlock('LENGTH_20');
+      if (this.snake.segments.length >= 50) this.achievements.tryUnlock('LENGTH_50');
+      if (this.score >= 500) this.achievements.tryUnlock('SCORE_500');
+      if (this.score >= 1000) this.achievements.tryUnlock('SCORE_1000');
+      if (this.heldPowerUps.length >= 5) this.achievements.tryUnlock('POWER_5');
+      if (this.speedBoostTimer > 0) this.achievements.tryUnlock('SPEED_RUN');
       if (eatenFood.type === FoodType.GOLDEN_APPLE) {
         this.audio.playGoldenEat();
       } else if (eatenFood.type === FoodType.SHRINK_PELLET) {
@@ -824,6 +863,10 @@ export class Game {
     const isArenaCleared = this.arena.advanceWave();
 
     if (isArenaCleared) {
+      // Arena achievements
+      this.achievements.tryUnlock('ARENA_1');
+      if (this.arena.currentArena >= 3) this.achievements.tryUnlock('ARENA_3');
+      if (this.arena.currentArena >= 5) this.achievements.tryUnlock('ARENA_5');
       // Arena cleared — show power-up selection
       const offerings = rollPowerUpOfferings(this.heldPowerUps);
       if (offerings.length > 0) {
@@ -975,6 +1018,11 @@ export class Game {
     // Synergy discovery toast
     if (this.synergyToast) {
       this.drawSynergyToast();
+    }
+
+    // Achievement toast
+    if (this.achievementToast) {
+      this.drawAchievementToast();
     }
 
     this.effects.drawCRT(this.renderer.ctx);
@@ -1164,6 +1212,41 @@ export class Game {
     }
   }
 
+  private drawAchievementToast(): void {
+    if (!this.achievementToast) return;
+    const ctx = this.renderer.ctx;
+    const { width } = ctx.canvas;
+    // Slide in from top
+    const slideProgress = Math.min(1, (3.0 - this.achievementToast.timer) * 4);
+    const slideOut = this.achievementToast.timer < 0.3 ? this.achievementToast.timer / 0.3 : 1;
+    const yOffset = -40 + slideProgress * 40;
+    const alpha = slideOut;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    const barHeight = 32;
+    const barY = yOffset;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(width * 0.15, barY, width * 0.7, barHeight);
+    ctx.strokeStyle = COLORS.score;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(width * 0.15, barY, width * 0.7, barHeight);
+
+    const fontSize = Math.min(10, Math.floor(width / 45));
+    ctx.font = `${fontSize}px "Press Start 2P", monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = COLORS.score;
+    ctx.fillText(
+      `${this.achievementToast.icon} ${this.achievementToast.name}`,
+      width / 2,
+      barY + barHeight / 2,
+    );
+
+    ctx.restore();
+  }
+
   private drawSynergyToast(): void {
     if (!this.synergyToast) return;
     const ctx = this.renderer.ctx;
@@ -1305,6 +1388,7 @@ export class Game {
         !this.rewindUsed &&
         this.rewindSnapshots.length > 0) {
       this.rewindUsed = true;
+      this.achievements.tryUnlock('REWIND_SAVE');
       const snapshot = this.rewindSnapshots[0]!; // earliest snapshot
       this.snake.segments = snapshot.segments.map(s => ({ x: s.x, y: s.y }));
       this.snake.direction = snapshot.direction;
@@ -1342,6 +1426,7 @@ export class Game {
       this.persistedData.totalRuns++;
       const scalesEarned = calculateScales(this.score, this.arena.currentArena - 1, this.totalFoodEaten);
       this.persistedData.totalScales += scalesEarned;
+      this.persistedData.achievementIds = this.achievements.getState().unlockedIds;
       saveData(this.persistedData);
     }
 

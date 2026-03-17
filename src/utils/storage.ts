@@ -5,6 +5,7 @@ export interface PersistedData {
   totalScales: number;
   totalRuns: number;
   unlockedIds: string[];
+  achievementIds: string[];
   selectedSkin: string;
   settings: {
     muted: boolean;
@@ -18,6 +19,7 @@ const DEFAULT_DATA: PersistedData = {
   totalScales: 0,
   totalRuns: 0,
   unlockedIds: [],
+  achievementIds: [],
   selectedSkin: 'default',
   settings: {
     muted: false,
