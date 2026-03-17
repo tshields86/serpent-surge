@@ -18,6 +18,7 @@ import { ActiveSynergy, getActiveSynergies, detectNewSynergies } from './Synergy
 import { checkWallCollision, checkSelfCollision } from './Collision';
 import { BASE_TICK_RATE, COLORS, GRID_SIZE, MAX_DELTA } from '../utils/constants';
 import { loadData, saveData, PersistedData } from '../utils/storage';
+import { calculateScales } from '../meta/Progression';
 
 export enum GameState {
   TITLE = 'TITLE',
@@ -1321,7 +1322,8 @@ export class Game {
     if (this.persistedData) {
       this.persistedData.highScore = this.highScore;
       this.persistedData.totalRuns++;
-      this.persistedData.totalScales += Math.floor(this.score / 10);
+      const scalesEarned = calculateScales(this.score, this.arena.currentArena - 1, this.totalFoodEaten);
+      this.persistedData.totalScales += scalesEarned;
       saveData(this.persistedData);
     }
 

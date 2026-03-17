@@ -4,6 +4,8 @@ export interface PersistedData {
   highScore: number;
   totalScales: number;
   totalRuns: number;
+  unlockedIds: string[];
+  selectedSkin: string;
   settings: {
     muted: boolean;
   };
@@ -15,6 +17,8 @@ const DEFAULT_DATA: PersistedData = {
   highScore: 0,
   totalScales: 0,
   totalRuns: 0,
+  unlockedIds: [],
+  selectedSkin: 'default',
   settings: {
     muted: false,
   },
