@@ -10,6 +10,8 @@ export interface PersistedData {
   dailyBest: { seed: number; score: number } | null;
   settings: {
     muted: boolean;
+    colorblindMode: boolean;
+    reducedMotion: boolean;
   };
 }
 
@@ -25,6 +27,8 @@ const DEFAULT_DATA: PersistedData = {
   dailyBest: null,
   settings: {
     muted: false,
+    colorblindMode: false,
+    reducedMotion: false,
   },
 };
 
