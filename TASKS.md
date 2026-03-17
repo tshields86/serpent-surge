@@ -233,9 +233,9 @@ Implement one at a time, test each:
 - [x] **Playwright MCP**: Screenshot synergy notification
 
 ### 3.3 — Remaining Hazards
-- [ ] **Warp Hole** (pair): teleport snake to partner hole — purple swirl visual
-- [ ] **Magnet**: pulls nearest food 1 cell/tick toward it — field lines visual
-- [ ] Hazard variety scales with arena number
+- [x] **Warp Hole** (pair): teleport snake to partner hole — purple swirl visual
+- [x] **Magnet**: pulls nearest food 1 cell/tick toward it — field lines visual
+- [x] Hazard variety scales with arena number
 
 ### 3.4 — Remaining Food Types
 - [ ] **Speed Fruit**: 1.5x speed 3s, green (#39ff14), trailing particles
