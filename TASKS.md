@@ -332,10 +332,10 @@ Implement one at a time, test each:
 - [x] Separate leaderboard
 
 ### 4.4 — Boss Arenas
-- [ ] Every 5th arena: boss enemy snake on a pattern
-- [ ] Boss leaves poison trail, speeds up
-- [ ] Defeat → large scale bonus + guaranteed Rare+ power-up
-- [ ] **Playwright MCP**: Screenshot boss arena
+- [x] Every 5th arena: boss enemy snake on a pattern
+- [x] Boss leaves poison trail, speeds up
+- [x] Defeat → large scale bonus + guaranteed Rare+ power-up
+- [x] **Playwright MCP**: Screenshot boss arena
 
 ### 4.5 — Capacitor (iOS/Android)
 - [ ] Capacitor setup, safe area insets, haptics plugin
