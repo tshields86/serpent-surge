@@ -69,4 +69,48 @@ describe('PowerUp module', () => {
     const ids = offerings.map(o => o.id);
     expect(ids).not.toContain(PowerUpId.WALL_WRAP);
   });
+
+  it('Lucky guarantees at least 1 Uncommon+ offering', () => {
+    const held: PowerUpInstance[] = [];
+    acquirePowerUp(held, PowerUpId.LUCKY);
+
+    // Run multiple times to verify consistency
+    for (let i = 0; i < 20; i++) {
+      const offerings = rollPowerUpOfferings(held);
+      const hasUncommonPlus = offerings.some(
+        o => o.rarity !== 'COMMON',
+      );
+      expect(hasUncommonPlus).toBe(true);
+    }
+  });
+
+  it('Ouroboros has maxStack 1', () => {
+    const held: PowerUpInstance[] = [];
+    acquirePowerUp(held, PowerUpId.OUROBOROS);
+    expect(canAcquire(held, PowerUpId.OUROBOROS)).toBe(false);
+  });
+
+  it('Split Strike has maxStack 1', () => {
+    const held: PowerUpInstance[] = [];
+    acquirePowerUp(held, PowerUpId.SPLIT_STRIKE);
+    expect(canAcquire(held, PowerUpId.SPLIT_STRIKE)).toBe(false);
+  });
+
+  it('Afterimage can stack to 2', () => {
+    const held: PowerUpInstance[] = [];
+    acquirePowerUp(held, PowerUpId.AFTERIMAGE);
+    expect(canAcquire(held, PowerUpId.AFTERIMAGE)).toBe(true);
+    acquirePowerUp(held, PowerUpId.AFTERIMAGE);
+    expect(canAcquire(held, PowerUpId.AFTERIMAGE)).toBe(false);
+    expect(getStackCount(held, PowerUpId.AFTERIMAGE)).toBe(2);
+  });
+
+  it('Shockwave can stack to 2', () => {
+    const held: PowerUpInstance[] = [];
+    acquirePowerUp(held, PowerUpId.SHOCKWAVE);
+    expect(canAcquire(held, PowerUpId.SHOCKWAVE)).toBe(true);
+    acquirePowerUp(held, PowerUpId.SHOCKWAVE);
+    expect(canAcquire(held, PowerUpId.SHOCKWAVE)).toBe(false);
+    expect(getStackCount(held, PowerUpId.SHOCKWAVE)).toBe(2);
+  });
 });

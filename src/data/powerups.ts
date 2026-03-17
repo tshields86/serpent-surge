@@ -16,6 +16,11 @@ export enum PowerUpId {
   TIME_DILATION = 'TIME_DILATION',
   REWIND = 'REWIND',
   SINGULARITY = 'SINGULARITY',
+  SPLIT_STRIKE = 'SPLIT_STRIKE',
+  OUROBOROS = 'OUROBOROS',
+  LUCKY = 'LUCKY',
+  AFTERIMAGE = 'AFTERIMAGE',
+  SHOCKWAVE = 'SHOCKWAVE',
 }
 
 export interface PowerUpDefinition {
@@ -120,6 +125,46 @@ export const POWERUP_DEFS: PowerUpDefinition[] = [
     description: 'Food within 3 cells drifts toward you',
     rarity: PowerUpRarity.RARE,
     icon: '🌀',
+    maxStack: 2,
+  },
+  {
+    id: PowerUpId.SPLIT_STRIKE,
+    name: 'Split Strike',
+    description: 'Split into 2 snakes for 5s on eat',
+    rarity: PowerUpRarity.RARE,
+    icon: '✂️',
+    maxStack: 1,
+  },
+  {
+    id: PowerUpId.OUROBOROS,
+    name: 'Ouroboros',
+    description: 'Eating own tail heals instead of kills, 1x/arena',
+    rarity: PowerUpRarity.LEGENDARY,
+    icon: '🐍',
+    maxStack: 1,
+  },
+  {
+    id: PowerUpId.LUCKY,
+    name: 'Lucky',
+    description: 'Power-up choices always include 1+ Uncommon',
+    rarity: PowerUpRarity.UNCOMMON,
+    icon: '🍀',
+    maxStack: 1,
+  },
+  {
+    id: PowerUpId.AFTERIMAGE,
+    name: 'Afterimage',
+    description: 'Leave a fading decoy trail behind you',
+    rarity: PowerUpRarity.UNCOMMON,
+    icon: '👤',
+    maxStack: 2,
+  },
+  {
+    id: PowerUpId.SHOCKWAVE,
+    name: 'Shockwave',
+    description: 'Eating food pushes hazards 2 cells away',
+    rarity: PowerUpRarity.UNCOMMON,
+    icon: '💫',
     maxStack: 2,
   },
 ];

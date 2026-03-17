@@ -1,4 +1,4 @@
-import { PowerUpId, PowerUpDefinition, POWERUP_DEFS, RARITY_WEIGHTS } from '../data/powerups';
+import { PowerUpId, PowerUpRarity, PowerUpDefinition, POWERUP_DEFS, RARITY_WEIGHTS } from '../data/powerups';
 
 export { PowerUpId, PowerUpRarity } from '../data/powerups';
 
@@ -45,16 +45,30 @@ export function getStackCount(held: readonly PowerUpInstance[], id: PowerUpId): 
   return p ? p.stackCount : 0;
 }
 
-/** Roll 3 unique power-up offerings, weighted by rarity, filtering out maxed ones */
+/** Roll 3 unique power-up offerings, weighted by rarity, filtering out maxed ones.
+ *  If the player has Lucky, guarantee at least 1 Uncommon+ offering. */
 export function rollPowerUpOfferings(held: readonly PowerUpInstance[]): PowerUpDefinition[] {
   const available = POWERUP_DEFS.filter(def => canAcquire(held, def.id));
   if (available.length === 0) return [];
 
+  const hasLucky = hasPowerUp(held, PowerUpId.LUCKY);
   const offerings: PowerUpDefinition[] = [];
   const used = new Set<PowerUpId>();
 
+  // If Lucky is held, first slot is guaranteed Uncommon+
+  if (hasLucky) {
+    const uncommonPlus = available.filter(
+      d => !used.has(d.id) && d.rarity !== PowerUpRarity.COMMON,
+    );
+    if (uncommonPlus.length > 0) {
+      const picked = weightedPick(uncommonPlus);
+      offerings.push(picked);
+      used.add(picked.id);
+    }
+  }
+
   const count = Math.min(3, available.length);
-  for (let i = 0; i < count; i++) {
+  while (offerings.length < count) {
     const candidates = available.filter(d => !used.has(d.id));
     if (candidates.length === 0) break;
 

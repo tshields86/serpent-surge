@@ -66,6 +66,10 @@ export class Game {
   private rewindUsed = false;       // Rewind: used this arena?
   private rewindSnapshots: { segments: { x: number; y: number }[]; direction: Direction }[] = [];
   private lastDirectionInput: { dir: Direction; tick: number } | null = null; // Dash detection
+  private ouroborosUsed = false;    // Ouroboros: used this arena?
+  private splitSnake: Snake | null = null; // Split Strike: clone snake
+  private splitTimer = 0;           // Split Strike: seconds remaining
+  private afterimages: { x: number; y: number; alpha: number }[] = []; // Afterimage trail
 
   // Run stats
   score = 0;
@@ -179,6 +183,10 @@ export class Game {
     this.rewindSnapshots = [];
     this.lastDirectionInput = null;
     this.countdownTimer = 0;
+    this.ouroborosUsed = false;
+    this.splitSnake = null;
+    this.splitTimer = 0;
+    this.afterimages = [];
     this.ui.reset();
     this.deathScreen.reset();
     this.state = GameState.PLAYING;
@@ -289,6 +297,14 @@ export class Game {
       this.timeDilationTimer = Math.max(0, this.timeDilationTimer - dtSec);
     }
 
+    // Split Strike timer
+    if (this.splitTimer > 0) {
+      this.splitTimer = Math.max(0, this.splitTimer - dtSec);
+      if (this.splitTimer <= 0) {
+        this.splitSnake = null;
+      }
+    }
+
     if (this.countdownTimer > 0) {
       this.countdownTimer = Math.max(0, this.countdownTimer - dtSec);
     }
@@ -360,6 +376,20 @@ export class Game {
       }
     }
 
+    // Afterimage: add fading decoy at previous head position
+    if (hasPowerUp(this.heldPowerUps, PowerUpId.AFTERIMAGE)) {
+      const prevHead = this.snake.previousSegments[0];
+      if (prevHead) {
+        const stacks = getStackCount(this.heldPowerUps, PowerUpId.AFTERIMAGE);
+        this.afterimages.push({ x: prevHead.x, y: prevHead.y, alpha: 0.5 * stacks });
+      }
+      // Decay and remove faded afterimages
+      this.afterimages = this.afterimages.filter(a => {
+        a.alpha -= 0.05;
+        return a.alpha > 0.05;
+      });
+    }
+
     const head = this.snake.head;
 
     // Wall collision — Wall Wrap overrides
@@ -377,11 +407,36 @@ export class Game {
       }
     }
 
-    // Self collision — Ghost Mode overrides
+    // Self collision — Ghost Mode overrides, Ouroboros heals
     const isGhosting = this.ghostTimer > 0;
     if (!isGhosting && checkSelfCollision(this.snake.segments)) {
-      this.die();
-      return;
+      if (hasPowerUp(this.heldPowerUps, PowerUpId.OUROBOROS) && !this.ouroborosUsed) {
+        // Eat own tail: remove segments from collision point onward
+        this.ouroborosUsed = true;
+        const head = this.snake.head;
+        const hitIdx = this.snake.segments.findIndex(
+          (s, i) => i > 0 && s.x === head.x && s.y === head.y,
+        );
+        if (hitIdx > 0) {
+          const removed = this.snake.segments.splice(hitIdx);
+          this.score += removed.length * 5;
+          this.ui.triggerScorePulse();
+          // Heal particles
+          const cellSize = this.renderer.layout.cellSize;
+          const pixel = this.renderer.gridToPixel(head.x, head.y);
+          this.particles.emit(pixel.x + cellSize / 2, pixel.y + cellSize / 2, {
+            count: 20,
+            speed: 120,
+            lifetime: 0.5,
+            color: '#ffd700',
+            size: 3,
+          });
+        }
+        this.screenFlashTimer = 0.15;
+      } else {
+        this.die();
+        return;
+      }
     }
 
     // Update hazards (toggle spikes, decay poison)
@@ -491,6 +546,45 @@ export class Game {
         size: 3,
       });
 
+      // Shockwave: push hazards 2 cells away from eaten food
+      if (hasPowerUp(this.heldPowerUps, PowerUpId.SHOCKWAVE)) {
+        const pushDist = 1 + getStackCount(this.heldPowerUps, PowerUpId.SHOCKWAVE);
+        for (const h of this.hazards) {
+          const hdx = h.position.x - eatenFood.position.x;
+          const hdy = h.position.y - eatenFood.position.y;
+          const dist = Math.abs(hdx) + Math.abs(hdy);
+          if (dist > 0 && dist <= 4) {
+            const newX = h.position.x + Math.sign(hdx) * pushDist;
+            const newY = h.position.y + Math.sign(hdy) * pushDist;
+            // Clamp to grid
+            h.position.x = Math.max(0, Math.min(GRID_SIZE - 1, newX));
+            h.position.y = Math.max(0, Math.min(GRID_SIZE - 1, newY));
+          }
+        }
+        // Ripple visual
+        this.particles.emit(pixel.x + cellSize / 2, pixel.y + cellSize / 2, {
+          count: 12,
+          speed: 300,
+          lifetime: 0.3,
+          color: '#88ccff',
+          size: 2,
+        });
+      }
+
+      // Split Strike: spawn clone snake on eat
+      if (hasPowerUp(this.heldPowerUps, PowerUpId.SPLIT_STRIKE) && !this.splitSnake) {
+        // Create a clone heading the opposite direction
+        const cloneSegs = this.snake.segments.slice(0, Math.max(3, Math.floor(this.snake.segments.length / 2)));
+        const oppositeDir = this.snake.direction === Direction.UP ? Direction.DOWN
+          : this.snake.direction === Direction.DOWN ? Direction.UP
+          : this.snake.direction === Direction.LEFT ? Direction.RIGHT
+          : Direction.LEFT;
+        this.splitSnake = new Snake(cloneSegs[0]!, cloneSegs.length, oppositeDir);
+        this.splitSnake.segments = cloneSegs.map(s => ({ x: s.x, y: s.y }));
+        this.splitSnake.previousSegments = cloneSegs.map(s => ({ x: s.x, y: s.y }));
+        this.splitTimer = 5.0;
+      }
+
       // Check wave progression
       const waveCleared = this.arena.eatFood();
       if (waveCleared) {
@@ -503,6 +597,52 @@ export class Game {
         if (hasPowerUp(this.heldPowerUps, PowerUpId.SCAVENGER)) {
           const targetFoods = 1 + getStackCount(this.heldPowerUps, PowerUpId.SCAVENGER);
           while (this.foods.length < targetFoods) {
+            this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards, this.arena.currentWave));
+          }
+        }
+      }
+    }
+
+    // Update split snake
+    if (this.splitSnake && this.splitTimer > 0) {
+      this.splitSnake.move();
+      const splitHead = this.splitSnake.head;
+      // Wall collision for split snake
+      if (splitHead.x < 0 || splitHead.x >= GRID_SIZE ||
+          splitHead.y < 0 || splitHead.y >= GRID_SIZE) {
+        if (hasPowerUp(this.heldPowerUps, PowerUpId.WALL_WRAP)) {
+          this.splitSnake.segments[0] = {
+            x: ((splitHead.x % GRID_SIZE) + GRID_SIZE) % GRID_SIZE,
+            y: ((splitHead.y % GRID_SIZE) + GRID_SIZE) % GRID_SIZE,
+          };
+        } else {
+          this.splitSnake = null;
+          this.splitTimer = 0;
+        }
+      }
+      // Split snake can eat food
+      if (this.splitSnake) {
+        const splitEaten = checkFoodCollision(this.splitSnake.head, this.foods);
+        if (splitEaten) {
+          this.splitSnake.grow(1);
+          this.score += FOOD_SCORES[splitEaten.type];
+          this.totalFoodEaten++;
+          this.ui.triggerScorePulse();
+          this.audio.playEat();
+          this.foods = this.foods.filter(f => f !== splitEaten);
+          const pixel = this.renderer.gridToPixel(splitEaten.position.x, splitEaten.position.y);
+          const cellSize = this.renderer.layout.cellSize;
+          this.particles.emit(pixel.x + cellSize / 2, pixel.y + cellSize / 2, {
+            count: 10,
+            speed: 150,
+            lifetime: 0.3,
+            color: COLORS.snakeGlow,
+            size: 3,
+          });
+          const waveCleared = this.arena.eatFood();
+          if (waveCleared) {
+            this.onWaveClear();
+          } else {
             this.foods.push(spawnFood(this.snake, this.foods, this.currentTick, this.hazards, this.arena.currentWave));
           }
         }
@@ -564,6 +704,10 @@ export class Game {
       // Advance arena, reset snake and grid
       this.arena.advanceArena();
       this.rewindUsed = false;
+      this.ouroborosUsed = false;
+      this.splitSnake = null;
+      this.splitTimer = 0;
+      this.afterimages = [];
       this.snake = this.createSnake();
       this.foods = [];
       this.hazards = [];
@@ -610,6 +754,11 @@ export class Game {
     this.drawHazards();
     this.drawFood();
 
+    // Draw afterimages
+    if (this.afterimages.length > 0) {
+      this.drawAfterimages();
+    }
+
     this.snakeRenderer.draw(
       this.renderer.ctx,
       this.snake,
@@ -617,6 +766,21 @@ export class Game {
       this.interpolation,
       this.ghostTimer > 0,
     );
+
+    // Draw split snake
+    if (this.splitSnake && this.splitTimer > 0) {
+      const ctx = this.renderer.ctx;
+      ctx.save();
+      ctx.globalAlpha = 0.7;
+      this.snakeRenderer.draw(
+        ctx,
+        this.splitSnake,
+        this.renderer.layout,
+        this.interpolation,
+        false,
+      );
+      ctx.restore();
+    }
 
     this.particles.render(this.renderer.ctx);
 
@@ -800,6 +964,31 @@ export class Game {
         ctx.fill();
       }
 
+      ctx.restore();
+    }
+  }
+
+  private drawAfterimages(): void {
+    const ctx = this.renderer.ctx;
+    const { cellSize } = this.renderer.layout;
+    const padding = Math.max(1, Math.floor(cellSize * 0.05));
+
+    for (const img of this.afterimages) {
+      const pixel = this.renderer.gridToPixel(img.x, img.y);
+      ctx.save();
+      ctx.globalAlpha = img.alpha * 0.5;
+      ctx.fillStyle = COLORS.snakeBody;
+      ctx.shadowColor = COLORS.snakeGlow;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.roundRect(
+        pixel.x + padding,
+        pixel.y + padding,
+        cellSize - padding * 2,
+        cellSize - padding * 2,
+        cellSize * 0.2,
+      );
+      ctx.fill();
       ctx.restore();
     }
   }
