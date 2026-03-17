@@ -285,10 +285,10 @@ Implement one at a time, test each:
 - [x] **Playwright MCP**: Screenshot during shake effect
 
 ### 3.11 — Settings Screen
-- [ ] Music volume, SFX volume, CRT toggle, curvature toggle, control type, reset progress
-- [ ] Accessible from title + pause menu
-- [ ] All persisted to IndexedDB
-- [ ] **Playwright MCP**: Screenshot settings
+- [x] Music volume, SFX volume, CRT toggle, curvature toggle, control type, reset progress
+- [x] Accessible from title + pause menu
+- [x] All persisted to IndexedDB
+- [x] **Playwright MCP**: Screenshot settings
 
 ### 3.12 — Pause Menu
 - [ ] Pause button top-right (44x44px+ touch target)
