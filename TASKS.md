@@ -238,8 +238,8 @@ Implement one at a time, test each:
 - [x] Hazard variety scales with arena number
 
 ### 3.4 — Remaining Food Types
-- [ ] **Speed Fruit**: 1.5x speed 3s, green (#39ff14), trailing particles
-- [ ] **Bomb Fruit**: destroys 3x3 hazards on eat, orange (#ff6600), flashing
+- [x] **Speed Fruit**: 1.5x speed 3s, green (#39ff14), trailing particles
+- [x] **Bomb Fruit**: destroys 3x3 hazards on eat, orange (#ff6600), flashing
 
 ### 3.5 — Meta Progression
 - [ ] Create `src/meta/Progression.ts` — scales currency + unlocks
