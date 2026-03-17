@@ -224,13 +224,13 @@ Implement one at a time, test each:
 - [x] Tests for each
 
 ### 3.2 — Power-Up Synergies
-- [ ] Synergy detection on power-up acquisition
-- [ ] **Gluttony** (Ghost + Iron Gut): always phase through tail when length > 15
-- [ ] **Warp Speed** (Wall Wrap + Dash): dash through wall → 1s invincibility
-- [ ] **Toxic Blast** (Venom + Shockwave): shockwave leaves venom trail
-- [ ] **Black Hole** (Scavenger + Singularity): all food drifts toward head
-- [ ] Discovery notification on first trigger
-- [ ] **Playwright MCP**: Screenshot synergy notification
+- [x] Synergy detection on power-up acquisition
+- [x] **Gluttony** (Ghost + Iron Gut): always phase through tail when length > 15
+- [x] **Warp Speed** (Wall Wrap + Dash): dash through wall → 1s invincibility
+- [x] **Toxic Blast** (Venom + Shockwave): shockwave leaves venom trail
+- [x] **Black Hole** (Scavenger + Singularity): all food drifts toward head
+- [x] Discovery notification on first trigger
+- [x] **Playwright MCP**: Screenshot synergy notification
 
 ### 3.3 — Remaining Hazards
 - [ ] **Warp Hole** (pair): teleport snake to partner hole — purple swirl visual
