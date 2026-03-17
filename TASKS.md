@@ -257,11 +257,11 @@ Implement one at a time, test each:
 - [x] **Playwright MCP**: Screenshot 3-4 skins in gameplay
 
 ### 3.7 — Achievements
-- [ ] Create `src/meta/Achievements.ts` + `src/data/achievements.ts`
-- [ ] 15+ achievements (see spec for list)
-- [ ] Toast notification slides in from top, auto-dismiss 3s
-- [ ] Achievement gallery in Collection screen
-- [ ] **Playwright MCP**: Screenshot achievement toast
+- [x] Create `src/meta/Achievements.ts` + `src/data/achievements.ts`
+- [x] 15+ achievements (see spec for list)
+- [x] Toast notification slides in from top, auto-dismiss 3s
+- [x] Achievement gallery in Collection screen
+- [x] **Playwright MCP**: Screenshot achievement toast
 
 ### 3.8 — Daily Challenge
 - [ ] Create `src/meta/DailyChallenge.ts`
