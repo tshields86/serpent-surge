@@ -291,10 +291,10 @@ Implement one at a time, test each:
 - [x] **Playwright MCP**: Screenshot settings
 
 ### 3.12 — Pause Menu
-- [ ] Pause button top-right (44x44px+ touch target)
-- [ ] Overlay: Resume, Settings, Quit Run
-- [ ] Escape key to toggle
-- [ ] Full game loop pause
+- [x] Pause button top-right (44x44px+ touch target)
+- [x] Overlay: Resume, Settings, Quit Run
+- [x] Escape key to toggle
+- [x] Full game loop pause
 
 ### 3.13 — Responsive Polish
 - [ ] Test at: 320x568 (SE), 390x844 (14), 768x1024 (iPad), 1920x1080 (desktop)
