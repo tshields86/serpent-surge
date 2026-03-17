@@ -23,6 +23,7 @@ import { calculateScales } from '../meta/Progression';
 import { SKIN_DEFS } from '../data/skins';
 import { AchievementTracker } from '../meta/Achievements';
 import { SkinColors } from '../rendering/SnakeRenderer';
+import { BossSnake, createBoss, updateBoss, checkBossCollision, damageBoss, isBossArena } from './Boss';
 
 export enum GameState {
   TITLE = 'TITLE',
@@ -83,6 +84,7 @@ export class Game {
   private speedBoostTimer = 0; // Speed Fruit: 1.5x speed for 3s
   private achievements = new AchievementTracker();
   private achievementToast: { icon: string; name: string; timer: number } | null = null;
+  private boss: BossSnake | null = null;
 
   // Run stats
   score = 0;
@@ -222,6 +224,7 @@ export class Game {
     this.synergyToast = null;
     this.warpSpeedTimer = 0;
     this.speedBoostTimer = 0;
+    this.boss = null;
     this.ui.reset();
     this.deathScreen.reset();
     this.state = GameState.PLAYING;
@@ -579,6 +582,19 @@ export class Game {
       }
     }
 
+    // Boss update
+    if (this.boss && !this.boss.defeated) {
+      const poisonTrail = updateBoss(this.boss, head, this.currentTick);
+      if (poisonTrail) {
+        this.hazards.push(poisonTrail);
+      }
+      // Check collision with boss
+      if (this.warpSpeedTimer <= 0 && checkBossCollision(head, this.boss)) {
+        this.die();
+        return;
+      }
+    }
+
     // Warp Hole: teleport snake to partner hole
     const warpDest = checkWarpHole(head, this.hazards);
     if (warpDest) {
@@ -735,6 +751,35 @@ export class Game {
         color: particleColor,
         size: 3,
       });
+
+      // Damage boss when eating food near boss head
+      if (this.boss && !this.boss.defeated) {
+        const bossHead = this.boss.segments[0];
+        if (bossHead) {
+          const dist = Math.abs(eatenFood.position.x - bossHead.x) +
+            Math.abs(eatenFood.position.y - bossHead.y);
+          if (dist <= 3) {
+            const defeated = damageBoss(this.boss);
+            if (defeated) {
+              // Boss defeated — big score bonus
+              this.score += 200;
+              this.ui.triggerScorePulse();
+              const cellSize = this.renderer.layout.cellSize;
+              for (const seg of this.boss.segments) {
+                const pixel = this.renderer.gridToPixel(seg.x, seg.y);
+                this.particles.emit(pixel.x + cellSize / 2, pixel.y + cellSize / 2, {
+                  count: 6,
+                  speed: 200,
+                  lifetime: 0.5,
+                  color: '#ff4444',
+                  size: 4,
+                });
+              }
+              this.effects.triggerShake(0.4, 10);
+            }
+          }
+        }
+      }
 
       // Shockwave: push hazards 2 cells away from eaten food
       if (hasPowerUp(this.heldPowerUps, PowerUpId.SHOCKWAVE)) {
@@ -914,6 +959,12 @@ export class Game {
       this.splitSnake = null;
       this.splitTimer = 0;
       this.afterimages = [];
+      // Spawn boss on boss arenas
+      if (isBossArena(this.arena.currentArena)) {
+        this.boss = createBoss(this.arena.currentArena);
+      } else {
+        this.boss = null;
+      }
       this.snake = this.createSnake();
       this.foods = [];
       this.hazards = [];
@@ -964,6 +1015,7 @@ export class Game {
     this.renderer.drawGrid();
 
     this.drawHazards();
+    this.drawBoss();
     this.drawFood();
 
     // Draw afterimages
@@ -1302,6 +1354,71 @@ export class Game {
     ctx.shadowColor = '#ffd700';
     ctx.shadowBlur = 10;
     ctx.fillText(this.synergyToast.text, width / 2, barY + barHeight / 2);
+
+    ctx.restore();
+  }
+
+  private drawBoss(): void {
+    if (!this.boss || this.boss.defeated) return;
+    const ctx = this.renderer.ctx;
+    const { cellSize } = this.renderer.layout;
+    const padding = Math.max(1, Math.floor(cellSize * 0.08));
+    const radius = Math.max(2, Math.floor(cellSize * 0.2));
+
+    // Glow layer
+    ctx.save();
+    ctx.shadowColor = '#ff4444';
+    ctx.shadowBlur = cellSize * 0.5;
+    ctx.globalAlpha = 0.3;
+    for (const seg of this.boss.segments) {
+      const pixel = this.renderer.gridToPixel(seg.x, seg.y);
+      ctx.fillStyle = '#ff4444';
+      ctx.beginPath();
+      ctx.roundRect(
+        Math.floor(pixel.x + padding),
+        Math.floor(pixel.y + padding),
+        cellSize - padding * 2,
+        cellSize - padding * 2,
+        radius,
+      );
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Solid segments
+    ctx.save();
+    ctx.shadowColor = '#ff4444';
+    ctx.shadowBlur = cellSize * 0.3;
+    for (let i = this.boss.segments.length - 1; i >= 0; i--) {
+      const seg = this.boss.segments[i];
+      if (!seg) continue;
+      const pixel = this.renderer.gridToPixel(seg.x, seg.y);
+      const isHead = i === 0;
+      ctx.fillStyle = isHead ? '#ff6666' : '#cc2222';
+      ctx.beginPath();
+      ctx.roundRect(
+        Math.floor(pixel.x + padding),
+        Math.floor(pixel.y + padding),
+        cellSize - padding * 2,
+        cellSize - padding * 2,
+        radius,
+      );
+      ctx.fill();
+    }
+
+    // Health bar above boss head
+    const bossHead = this.boss.segments[0];
+    if (bossHead) {
+      const pixel = this.renderer.gridToPixel(bossHead.x, bossHead.y);
+      const barWidth = cellSize * 2;
+      const barHeight = 4;
+      const barX = pixel.x + cellSize / 2 - barWidth / 2;
+      const barY = pixel.y - 8;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(barX, barY, barWidth, barHeight);
+      ctx.fillStyle = '#ff4444';
+      ctx.fillRect(barX, barY, barWidth * (this.boss.health / this.boss.maxHealth), barHeight);
+    }
 
     ctx.restore();
   }
