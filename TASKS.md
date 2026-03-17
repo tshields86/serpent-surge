@@ -271,10 +271,10 @@ Implement one at a time, test each:
 - [x] Tests: same seed = same sequence
 
 ### 3.9 — Music
-- [ ] Create `src/audio/Music.ts`
-- [ ] 3 Tone.js synthwave loops: menu (chill), gameplay (layered intensity), death (drone)
-- [ ] Crossfade on state transitions
-- [ ] Separate music/SFX volume controls
+- [x] Create `src/audio/Music.ts`
+- [x] 3 Tone.js synthwave loops: menu (chill), gameplay (layered intensity), death (drone)
+- [x] Crossfade on state transitions
+- [x] Separate music/SFX volume controls
 
 ### 3.10 — Juice & Feel
 - [ ] Screen shake: death (300ms decay), bomb explosion (brief)
