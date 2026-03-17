@@ -338,7 +338,7 @@ Implement one at a time, test each:
 - [x] **Playwright MCP**: Screenshot boss arena
 
 ### 4.5 — Capacitor (iOS/Android)
-- [ ] Capacitor setup, safe area insets, haptics plugin
+- [x] Capacitor setup, safe area insets, haptics plugin
 - [ ] Test on real devices
 
 ### 4.6 — App Store Prep
