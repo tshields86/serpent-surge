@@ -216,12 +216,12 @@ Implement one at a time, test each:
 ## Phase 3 — Depth & Polish
 
 ### 3.1 — Remaining Power-Ups
-- [ ] **Split Strike** (Rare): split into 2 snakes for 5s
-- [ ] **Ouroboros** (Legendary): eating own tail heals, 1x per arena
-- [ ] **Lucky** (Uncommon): always 1+ Uncommon in power-up choices
-- [ ] **Afterimage** (Uncommon): decoy trail that fades
-- [ ] **Shockwave** (Uncommon): eating pushes hazards 2 cells — ripple visual
-- [ ] Tests for each
+- [x] **Split Strike** (Rare): split into 2 snakes for 5s
+- [x] **Ouroboros** (Legendary): eating own tail heals, 1x per arena
+- [x] **Lucky** (Uncommon): always 1+ Uncommon in power-up choices
+- [x] **Afterimage** (Uncommon): decoy trail that fades
+- [x] **Shockwave** (Uncommon): eating pushes hazards 2 cells — ripple visual
+- [x] Tests for each
 
 ### 3.2 — Power-Up Synergies
 - [ ] Synergy detection on power-up acquisition
