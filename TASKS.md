@@ -316,10 +316,10 @@ Implement one at a time, test each:
 ## Phase 4 — Launch & Platform
 
 ### 4.1 — Leaderboard (Supabase)
-- [ ] Supabase project setup
-- [ ] Leaderboard table + anonymous auth
-- [ ] Submit score on death, offline queue for sync
-- [ ] Leaderboard screen: all-time top 50, daily top 50, personal history
+- [x] Supabase project setup
+- [x] Leaderboard table + anonymous auth
+- [x] Submit score on death, offline queue for sync
+- [x] Leaderboard screen: all-time top 50, daily top 50, personal history
 
 ### 4.2 — Social Sharing
 - [ ] Canvas-to-PNG death screen capture
