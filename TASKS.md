@@ -277,12 +277,12 @@ Implement one at a time, test each:
 - [x] Separate music/SFX volume controls
 
 ### 3.10 — Juice & Feel
-- [ ] Screen shake: death (300ms decay), bomb explosion (brief)
-- [ ] Score pop animation on change
-- [ ] Speed lines during dash
-- [ ] Golden apple flash on eat
-- [ ] Snake head subtle pulse (scale oscillation)
-- [ ] **Playwright MCP**: Screenshot during shake effect
+- [x] Screen shake: death (300ms decay), bomb explosion (brief)
+- [x] Score pop animation on change
+- [x] Speed lines during dash
+- [x] Golden apple flash on eat
+- [x] Snake head subtle pulse (scale oscillation)
+- [x] **Playwright MCP**: Screenshot during shake effect
 
 ### 3.11 — Settings Screen
 - [ ] Music volume, SFX volume, CRT toggle, curvature toggle, control type, reset progress
