@@ -14,6 +14,7 @@ import { TitleScreen } from '../screens/TitleScreen';
 import { PowerUpScreen } from '../screens/PowerUpScreen';
 import { AudioManager } from '../audio/AudioManager';
 import { PowerUpId, PowerUpInstance, acquirePowerUp, hasPowerUp, getStackCount, rollPowerUpOfferings } from './PowerUp';
+import { ActiveSynergy, getActiveSynergies, detectNewSynergies } from './Synergy';
 import { checkWallCollision, checkSelfCollision } from './Collision';
 import { BASE_TICK_RATE, COLORS, GRID_SIZE, MAX_DELTA } from '../utils/constants';
 import { loadData, saveData, PersistedData } from '../utils/storage';
@@ -70,6 +71,9 @@ export class Game {
   private splitSnake: Snake | null = null; // Split Strike: clone snake
   private splitTimer = 0;           // Split Strike: seconds remaining
   private afterimages: { x: number; y: number; alpha: number }[] = []; // Afterimage trail
+  private activeSynergies: ActiveSynergy[] = [];
+  private synergyToast: { text: string; timer: number } | null = null;
+  private warpSpeedTimer = 0; // Warp Speed synergy: invincibility after wall dash
 
   // Run stats
   score = 0;
@@ -132,6 +136,10 @@ export class Game {
     const dy = dir === Direction.UP ? -1 : dir === Direction.DOWN ? 1 : 0;
     const newHead = { x: head.x + dx * skipCells, y: head.y + dy * skipCells };
 
+    // Check if dash went through wall (for Warp Speed synergy)
+    const dashedThroughWall = newHead.x < 0 || newHead.x >= GRID_SIZE ||
+      newHead.y < 0 || newHead.y >= GRID_SIZE;
+
     // Check if dash destination is valid
     if (hasPowerUp(this.heldPowerUps, PowerUpId.WALL_WRAP)) {
       newHead.x = ((newHead.x % GRID_SIZE) + GRID_SIZE) % GRID_SIZE;
@@ -155,6 +163,10 @@ export class Game {
           color: COLORS.snakeGlow,
           size: 2,
         });
+      }
+      // Warp Speed synergy: dash through wall grants invincibility
+      if (dashedThroughWall && this.activeSynergies.some(s => s.id === 'WARP_SPEED')) {
+        this.warpSpeedTimer = 1.0;
       }
     }
   }
@@ -187,6 +199,9 @@ export class Game {
     this.splitSnake = null;
     this.splitTimer = 0;
     this.afterimages = [];
+    this.activeSynergies = [];
+    this.synergyToast = null;
+    this.warpSpeedTimer = 0;
     this.ui.reset();
     this.deathScreen.reset();
     this.state = GameState.PLAYING;
@@ -297,6 +312,11 @@ export class Game {
       this.timeDilationTimer = Math.max(0, this.timeDilationTimer - dtSec);
     }
 
+    // Warp Speed invincibility timer
+    if (this.warpSpeedTimer > 0) {
+      this.warpSpeedTimer = Math.max(0, this.warpSpeedTimer - dtSec);
+    }
+
     // Split Strike timer
     if (this.splitTimer > 0) {
       this.splitTimer = Math.max(0, this.splitTimer - dtSec);
@@ -307,6 +327,14 @@ export class Game {
 
     if (this.countdownTimer > 0) {
       this.countdownTimer = Math.max(0, this.countdownTimer - dtSec);
+    }
+
+    // Synergy toast timer
+    if (this.synergyToast) {
+      this.synergyToast.timer -= dtSec;
+      if (this.synergyToast.timer <= 0) {
+        this.synergyToast = null;
+      }
     }
 
     // Handle transition timers
@@ -328,8 +356,17 @@ export class Game {
       if (this.powerUpScreen.isSelectionComplete()) {
         const selected = this.powerUpScreen.getSelectedPowerUp();
         if (selected) {
+          const beforeSynergies = getActiveSynergies(this.heldPowerUps);
           acquirePowerUp(this.heldPowerUps, selected.id);
           this.audio.playPowerUpChime();
+          // Check for new synergies
+          const afterSynergies = getActiveSynergies(this.heldPowerUps);
+          const newSynergies = detectNewSynergies(beforeSynergies, afterSynergies);
+          this.activeSynergies = afterSynergies;
+          if (newSynergies.length > 0) {
+            const syn = newSynergies[0]!;
+            this.synergyToast = { text: `SYNERGY: ${syn.name} — ${syn.description}`, timer: 3.0 };
+          }
         }
         this.powerUpScreen.reset();
         // Transition to arena transition
@@ -408,7 +445,10 @@ export class Game {
     }
 
     // Self collision — Ghost Mode overrides, Ouroboros heals
-    const isGhosting = this.ghostTimer > 0;
+    // Gluttony synergy: always ghosting when length > 15
+    const gluttonyActive = this.activeSynergies.some(s => s.id === 'GLUTTONY') &&
+      this.snake.segments.length > 15;
+    const isGhosting = this.ghostTimer > 0 || gluttonyActive;
     if (!isGhosting && checkSelfCollision(this.snake.segments)) {
       if (hasPowerUp(this.heldPowerUps, PowerUpId.OUROBOROS) && !this.ouroborosUsed) {
         // Eat own tail: remove segments from collision point onward
@@ -442,8 +482,8 @@ export class Game {
     // Update hazards (toggle spikes, decay poison)
     this.hazards = updateHazards(this.hazards, this.currentTick);
 
-    // Check hazard collision
-    const hitHazard = checkHazardCollision(head, this.hazards);
+    // Check hazard collision (Warp Speed invincibility bypasses)
+    const hitHazard = this.warpSpeedTimer > 0 ? null : checkHazardCollision(head, this.hazards);
     if (hitHazard) {
       // Head Bash: destroy wall block instead of dying
       if (hitHazard.type === HazardType.WALL_BLOCK &&
@@ -468,12 +508,14 @@ export class Game {
     }
 
     // Singularity: drift food toward head
+    // Black Hole synergy: all food drifts (no range limit)
     if (hasPowerUp(this.heldPowerUps, PowerUpId.SINGULARITY)) {
+      const blackHole = this.activeSynergies.some(s => s.id === 'BLACK_HOLE');
       for (const food of this.foods) {
         const dx = head.x - food.position.x;
         const dy = head.y - food.position.y;
         const dist = Math.abs(dx) + Math.abs(dy); // manhattan
-        if (dist > 0 && dist <= 3) {
+        if (dist > 0 && (blackHole || dist <= 3)) {
           // Move food 1 cell toward head
           const newX = food.position.x + Math.sign(dx);
           const newY = food.position.y + Math.sign(dy);
@@ -559,6 +601,18 @@ export class Game {
             // Clamp to grid
             h.position.x = Math.max(0, Math.min(GRID_SIZE - 1, newX));
             h.position.y = Math.max(0, Math.min(GRID_SIZE - 1, newY));
+          }
+        }
+        // Toxic Blast synergy: shockwave leaves venom trail
+        if (this.activeSynergies.some(s => s.id === 'TOXIC_BLAST')) {
+          for (const h of this.hazards) {
+            this.hazards.push({
+              position: { x: h.position.x, y: h.position.y },
+              type: HazardType.POISON_TRAIL,
+              state: 'active',
+              ticksRemaining: 5,
+              spawnTick: this.currentTick,
+            });
           }
         }
         // Ripple visual
@@ -825,6 +879,11 @@ export class Game {
       ctx.restore();
     }
 
+    // Synergy discovery toast
+    if (this.synergyToast) {
+      this.drawSynergyToast();
+    }
+
     this.effects.drawCRT(this.renderer.ctx);
 
     if (this.state === GameState.POWER_UP_SELECT) {
@@ -966,6 +1025,34 @@ export class Game {
 
       ctx.restore();
     }
+  }
+
+  private drawSynergyToast(): void {
+    if (!this.synergyToast) return;
+    const ctx = this.renderer.ctx;
+    const { width } = ctx.canvas;
+    const alpha = Math.min(1, this.synergyToast.timer * 2);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Background bar
+    const barHeight = 36;
+    const barY = 80;
+    ctx.fillStyle = 'rgba(128, 0, 255, 0.7)';
+    ctx.fillRect(0, barY, width, barHeight);
+
+    // Text
+    const fontSize = Math.min(12, Math.floor(width / 40));
+    ctx.font = `${fontSize}px "Press Start 2P", monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffd700';
+    ctx.shadowColor = '#ffd700';
+    ctx.shadowBlur = 10;
+    ctx.fillText(this.synergyToast.text, width / 2, barY + barHeight / 2);
+
+    ctx.restore();
   }
 
   private drawAfterimages(): void {
