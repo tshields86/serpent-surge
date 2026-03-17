@@ -264,11 +264,11 @@ Implement one at a time, test each:
 - [x] **Playwright MCP**: Screenshot achievement toast
 
 ### 3.8 — Daily Challenge
-- [ ] Create `src/meta/DailyChallenge.ts`
-- [ ] Seeded RNG (mulberry32, seed = YYYYMMDD)
-- [ ] Fixed spawns, layouts, offerings per seed
-- [ ] Entry from title screen, personal daily best displayed
-- [ ] Tests: same seed = same sequence
+- [x] Create `src/meta/DailyChallenge.ts`
+- [x] Seeded RNG (mulberry32, seed = YYYYMMDD)
+- [x] Fixed spawns, layouts, offerings per seed
+- [x] Entry from title screen, personal daily best displayed
+- [x] Tests: same seed = same sequence
 
 ### 3.9 — Music
 - [ ] Create `src/audio/Music.ts`
