@@ -242,12 +242,12 @@ Implement one at a time, test each:
 - [x] **Bomb Fruit**: destroys 3x3 hazards on eat, orange (#ff6600), flashing
 
 ### 3.5 — Meta Progression
-- [ ] Create `src/meta/Progression.ts` — scales currency + unlocks
-- [ ] Scales formula: score/10 + 50/arena + 2/food
-- [ ] Create `src/data/unlocks.ts` + `src/screens/CollectionScreen.ts`
-- [ ] Unlocks: Starting Length 4 (100), Reroll (200), Arena Preview (300), Extra Life (500), Endless Mode (750)
-- [ ] Persist to IndexedDB
-- [ ] **Playwright MCP**: Screenshot collection screen
+- [x] Create `src/meta/Progression.ts` — scales currency + unlocks
+- [x] Scales formula: score/10 + 50/arena + 2/food
+- [x] Create `src/data/unlocks.ts` + `src/screens/CollectionScreen.ts`
+- [x] Unlocks: Starting Length 4 (100), Reroll (200), Arena Preview (300), Extra Life (500), Endless Mode (750)
+- [x] Persist to IndexedDB
+- [x] **Playwright MCP**: Screenshot collection screen
 
 ### 3.6 — Snake Skins
 - [ ] 6-8 skins: Default, Crimson, Cyan, Solar, Phantom, Toxic, Ember, Void
