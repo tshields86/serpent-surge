@@ -354,11 +354,11 @@ Implement one at a time, test each:
 - [ ] Lighthouse audit: 90+ Performance + Accessibility
 
 ### 4.9 — Launch
-- [ ] Deploy web (Vercel/Netlify/Cloudflare Pages)
+- [x] Deploy web (Vercel/Netlify/Cloudflare Pages)
 - [ ] Custom domain
 - [ ] iOS App Store submission
 - [ ] Google Play Store submission
-- [ ] Git tag: `v1.0.0`
+- [x] Git tag: `v1.0.0`
 
 ---
 
