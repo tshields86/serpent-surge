@@ -2,6 +2,8 @@ export enum HazardType {
   WALL_BLOCK = 'WALL_BLOCK',
   SPIKE_TRAP = 'SPIKE_TRAP',
   POISON_TRAIL = 'POISON_TRAIL',
+  WARP_HOLE = 'WARP_HOLE',
+  MAGNET = 'MAGNET',
 }
 
 export interface HazardDef {
@@ -37,5 +39,21 @@ export const HAZARD_DEFS: Record<HazardType, HazardDef> = {
     permanent: false,
     toggleInterval: null,
     decayTicks: 8,
+  },
+  [HazardType.WARP_HOLE]: {
+    type: HazardType.WARP_HOLE,
+    name: 'Warp Hole',
+    minWave: 3,
+    permanent: true,
+    toggleInterval: null,
+    decayTicks: null,
+  },
+  [HazardType.MAGNET]: {
+    type: HazardType.MAGNET,
+    name: 'Magnet',
+    minWave: 4,
+    permanent: true,
+    toggleInterval: null,
+    decayTicks: null,
   },
 };

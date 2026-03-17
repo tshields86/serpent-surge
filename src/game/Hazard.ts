@@ -12,6 +12,8 @@ export interface HazardInstance {
   state: 'active' | 'inactive';
   ticksRemaining: number | null;
   spawnTick: number;
+  partnerId?: number; // For warp hole pairs
+  id?: number;        // Unique id for pairing
 }
 
 /** Update hazards each game tick: toggle spikes, decay poison */
@@ -39,14 +41,33 @@ export function updateHazards(hazards: HazardInstance[], currentTick: number): H
   return result;
 }
 
-/** Check if head collides with any active hazard */
+/** Check if head collides with any active deadly hazard */
 export function checkHazardCollision(head: Vec2, hazards: readonly HazardInstance[]): HazardInstance | null {
   for (const hazard of hazards) {
     if (hazard.position.x === head.x && hazard.position.y === head.y) {
       if (hazard.type === HazardType.SPIKE_TRAP && hazard.state === 'inactive') {
         continue; // spike is off, safe
       }
+      // Warp holes and magnets are not deadly
+      if (hazard.type === HazardType.WARP_HOLE || hazard.type === HazardType.MAGNET) {
+        continue;
+      }
       return hazard;
+    }
+  }
+  return null;
+}
+
+/** Check if head is on a warp hole, return the partner position */
+export function checkWarpHole(head: Vec2, hazards: readonly HazardInstance[]): Vec2 | null {
+  for (const hazard of hazards) {
+    if (hazard.type === HazardType.WARP_HOLE &&
+        hazard.position.x === head.x && hazard.position.y === head.y &&
+        hazard.partnerId !== undefined) {
+      const partner = hazards.find(h => h.id === hazard.partnerId);
+      if (partner) {
+        return { x: partner.position.x, y: partner.position.y };
+      }
     }
   }
   return null;
@@ -94,6 +115,7 @@ export function spawnHazards(
     }
   }
 
+  let nextId = 0;
   const spawned: HazardInstance[] = [];
   for (let i = 0; i < count && emptyCells.length > 0; i++) {
     const idx = Math.floor(Math.random() * emptyCells.length);
@@ -101,13 +123,33 @@ export function spawnHazards(
     const type = available[Math.floor(Math.random() * available.length)]!;
     const def = HAZARD_DEFS[type];
 
-    spawned.push({
-      position: pos,
-      type,
-      state: 'active',
-      ticksRemaining: def.decayTicks,
-      spawnTick: currentTick,
-    });
+    if (type === HazardType.WARP_HOLE) {
+      // Warp holes spawn in pairs
+      if (emptyCells.length === 0) continue;
+      const idx2 = Math.floor(Math.random() * emptyCells.length);
+      const pos2 = emptyCells.splice(idx2, 1)[0]!;
+      const id1 = nextId++;
+      const id2 = nextId++;
+      spawned.push({
+        position: pos, type, state: 'active',
+        ticksRemaining: null, spawnTick: currentTick,
+        id: id1, partnerId: id2,
+      });
+      spawned.push({
+        position: pos2, type, state: 'active',
+        ticksRemaining: null, spawnTick: currentTick,
+        id: id2, partnerId: id1,
+      });
+    } else {
+      spawned.push({
+        position: pos,
+        type,
+        state: 'active',
+        ticksRemaining: def.decayTicks,
+        spawnTick: currentTick,
+        id: nextId++,
+      });
+    }
   }
 
   return spawned;

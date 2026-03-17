@@ -3,7 +3,7 @@ import { Grid } from './Grid';
 import { InputManager } from './Input';
 import { Arena } from './Arena';
 import { FoodType, FoodItem, FOOD_SCORES, spawnFood, checkFoodCollision } from './Food';
-import { HazardType, HazardInstance, spawnHazards, updateHazards, checkHazardCollision } from './Hazard';
+import { HazardType, HazardInstance, spawnHazards, updateHazards, checkHazardCollision, checkWarpHole } from './Hazard';
 import { Renderer } from '../rendering/Renderer';
 import { SnakeRenderer } from '../rendering/SnakeRenderer';
 import { ParticleSystem } from '../rendering/ParticleSystem';
@@ -507,6 +507,45 @@ export class Game {
       }
     }
 
+    // Warp Hole: teleport snake to partner hole
+    const warpDest = checkWarpHole(head, this.hazards);
+    if (warpDest) {
+      this.snake.segments[0] = { x: warpDest.x, y: warpDest.y };
+      const cellSize = this.renderer.layout.cellSize;
+      // Warp-in particles
+      const pixel = this.renderer.gridToPixel(warpDest.x, warpDest.y);
+      this.particles.emit(pixel.x + cellSize / 2, pixel.y + cellSize / 2, {
+        count: 10,
+        speed: 100,
+        lifetime: 0.3,
+        color: '#9944ff',
+        size: 3,
+      });
+    }
+
+    // Magnet hazards: pull nearest food 1 cell toward them each tick
+    for (const h of this.hazards) {
+      if (h.type !== HazardType.MAGNET) continue;
+      let nearestFood: FoodItem | null = null;
+      let nearestDist = Infinity;
+      for (const food of this.foods) {
+        const d = Math.abs(food.position.x - h.position.x) + Math.abs(food.position.y - h.position.y);
+        if (d > 0 && d < nearestDist) {
+          nearestDist = d;
+          nearestFood = food;
+        }
+      }
+      if (nearestFood) {
+        const fdx = Math.sign(h.position.x - nearestFood.position.x);
+        const fdy = Math.sign(h.position.y - nearestFood.position.y);
+        const nx = nearestFood.position.x + fdx;
+        const ny = nearestFood.position.y + fdy;
+        if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
+          nearestFood.position = { x: nx, y: ny };
+        }
+      }
+    }
+
     // Singularity: drift food toward head
     // Black Hole synergy: all food drifts (no range limit)
     if (hasPowerUp(this.heldPowerUps, PowerUpId.SINGULARITY)) {
@@ -1007,6 +1046,50 @@ export class Game {
           ctx.lineTo(cx - r * 0.3, cy - r * 0.3);
           ctx.closePath();
           ctx.fill();
+        }
+      } else if (hazard.type === HazardType.WARP_HOLE) {
+        // Purple swirling portal
+        const cx = pixel.x + cellSize / 2;
+        const cy = pixel.y + cellSize / 2;
+        const r = size / 2;
+        const spin = performance.now() / 500;
+        ctx.fillStyle = '#7722cc';
+        ctx.shadowColor = '#9944ff';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        // Inner swirl
+        ctx.strokeStyle = '#cc88ff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 0.5, spin, spin + Math.PI * 1.5);
+        ctx.stroke();
+      } else if (hazard.type === HazardType.MAGNET) {
+        // Red/blue magnet with field lines
+        const cx = pixel.x + cellSize / 2;
+        const cy = pixel.y + cellSize / 2;
+        const r = size / 2;
+        // Red half
+        ctx.fillStyle = '#ff3333';
+        ctx.shadowColor = '#ff3333';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2);
+        ctx.fill();
+        // Blue half
+        ctx.fillStyle = '#3366ff';
+        ctx.shadowColor = '#3366ff';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, Math.PI / 2, -Math.PI / 2);
+        ctx.fill();
+        // Field lines
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1;
+        for (let ring = 1; ring <= 2; ring++) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r + ring * cellSize * 0.4, 0, Math.PI * 2);
+          ctx.stroke();
         }
       } else if (hazard.type === HazardType.POISON_TRAIL) {
         // Purple-green poison with fade based on remaining ticks
