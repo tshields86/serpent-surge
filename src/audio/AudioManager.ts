@@ -86,6 +86,12 @@ export class AudioManager {
     }, 80);
   }
 
+  playBombEat(): void {
+    if (this.muted) return;
+    this.deathSynth?.triggerAttackRelease('16n');
+    this.eatSynth?.triggerAttackRelease('G3', '8n');
+  }
+
   playDeath(): void {
     if (this.muted) return;
     this.deathSynth?.triggerAttackRelease('8n');

@@ -6,6 +6,8 @@ export enum FoodType {
   APPLE = 'APPLE',
   GOLDEN_APPLE = 'GOLDEN_APPLE',
   SHRINK_PELLET = 'SHRINK_PELLET',
+  SPEED_FRUIT = 'SPEED_FRUIT',
+  BOMB_FRUIT = 'BOMB_FRUIT',
 }
 
 export interface FoodItem {
@@ -23,6 +25,8 @@ export const FOOD_SCORES: Record<FoodType, number> = {
   [FoodType.APPLE]: 10,
   [FoodType.GOLDEN_APPLE]: 50,
   [FoodType.SHRINK_PELLET]: 25,
+  [FoodType.SPEED_FRUIT]: 15,
+  [FoodType.BOMB_FRUIT]: 30,
 };
 
 export function spawnFood(
@@ -49,10 +53,13 @@ export function spawnFood(
   // Determine food type
   const roll = Math.random();
   let type = FoodType.APPLE;
-  if (roll < 0.10 && wave >= 3) {
+  if (roll < 0.05 && wave >= 4) {
+    type = FoodType.BOMB_FRUIT;
+  } else if (roll < 0.13 && wave >= 3) {
+    type = FoodType.SPEED_FRUIT;
+  } else if (roll < 0.20 && wave >= 3) {
     type = FoodType.SHRINK_PELLET;
-  } else if (roll < 0.25) {
-    // 15% chance for golden apple (25% - 10% shrink range)
+  } else if (roll < 0.33) {
     type = FoodType.GOLDEN_APPLE;
   }
 

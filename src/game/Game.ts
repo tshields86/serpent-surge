@@ -74,6 +74,7 @@ export class Game {
   private activeSynergies: ActiveSynergy[] = [];
   private synergyToast: { text: string; timer: number } | null = null;
   private warpSpeedTimer = 0; // Warp Speed synergy: invincibility after wall dash
+  private speedBoostTimer = 0; // Speed Fruit: 1.5x speed for 3s
 
   // Run stats
   score = 0;
@@ -202,6 +203,7 @@ export class Game {
     this.activeSynergies = [];
     this.synergyToast = null;
     this.warpSpeedTimer = 0;
+    this.speedBoostTimer = 0;
     this.ui.reset();
     this.deathScreen.reset();
     this.state = GameState.PLAYING;
@@ -281,10 +283,13 @@ export class Game {
     this.lastTimestamp = timestamp;
 
     if (this.state === GameState.PLAYING && this.countdownTimer <= 0) {
-      // Time Dilation: slow down tick rate during active effect
+      // Speed modifiers
       let effectiveTickRate = this.currentTickRate;
+      if (this.speedBoostTimer > 0) {
+        effectiveTickRate *= 1.5; // Speed Fruit: 50% faster
+      }
       if (this.timeDilationTimer > 0) {
-        effectiveTickRate *= 0.7; // 30% slowdown
+        effectiveTickRate *= 0.7; // Time Dilation: 30% slowdown
       }
       const tickInterval = 1000 / effectiveTickRate;
       this.tickAccumulator += delta;
@@ -310,6 +315,11 @@ export class Game {
 
     if (this.timeDilationTimer > 0) {
       this.timeDilationTimer = Math.max(0, this.timeDilationTimer - dtSec);
+    }
+
+    // Speed Fruit boost timer
+    if (this.speedBoostTimer > 0) {
+      this.speedBoostTimer = Math.max(0, this.speedBoostTimer - dtSec);
     }
 
     // Warp Speed invincibility timer
@@ -580,6 +590,24 @@ export class Game {
       // Apply food effect
       if (eatenFood.type === FoodType.SHRINK_PELLET) {
         this.snake.shrink(2);
+      } else if (eatenFood.type === FoodType.SPEED_FRUIT) {
+        this.speedBoostTimer = 3.0;
+        this.snake.grow(1);
+      } else if (eatenFood.type === FoodType.BOMB_FRUIT) {
+        // Destroy hazards in 3x3 area around eat position
+        const bx = eatenFood.position.x;
+        const by = eatenFood.position.y;
+        const beforeCount = this.hazards.length;
+        this.hazards = this.hazards.filter(h => {
+          const dx = Math.abs(h.position.x - bx);
+          const dy = Math.abs(h.position.y - by);
+          return dx > 1 || dy > 1;
+        });
+        const destroyed = beforeCount - this.hazards.length;
+        if (destroyed > 0) {
+          this.score += destroyed * 10;
+        }
+        this.snake.grow(1);
       } else {
         // Iron Gut: +2 per stack instead of +1
         const growAmount = hasPowerUp(this.heldPowerUps, PowerUpId.IRON_GUT)
@@ -601,6 +629,8 @@ export class Game {
         this.audio.playGoldenEat();
       } else if (eatenFood.type === FoodType.SHRINK_PELLET) {
         this.audio.playShrinkEat();
+      } else if (eatenFood.type === FoodType.BOMB_FRUIT) {
+        this.audio.playBombEat();
       } else {
         this.audio.playEat();
       }
@@ -617,8 +647,13 @@ export class Game {
         ? COLORS.goldenApple
         : eatenFood.type === FoodType.SHRINK_PELLET
           ? COLORS.shrinkPellet
-          : COLORS.apple;
-      const particleCount = eatenFood.type === FoodType.GOLDEN_APPLE ? 18 : 12;
+          : eatenFood.type === FoodType.SPEED_FRUIT
+            ? COLORS.speedFruit
+            : eatenFood.type === FoodType.BOMB_FRUIT
+              ? COLORS.bombFruit
+              : COLORS.apple;
+      const particleCount = eatenFood.type === FoodType.GOLDEN_APPLE ? 18
+        : eatenFood.type === FoodType.BOMB_FRUIT ? 24 : 12;
       this.particles.emit(pixel.x + cellSize / 2, pixel.y + cellSize / 2, {
         count: particleCount,
         speed: 150,
@@ -1195,6 +1230,41 @@ export class Game {
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fill();
+      } else if (food.type === FoodType.SPEED_FRUIT) {
+        // Green speed fruit with trailing particles
+        const r = (cellSize - padding * 2) / 2;
+        ctx.shadowColor = COLORS.speedFruit;
+        ctx.shadowBlur = cellSize * 0.5;
+        ctx.fillStyle = COLORS.speedFruit;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        // Small trailing dots
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath();
+        ctx.arc(cx - r * 0.8, cy, r * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx - r * 1.4, cy, r * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (food.type === FoodType.BOMB_FRUIT) {
+        // Orange flashing bomb
+        const r = (cellSize - padding * 2) / 2;
+        const flash = Math.sin(performance.now() / 150) > 0 ? 1.0 : 0.6;
+        ctx.globalAlpha = flash;
+        ctx.shadowColor = COLORS.bombFruit;
+        ctx.shadowBlur = cellSize * 0.6;
+        ctx.fillStyle = COLORS.bombFruit;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        // Fuse line
+        ctx.strokeStyle = '#ffcc00';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r);
+        ctx.lineTo(cx + r * 0.4, cy - r * 1.4);
+        ctx.stroke();
       } else {
         // Standard apple
         const r = (cellSize - padding * 2) / 2;
