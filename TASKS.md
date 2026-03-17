@@ -345,7 +345,7 @@ Implement one at a time, test each:
 - [x] Icons, screenshots, description, privacy policy, age rating
 
 ### 4.7 — Analytics
-- [ ] Minimal tracking via Supabase: runs, arenas reached, popular power-ups, daily challenge participation
+- [x] Minimal tracking via Supabase: runs, arenas reached, popular power-ups, daily challenge participation
 
 ### 4.8 — Accessibility
 - [ ] Colorblind mode (patterns/shapes supplement color)
