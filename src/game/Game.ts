@@ -19,6 +19,8 @@ import { checkWallCollision, checkSelfCollision } from './Collision';
 import { BASE_TICK_RATE, COLORS, GRID_SIZE, MAX_DELTA } from '../utils/constants';
 import { loadData, saveData, PersistedData } from '../utils/storage';
 import { calculateScales } from '../meta/Progression';
+import { SKIN_DEFS } from '../data/skins';
+import { SkinColors } from '../rendering/SnakeRenderer';
 
 export enum GameState {
   TITLE = 'TITLE',
@@ -83,6 +85,11 @@ export class Game {
   private deathLength = 0;
   private highScore = 0;
   private persistedData: PersistedData | null = null;
+  private activeSkin: SkinColors = {
+    bodyColor: SKIN_DEFS[0]!.bodyColor,
+    headColor: SKIN_DEFS[0]!.headColor,
+    glowColor: SKIN_DEFS[0]!.glowColor,
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
@@ -274,6 +281,15 @@ export class Game {
       this.highScore = data.highScore;
       if (data.settings.muted && !this.audio.isMuted) {
         this.audio.toggleMute();
+      }
+      // Load selected skin
+      const skinDef = SKIN_DEFS.find(s => s.id === data.selectedSkin);
+      if (skinDef) {
+        this.activeSkin = {
+          bodyColor: skinDef.bodyColor,
+          headColor: skinDef.headColor,
+          glowColor: skinDef.glowColor,
+        };
       }
     });
     requestAnimationFrame((t) => this.loop(t));
@@ -894,6 +910,7 @@ export class Game {
       this.renderer.layout,
       this.interpolation,
       this.ghostTimer > 0,
+      this.activeSkin,
     );
 
     // Draw split snake
@@ -907,6 +924,7 @@ export class Game {
         this.renderer.layout,
         this.interpolation,
         false,
+        this.activeSkin,
       );
       ctx.restore();
     }
