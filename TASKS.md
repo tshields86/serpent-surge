@@ -326,10 +326,10 @@ Implement one at a time, test each:
 - [x] Web Share API (mobile) / copy-to-clipboard (desktop)
 
 ### 4.3 — Endless Mode
-- [ ] Unlocks at 750 scales
-- [ ] No arenas — continuous, escalating difficulty
-- [ ] Power-up every 15 food eaten
-- [ ] Separate leaderboard
+- [x] Unlocks at 750 scales
+- [x] No arenas — continuous, escalating difficulty
+- [x] Power-up every 15 food eaten
+- [x] Separate leaderboard
 
 ### 4.4 — Boss Arenas
 - [ ] Every 5th arena: boss enemy snake on a pattern
