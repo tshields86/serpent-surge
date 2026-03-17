@@ -13,6 +13,7 @@ import { DeathScreen } from '../screens/DeathScreen';
 import { TitleScreen } from '../screens/TitleScreen';
 import { PowerUpScreen } from '../screens/PowerUpScreen';
 import { AudioManager } from '../audio/AudioManager';
+import { MusicPlayer } from '../audio/Music';
 import { PowerUpId, PowerUpInstance, acquirePowerUp, hasPowerUp, getStackCount, rollPowerUpOfferings } from './PowerUp';
 import { ActiveSynergy, getActiveSynergies, detectNewSynergies } from './Synergy';
 import { checkWallCollision, checkSelfCollision } from './Collision';
@@ -44,6 +45,7 @@ export class Game {
   private titleScreen: TitleScreen;
   private powerUpScreen: PowerUpScreen;
   private audio: AudioManager;
+  private music: MusicPlayer;
   private input: InputManager;
   private grid: Grid;
   private snake: Snake;
@@ -104,6 +106,7 @@ export class Game {
     this.titleScreen = new TitleScreen();
     this.powerUpScreen = new PowerUpScreen();
     this.audio = new AudioManager();
+    this.music = new MusicPlayer();
     this.input = new InputManager();
     this.grid = new Grid();
     this.arena = new Arena();
@@ -185,6 +188,7 @@ export class Game {
 
   private startRun(): void {
     this.audio.init();
+    this.music.init().then(() => this.music.transition('gameplay'));
     this.snake = this.createSnake();
     this.arena.reset();
     this.foods = [];
@@ -284,6 +288,7 @@ export class Game {
       this.highScore = data.highScore;
       if (data.settings.muted && !this.audio.isMuted) {
         this.audio.toggleMute();
+        this.music.setMuted(true);
       }
       // Load achievements
       if (data.achievementIds) {
@@ -1416,6 +1421,7 @@ export class Game {
     this.deathLength = this.snake.segments.length;
     this.screenFlashTimer = 0.2;
     this.audio.playDeath();
+    this.music.transition('death');
     if (this.score > this.highScore) {
       this.highScore = this.score;
     }
