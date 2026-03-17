@@ -322,8 +322,8 @@ Implement one at a time, test each:
 - [x] Leaderboard screen: all-time top 50, daily top 50, personal history
 
 ### 4.2 — Social Sharing
-- [ ] Canvas-to-PNG death screen capture
-- [ ] Web Share API (mobile) / copy-to-clipboard (desktop)
+- [x] Canvas-to-PNG death screen capture
+- [x] Web Share API (mobile) / copy-to-clipboard (desktop)
 
 ### 4.3 — Endless Mode
 - [ ] Unlocks at 750 scales
