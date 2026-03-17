@@ -117,6 +117,9 @@ export class Game {
 
     canvas.addEventListener('click', (e) => this.onClick(e));
     canvas.addEventListener('touchend', (e) => this.onTap(e));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.togglePause();
+    });
   }
 
   private createSnake(): Snake {
@@ -229,6 +232,10 @@ export class Game {
       this.startRun();
       return;
     }
+    if (this.state === GameState.PAUSED) {
+      this.togglePause();
+      return;
+    }
     if (this.state === GameState.POWER_UP_SELECT) {
       this.powerUpScreen.handleClick(e.offsetX, e.offsetY);
       return;
@@ -250,6 +257,10 @@ export class Game {
   private onTap(e: TouchEvent): void {
     if (this.state === GameState.TITLE) {
       this.startRun();
+      return;
+    }
+    if (this.state === GameState.PAUSED) {
+      this.togglePause();
       return;
     }
     if (this.state === GameState.POWER_UP_SELECT) {
@@ -1052,6 +1063,10 @@ export class Game {
       );
     }
 
+    if (this.state === GameState.PAUSED) {
+      this.drawPauseMenu();
+    }
+
     if (this.state === GameState.DEATH) {
       this.deathScreen.draw(
         this.renderer.ctx,
@@ -1459,6 +1474,44 @@ export class Game {
         size: 4,
       });
     }
+  }
+
+  private togglePause(): void {
+    if (this.state === GameState.PLAYING) {
+      this.state = GameState.PAUSED;
+      this.music.transition('menu');
+    } else if (this.state === GameState.PAUSED) {
+      this.state = GameState.PLAYING;
+      this.music.transition('gameplay');
+    }
+  }
+
+  private drawPauseMenu(): void {
+    const ctx = this.renderer.ctx;
+    const { width, height } = ctx.canvas;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(10, 10, 10, 0.8)';
+    ctx.fillRect(0, 0, width, height);
+
+    const titleSize = Math.min(24, Math.floor(width / 18));
+    ctx.font = `${titleSize}px "Press Start 2P", monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = COLORS.uiAccent;
+    ctx.shadowColor = COLORS.snakeGlow;
+    ctx.shadowBlur = 15;
+    ctx.fillText('PAUSED', width / 2, height / 2 - 40);
+    ctx.shadowBlur = 0;
+
+    const itemSize = Math.min(12, Math.floor(width / 35));
+    ctx.font = `${itemSize}px "Press Start 2P", monospace`;
+    ctx.fillStyle = COLORS.uiText;
+    ctx.fillText('TAP TO RESUME', width / 2, height / 2 + 20);
+    ctx.fillStyle = '#666';
+    ctx.fillText('ESC TO RESUME', width / 2, height / 2 + 55);
+
+    ctx.restore();
   }
 
   restart(): void {
