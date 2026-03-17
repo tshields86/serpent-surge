@@ -348,9 +348,9 @@ Implement one at a time, test each:
 - [x] Minimal tracking via Supabase: runs, arenas reached, popular power-ups, daily challenge participation
 
 ### 4.8 — Accessibility
-- [ ] Colorblind mode (patterns/shapes supplement color)
-- [ ] Reduced motion option (disable particles, shake, CRT)
-- [ ] `prefers-reduced-motion` auto-detect
+- [x] Colorblind mode (patterns/shapes supplement color)
+- [x] Reduced motion option (disable particles, shake, CRT)
+- [x] `prefers-reduced-motion` auto-detect
 - [ ] Lighthouse audit: 90+ Performance + Accessibility
 
 ### 4.9 — Launch
