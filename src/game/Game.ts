@@ -1309,15 +1309,14 @@ export class Game {
         ctx.lineWidth = 1;
         ctx.strokeRect(x + 2, y + 2, size - 4, size - 4);
       } else if (hazard.type === HazardType.SPIKE_TRAP) {
+        const cx = pixel.x + cellSize / 2;
+        const cy = pixel.y + cellSize / 2;
+        const r = size / 2;
         if (hazard.state === 'active') {
-          // Bright red spikes
+          // Bright red spikes — fully extended, glowing
           ctx.fillStyle = '#ff0040';
           ctx.shadowColor = '#ff0040';
-          ctx.shadowBlur = 8;
-          // Draw X pattern for spikes
-          const cx = pixel.x + cellSize / 2;
-          const cy = pixel.y + cellSize / 2;
-          const r = size / 2;
+          ctx.shadowBlur = 12;
           ctx.beginPath();
           ctx.moveTo(cx, cy - r);
           ctx.lineTo(cx + r * 0.3, cy - r * 0.3);
@@ -1330,22 +1329,12 @@ export class Game {
           ctx.closePath();
           ctx.fill();
         } else {
-          // Dim inactive spikes
-          ctx.globalAlpha = 0.3;
-          ctx.fillStyle = '#660020';
-          const cx = pixel.x + cellSize / 2;
-          const cy = pixel.y + cellSize / 2;
-          const r = size / 2;
+          // Inactive — small gray dot, no spikes, clearly safe
+          ctx.globalAlpha = 0.5;
+          ctx.fillStyle = '#444';
+          ctx.shadowBlur = 0;
           ctx.beginPath();
-          ctx.moveTo(cx, cy - r);
-          ctx.lineTo(cx + r * 0.3, cy - r * 0.3);
-          ctx.lineTo(cx + r, cy);
-          ctx.lineTo(cx + r * 0.3, cy + r * 0.3);
-          ctx.lineTo(cx, cy + r);
-          ctx.lineTo(cx - r * 0.3, cy + r * 0.3);
-          ctx.lineTo(cx - r, cy);
-          ctx.lineTo(cx - r * 0.3, cy - r * 0.3);
-          ctx.closePath();
+          ctx.arc(cx, cy, r * 0.3, 0, Math.PI * 2);
           ctx.fill();
         }
       } else if (hazard.type === HazardType.WARP_HOLE) {
