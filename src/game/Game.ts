@@ -12,6 +12,7 @@ import { Effects } from '../rendering/Effects';
 import { DeathScreen } from '../screens/DeathScreen';
 import { TitleScreen } from '../screens/TitleScreen';
 import { PowerUpScreen } from '../screens/PowerUpScreen';
+import { SettingsScreen, GameSettings } from '../screens/SettingsScreen';
 import { AudioManager } from '../audio/AudioManager';
 import { MusicPlayer } from '../audio/Music';
 import { PowerUpId, PowerUpInstance, acquirePowerUp, hasPowerUp, getStackCount, rollPowerUpOfferings } from './PowerUp';
@@ -45,6 +46,7 @@ export class Game {
   private deathScreen: DeathScreen;
   private titleScreen: TitleScreen;
   private powerUpScreen: PowerUpScreen;
+  private settingsScreen: SettingsScreen;
   private audio: AudioManager;
   private music: MusicPlayer;
   private input: InputManager;
@@ -107,6 +109,7 @@ export class Game {
     this.deathScreen = new DeathScreen();
     this.titleScreen = new TitleScreen();
     this.powerUpScreen = new PowerUpScreen();
+    this.settingsScreen = new SettingsScreen();
     this.audio = new AudioManager();
     this.music = new MusicPlayer();
     this.input = new InputManager();
@@ -120,7 +123,13 @@ export class Game {
     canvas.addEventListener('click', (e) => this.onClick(e));
     canvas.addEventListener('touchend', (e) => this.onTap(e), { passive: false });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.togglePause();
+      if (e.key === 'Escape') {
+        if (this.settingsScreen.isVisible()) {
+          this.settingsScreen.hide();
+        } else {
+          this.togglePause();
+        }
+      }
     });
   }
 
@@ -130,6 +139,7 @@ export class Game {
   }
 
   private onDirection(dir: Direction): void {
+    if (this.settingsScreen.isVisible()) return;
     if (this.state === GameState.TITLE) {
       this.startRun();
       return;
@@ -239,8 +249,18 @@ export class Game {
   }
 
   private onClick(e: MouseEvent): void {
+    // Settings screen handles clicks when visible (from any state)
+    if (this.settingsScreen.isVisible()) {
+      const result = this.settingsScreen.handleClick(e.offsetX, e.offsetY, this.renderer.canvas.width);
+      if (result === 'close') {
+        this.settingsScreen.hide();
+      } else if (result === 'changed') {
+        this.applySettings(this.settingsScreen.getSettings());
+      }
+      return;
+    }
     if (this.state === GameState.TITLE) {
-      this.startRun();
+      this.handleTitleClick(e.offsetX, e.offsetY);
       return;
     }
     if (this.state === GameState.PLAYING && this.isInBounds(e.offsetX, e.offsetY, this.pauseBtnBounds)) {
@@ -248,6 +268,10 @@ export class Game {
       return;
     }
     if (this.state === GameState.PAUSED) {
+      if (this.isInBounds(e.offsetX, e.offsetY, this.pauseSettingsBounds)) {
+        this.openSettings();
+        return;
+      }
       const b = this.pauseQuitBounds;
       if (e.offsetX >= b.x && e.offsetX <= b.x + b.width &&
           e.offsetY >= b.y && e.offsetY <= b.y + b.height) {
@@ -284,8 +308,22 @@ export class Game {
 
   private onTap(e: TouchEvent): void {
     e.preventDefault();
+    // Settings screen handles taps when visible
+    if (this.settingsScreen.isVisible()) {
+      const pos = this.getTapPos(e);
+      if (!pos) return;
+      const result = this.settingsScreen.handleClick(pos.x, pos.y, this.renderer.canvas.width);
+      if (result === 'close') {
+        this.settingsScreen.hide();
+      } else if (result === 'changed') {
+        this.applySettings(this.settingsScreen.getSettings());
+      }
+      return;
+    }
     if (this.state === GameState.TITLE) {
-      this.startRun();
+      const pos = this.getTapPos(e);
+      if (!pos) return;
+      this.handleTitleClick(pos.x, pos.y);
       return;
     }
     if (this.state === GameState.PLAYING) {
@@ -298,6 +336,10 @@ export class Game {
     if (this.state === GameState.PAUSED) {
       const pos = this.getTapPos(e);
       if (!pos) return;
+      if (this.isInBounds(pos.x, pos.y, this.pauseSettingsBounds)) {
+        this.openSettings();
+        return;
+      }
       if (this.isInBounds(pos.x, pos.y, this.pauseQuitBounds)) {
         this.quitToTitle();
       } else {
@@ -334,9 +376,19 @@ export class Game {
     loadData().then(data => {
       this.persistedData = data;
       this.highScore = data.highScore;
-      if (data.settings.muted && !this.audio.isMuted) {
-        this.audio.toggleMute();
-        this.music.setMuted(true);
+      // Apply persisted settings
+      const s = data.settings;
+      this.audio.setMuted(s.muted);
+      this.music.setMuted(s.muted);
+      if (s.musicVolume !== undefined) {
+        const musicDb = s.muted || s.musicVolume <= 0 ? -Infinity : -30 + (s.musicVolume / 100) * 30;
+        this.music.setVolume(musicDb);
+      }
+      if (s.sfxVolume !== undefined) {
+        this.audio.setVolume(s.muted ? 0 : s.sfxVolume / 100);
+      }
+      if (s.crtEnabled !== undefined) {
+        this.effects.setCrtEnabled(s.crtEnabled);
       }
       // Load achievements
       if (data.achievementIds) {
@@ -1034,8 +1086,11 @@ export class Game {
 
   private render(): void {
     if (this.state === GameState.TITLE) {
-      this.titleScreen.draw(this.renderer.ctx, this.highScore);
+      this.titleScreen.draw(this.renderer.ctx, this.highScore, this.persistedData?.totalScales);
       this.effects.drawCRT(this.renderer.ctx);
+      if (this.settingsScreen.isVisible()) {
+        this.settingsScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+      }
       return;
     }
 
@@ -1156,6 +1211,9 @@ export class Game {
 
     if (this.state === GameState.PAUSED) {
       this.drawPauseMenu();
+      if (this.settingsScreen.isVisible()) {
+        this.settingsScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+      }
     }
 
     if (this.state === GameState.DEATH) {
@@ -1644,6 +1702,7 @@ export class Game {
 
   private pauseBtnBounds = { x: 0, y: 0, width: 0, height: 0 };
   private pauseQuitBounds = { x: 0, y: 0, width: 0, height: 0 };
+  private pauseSettingsBounds = { x: 0, y: 0, width: 0, height: 0 };
 
   private drawPauseButton(): void {
     const ctx = this.renderer.ctx;
@@ -1699,18 +1758,31 @@ export class Game {
     const itemSize = Math.min(12, Math.floor(width / 35));
     ctx.font = `${itemSize}px "Press Start 2P", monospace`;
     ctx.fillStyle = COLORS.uiText;
-    ctx.fillText('TAP TO RESUME', width / 2, height / 2);
+    ctx.fillText('TAP TO RESUME', width / 2, height / 2 - 10);
+
+    // Settings button
+    ctx.fillStyle = '#888';
+    const settingsY = height / 2 + 35;
+    const settingsText = 'SETTINGS';
+    ctx.fillText(settingsText, width / 2, settingsY);
+    const settingsMetrics = ctx.measureText(settingsText);
+    this.pauseSettingsBounds = {
+      x: width / 2 - settingsMetrics.width / 2 - 10,
+      y: settingsY - itemSize,
+      width: settingsMetrics.width + 20,
+      height: Math.max(44, itemSize * 2.5),
+    };
 
     // Quit Run button
     ctx.fillStyle = '#ff4444';
-    const quitY = height / 2 + 50;
+    const quitY = height / 2 + 80;
     const quitText = 'QUIT RUN';
     ctx.fillText(quitText, width / 2, quitY);
     const quitMetrics = ctx.measureText(quitText);
-    const quitH = itemSize * 1.5;
+    const quitH = Math.max(44, itemSize * 2.5);
     this.pauseQuitBounds = {
       x: width / 2 - quitMetrics.width / 2 - 10,
-      y: quitY - quitH / 2,
+      y: quitY - itemSize,
       width: quitMetrics.width + 20,
       height: quitH,
     };
@@ -1718,7 +1790,7 @@ export class Game {
     // Only show ESC hint on non-touch devices
     if (!('ontouchstart' in window)) {
       ctx.fillStyle = '#666';
-      ctx.fillText('ESC TO RESUME', width / 2, height / 2 + 95);
+      ctx.fillText('ESC TO RESUME', width / 2, height / 2 + 130);
     }
 
     ctx.restore();
@@ -1731,5 +1803,63 @@ export class Game {
 
   restart(): void {
     this.startRun();
+  }
+
+  private handleTitleClick(x: number, y: number): void {
+    const action = this.titleScreen.handleClick(x, y);
+    if (!action) return;
+    switch (action.action) {
+      case 'start':
+        this.startRun();
+        break;
+      case 'settings':
+        this.openSettings();
+        break;
+      case 'daily':
+        // TODO: wire up daily challenge mode
+        this.startRun();
+        break;
+      case 'collection':
+        // TODO: wire up collection screen
+        break;
+    }
+  }
+
+  private openSettings(): void {
+    const settings: GameSettings = {
+      musicVolume: this.persistedData?.settings?.musicVolume ?? 70,
+      sfxVolume: this.persistedData?.settings?.sfxVolume ?? 80,
+      crtEnabled: this.persistedData?.settings?.crtEnabled ?? true,
+      muted: this.persistedData?.settings?.muted ?? false,
+      colorblindMode: this.persistedData?.settings?.colorblindMode ?? false,
+      reducedMotion: this.persistedData?.settings?.reducedMotion ?? false,
+    };
+    this.settingsScreen.show(settings);
+  }
+
+  private applySettings(settings: GameSettings): void {
+    // Apply to audio — music uses dB, SFX uses 0-1
+    const musicDb = settings.muted || settings.musicVolume <= 0 ? -Infinity : -30 + (settings.musicVolume / 100) * 30;
+    this.music.setVolume(musicDb);
+    this.music.setMuted(settings.muted);
+    this.audio.setMuted(settings.muted);
+    this.audio.setVolume(settings.muted ? 0 : settings.sfxVolume / 100);
+
+    // Apply to effects
+    this.effects.setCrtEnabled(settings.crtEnabled);
+
+    // Persist
+    if (this.persistedData) {
+      this.persistedData.settings = {
+        ...this.persistedData.settings,
+        musicVolume: settings.musicVolume,
+        sfxVolume: settings.sfxVolume,
+        crtEnabled: settings.crtEnabled,
+        muted: settings.muted,
+        colorblindMode: settings.colorblindMode,
+        reducedMotion: settings.reducedMotion,
+      };
+      saveData(this.persistedData);
+    }
   }
 }

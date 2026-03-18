@@ -5,6 +5,8 @@ export interface GameSettings {
   sfxVolume: number;    // 0-100
   crtEnabled: boolean;
   muted: boolean;
+  colorblindMode: boolean;
+  reducedMotion: boolean;
 }
 
 const DEFAULT_SETTINGS: GameSettings = {
@@ -12,6 +14,8 @@ const DEFAULT_SETTINGS: GameSettings = {
   sfxVolume: 80,
   crtEnabled: true,
   muted: false,
+  colorblindMode: false,
+  reducedMotion: false,
 };
 
 interface SettingsRow {
@@ -25,11 +29,14 @@ const ROWS: SettingsRow[] = [
   { label: 'SFX Volume', key: 'sfxVolume', type: 'slider' },
   { label: 'CRT Effect', key: 'crtEnabled', type: 'toggle' },
   { label: 'Muted', key: 'muted', type: 'toggle' },
+  { label: 'Colorblind', key: 'colorblindMode', type: 'toggle' },
+  { label: 'Reduced Motion', key: 'reducedMotion', type: 'toggle' },
 ];
 
 export class SettingsScreen {
   private settings: GameSettings = { ...DEFAULT_SETTINGS };
   private visible = false;
+  private closeBounds = { x: 0, y: 0, width: 0, height: 0 };
 
   show(settings: GameSettings): void {
     this.settings = { ...settings };
@@ -107,8 +114,22 @@ export class SettingsScreen {
       }
     }
 
-    // Close instruction
+    // Close button
+    const closeBtnY = startY + ROWS.length * rowHeight + 30;
+    const closeSize = Math.min(12, Math.floor(width / 35));
+    ctx.font = `${closeSize}px "Press Start 2P", monospace`;
     ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff4444';
+    ctx.fillText('CLOSE', width / 2, closeBtnY);
+    const closeMetrics = ctx.measureText('CLOSE');
+    this.closeBounds = {
+      x: width / 2 - closeMetrics.width / 2 - 10,
+      y: closeBtnY - closeSize,
+      width: closeMetrics.width + 20,
+      height: closeSize * 2,
+    };
+
+    // Hint
     ctx.fillStyle = '#666';
     ctx.font = `${Math.min(9, Math.floor(width / 45))}px "Press Start 2P", monospace`;
     ctx.fillText('TAP TO TOGGLE • ESC TO CLOSE', width / 2, height - 30);
@@ -116,9 +137,15 @@ export class SettingsScreen {
     ctx.restore();
   }
 
-  /** Handle click — returns true if settings changed */
-  handleClick(x: number, y: number, width: number): boolean {
+  /** Handle click — returns 'changed' if settings changed, 'close' if close clicked, false otherwise */
+  handleClick(x: number, y: number, width: number): 'changed' | 'close' | false {
     if (!this.visible) return false;
+
+    // Check close button
+    const cb = this.closeBounds;
+    if (x >= cb.x && x <= cb.x + cb.width && y >= cb.y && y <= cb.y + cb.height) {
+      return 'close';
+    }
 
     const rowHeight = 50;
     const startY = 100;
@@ -141,7 +168,7 @@ export class SettingsScreen {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (this.settings as any)[row.key] = pct;
         }
-        return true;
+        return 'changed';
       }
     }
     return false;

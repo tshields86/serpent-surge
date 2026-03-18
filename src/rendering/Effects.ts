@@ -2,6 +2,7 @@ export class Effects {
   private crtCanvas: HTMLCanvasElement | null = null;
   private crtWidth = 0;
   private crtHeight = 0;
+  private crtEnabled = true;
 
   // Screen shake state
   private shakeTimer = 0;
@@ -20,19 +21,24 @@ export class Effects {
     offscreen.height = height;
     const octx = offscreen.getContext('2d')!;
 
-    // Scanlines: thin dark lines every 3px
-    octx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    // Scanlines: alternating light lines every 3px for visible CRT effect
+    // Use a subtle light tint so scanlines show on the dark background
     for (let y = 0; y < height; y += 3) {
+      // Dark gap between scanlines
+      octx.fillStyle = 'rgba(0, 0, 0, 0.3)';
       octx.fillRect(0, y, width, 1);
+      // Faint bright scanline
+      octx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      octx.fillRect(0, y + 1, width, 1);
     }
 
     // Vignette: radial gradient darkening at edges
     const gradient = octx.createRadialGradient(
       width / 2, height / 2, height * 0.3,
-      width / 2, height / 2, height * 0.8,
+      width / 2, height / 2, height * 0.75,
     );
     gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
     octx.fillStyle = gradient;
     octx.fillRect(0, 0, width, height);
 
@@ -43,9 +49,14 @@ export class Effects {
   }
 
   drawCRT(ctx: CanvasRenderingContext2D): void {
+    if (!this.crtEnabled) return;
     const { width, height } = ctx.canvas;
     const crt = this.ensureCRT(width, height);
     ctx.drawImage(crt, 0, 0);
+  }
+
+  setCrtEnabled(enabled: boolean): void {
+    this.crtEnabled = enabled;
   }
 
   /** Trigger screen shake */

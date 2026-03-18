@@ -129,6 +129,23 @@ export class AudioManager {
     return this.muted;
   }
 
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+  }
+
+  /** Set SFX volume: 0-1 range, adjusts all synth volumes */
+  setVolume(level: number): void {
+    const db = level <= 0 ? -Infinity : -30 + level * 30;
+    const synths = [
+      this.eatSynth, this.goldenEatSynth, this.shrinkSynth,
+      this.deathSynth, this.deathTone, this.fanfareSynth,
+      this.chimeSynth, this.whooshSynth,
+    ];
+    for (const s of synths) {
+      if (s) s.volume.value = db;
+    }
+  }
+
   get isMuted(): boolean {
     return this.muted;
   }

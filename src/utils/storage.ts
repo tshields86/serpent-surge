@@ -12,6 +12,9 @@ export interface PersistedData {
     muted: boolean;
     colorblindMode: boolean;
     reducedMotion: boolean;
+    musicVolume: number;
+    sfxVolume: number;
+    crtEnabled: boolean;
   };
 }
 
@@ -29,6 +32,9 @@ const DEFAULT_DATA: PersistedData = {
     muted: false,
     colorblindMode: false,
     reducedMotion: false,
+    musicVolume: 70,
+    sfxVolume: 80,
+    crtEnabled: true,
   },
 };
 
