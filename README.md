@@ -15,7 +15,10 @@ Navigate a neon snake through increasingly dangerous arenas. Eat food to grow, c
 - **10 Power-Ups** — Ghost Mode, Wall Wrap, Dash, Rewind, Singularity, and more
 - **Hazards** — Wall Blocks, Spike Traps (toggle on/off), Poison Trails (decay over time)
 - **Extended Food** — Golden Apples (+50 pts), Shrink Pellets (-2 length)
-- **Persistence** — High scores and settings saved via IndexedDB
+- **Daily Challenge** — Seeded runs for consistent competition
+- **Leaderboard** — Submit scores and compete globally via Firebase
+- **Achievements** — Unlock milestones as you play
+- **Persistence** — High scores, settings, and progression saved via IndexedDB
 
 ## Tech Stack
 
@@ -26,6 +29,8 @@ Navigate a neon snake through increasingly dangerous arenas. Eat food to grow, c
 | Build | Vite |
 | Audio | Tone.js (synthesized retro SFX) |
 | Storage | IndexedDB via idb-keyval |
+| Backend | Firebase (leaderboard, analytics, auth) |
+| Mobile | Capacitor (iOS/Android) + haptics |
 | Testing | Vitest |
 | PWA | Service worker + manifest |
 
@@ -45,6 +50,8 @@ npm test
 npm run build
 ```
 
+Create a `.env` file based on `.env.example` for Firebase configuration.
+
 ## Controls
 
 | Input | Action |
@@ -60,8 +67,9 @@ src/
 ├── audio/          # Tone.js synthesized SFX
 ├── data/           # Power-up and hazard definitions
 ├── game/           # Core game logic (snake, food, collision, arena)
+├── meta/           # Leaderboard, analytics, achievements, daily challenge
 ├── rendering/      # Canvas renderer, particles, effects, HUD
-├── screens/        # Title, death, power-up selection screens
+├── screens/        # Title, death, power-up selection, leaderboard, settings
 ├── utils/          # Constants, math helpers, storage
 └── main.ts         # Entry point
 ```
