@@ -1715,8 +1715,11 @@ export class Game {
       height: quitH,
     };
 
-    ctx.fillStyle = '#666';
-    ctx.fillText('ESC TO RESUME', width / 2, height / 2 + 95);
+    // Only show ESC hint on non-touch devices
+    if (!('ontouchstart' in window)) {
+      ctx.fillStyle = '#666';
+      ctx.fillText('ESC TO RESUME', width / 2, height / 2 + 95);
+    }
 
     ctx.restore();
   }
