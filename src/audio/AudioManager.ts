@@ -12,6 +12,14 @@ export class AudioManager {
   private chimeSynth: Tone.Synth | null = null;
   private whooshSynth: Tone.NoiseSynth | null = null;
 
+  /** Resume audio context — call from user gesture handlers on mobile */
+  resume(): void {
+    const ctx = Tone.getContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+  }
+
   async init(): Promise<void> {
     if (this.initialized) return;
     await Tone.start();

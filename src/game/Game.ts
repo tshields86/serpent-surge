@@ -205,6 +205,19 @@ export class Game {
     }
   }
 
+  private audioInitialized = false;
+
+  /** Must be called directly inside a user gesture handler (click/tap) for mobile */
+  private ensureAudioContext(): void {
+    if (!this.audioInitialized) {
+      this.audioInitialized = true;
+      // Tone.start() must be invoked within a user gesture for mobile browsers
+      this.audio.init().then(() => this.music.init());
+    }
+    // Always try to resume in case the context was suspended by the browser
+    this.audio.resume();
+  }
+
   private async initAudio(): Promise<void> {
     await this.audio.init();
     await this.music.init();
@@ -253,6 +266,7 @@ export class Game {
   }
 
   private onClick(e: MouseEvent): void {
+    this.ensureAudioContext();
     // Settings screen handles clicks when visible (from any state)
     if (this.settingsScreen.isVisible()) {
       const result = this.settingsScreen.handleClick(e.offsetX, e.offsetY, this.renderer.canvas.width);
@@ -318,6 +332,7 @@ export class Game {
 
   private onTap(e: TouchEvent): void {
     e.preventDefault();
+    this.ensureAudioContext();
     // Settings screen handles taps when visible
     if (this.settingsScreen.isVisible()) {
       const pos = this.getTapPos(e);
