@@ -299,6 +299,12 @@ export class Game {
         e.offsetY >= bounds.y && e.offsetY <= bounds.y + bounds.height
       ) {
         this.restart();
+        return;
+      }
+      const shareBounds = this.deathScreen.getShareBounds();
+      if (this.isInBounds(e.offsetX, e.offsetY, shareBounds)) {
+        this.deathScreen.share(this.renderer.canvas, this.score);
+        return;
       }
     }
   }
@@ -371,6 +377,12 @@ export class Game {
         y >= bounds.y && y <= bounds.y + bounds.height
       ) {
         this.restart();
+        return;
+      }
+      const shareBounds = this.deathScreen.getShareBounds();
+      if (this.isInBounds(x, y, shareBounds)) {
+        this.deathScreen.share(this.renderer.canvas, this.score);
+        return;
       }
     }
   }
