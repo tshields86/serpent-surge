@@ -452,6 +452,7 @@ export class Game {
 
     const dtSec = delta / 1000;
     this.particles.update(dtSec);
+    this.snakeRenderer.update(dtSec);
     this.ui.update(dtSec, this.score);
     this.effects.updateShake(dtSec);
 
