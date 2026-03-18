@@ -1,14 +1,6 @@
-const CACHE_NAME = 'serpent-surge-v1';
+const CACHE_NAME = 'serpent-surge-v2';
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([
-        '/',
-        '/index.html',
-      ]);
-    })
-  );
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
@@ -24,12 +16,32 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const request = event.request;
+
+  // Navigation requests (HTML pages): network-first
+  // This ensures users always get the latest index.html after a deploy
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // All other requests (JS, CSS, images, fonts): cache-first with network fallback
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
+    caches.match(request).then((cached) => {
+      return cached || fetch(request).then((response) => {
         if (response.ok) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
       });
