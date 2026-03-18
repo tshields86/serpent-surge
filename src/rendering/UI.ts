@@ -60,7 +60,8 @@ export class UI {
   ): void {
     const { hudTop } = layout;
     const padding = 16;
-    const fontSize = Math.min(14, Math.floor(hudTop.width / 30));
+    const scaleFactor = Math.max(1, Math.min(1.5, hudTop.height / 60));
+    const fontSize = Math.min(Math.floor(14 * scaleFactor), Math.floor(hudTop.width / 30));
 
     ctx.save();
     ctx.font = `${fontSize}px ${FONT_FAMILY}`;
@@ -85,7 +86,7 @@ export class UI {
     ctx.restore();
 
     // Arena + Wave info (centered)
-    const smallSize = Math.min(10, Math.floor(hudTop.width / 45));
+    const smallSize = Math.min(Math.floor(10 * scaleFactor), Math.floor(hudTop.width / 45));
     ctx.font = `${smallSize}px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     const centerX = hudTop.width / 2;
@@ -104,7 +105,8 @@ export class UI {
   ): void {
     const { hudBottom } = layout;
     const padding = 16;
-    const fontSize = Math.min(11, Math.floor(hudBottom.width / 40));
+    const scaleFactor = Math.max(1, Math.min(1.5, hudBottom.height / 50));
+    const fontSize = Math.min(Math.floor(11 * scaleFactor), Math.floor(hudBottom.width / 40));
 
     ctx.save();
     ctx.font = `${fontSize}px ${FONT_FAMILY}`;

@@ -32,21 +32,27 @@ export class Renderer {
     const windowWidth = this.canvas.width || window.innerWidth;
     const windowHeight = this.canvas.height || window.innerHeight;
 
-    const availableHeight = windowHeight - HUD_HEIGHT_TOP - HUD_HEIGHT_BOTTOM - LAYOUT_PADDING * 2;
-    const availableWidth = windowWidth - LAYOUT_PADDING * 2;
+    // Scale HUD heights for larger screens (tablets/desktops)
+    const scaleFactor = Math.max(1, Math.min(1.5, windowHeight / 700));
+    const hudTop = Math.floor(HUD_HEIGHT_TOP * scaleFactor);
+    const hudBottom = Math.floor(HUD_HEIGHT_BOTTOM * scaleFactor);
+    const padding = Math.floor(LAYOUT_PADDING * scaleFactor);
+
+    const availableHeight = windowHeight - hudTop - hudBottom - padding * 2;
+    const availableWidth = windowWidth - padding * 2;
 
     const playSize = Math.min(availableWidth, availableHeight);
     const cellSize = Math.floor(playSize / GRID_SIZE);
     const actualPlaySize = cellSize * GRID_SIZE;
 
     const playX = Math.floor((windowWidth - actualPlaySize) / 2);
-    const playY = HUD_HEIGHT_TOP + Math.floor((availableHeight - actualPlaySize) / 2) + LAYOUT_PADDING;
+    const playY = hudTop + Math.floor((availableHeight - actualPlaySize) / 2) + padding;
 
     return {
       playArea: { x: playX, y: playY, size: actualPlaySize },
       cellSize,
-      hudTop: { x: 0, y: 0, width: windowWidth, height: HUD_HEIGHT_TOP },
-      hudBottom: { x: 0, y: playY + actualPlaySize, width: windowWidth, height: HUD_HEIGHT_BOTTOM },
+      hudTop: { x: 0, y: 0, width: windowWidth, height: hudTop },
+      hudBottom: { x: 0, y: playY + actualPlaySize, width: windowWidth, height: hudBottom },
     };
   }
 
