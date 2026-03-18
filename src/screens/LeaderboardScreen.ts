@@ -1,6 +1,8 @@
 import { COLORS } from '../utils/constants';
 import { LeaderboardEntry } from '../meta/Leaderboard';
 
+const FONT_FAMILY = '"Press Start 2P", monospace';
+
 type Tab = 'all-time' | 'daily';
 
 export class LeaderboardScreen {
@@ -9,6 +11,7 @@ export class LeaderboardScreen {
   private allTimeEntries: LeaderboardEntry[] = [];
   private dailyEntries: LeaderboardEntry[] = [];
   private loading = false;
+  private closeBounds = { x: 0, y: 0, width: 0, height: 0 };
 
   show(): void {
     this.visible = true;
@@ -32,10 +35,6 @@ export class LeaderboardScreen {
     this.loading = false;
   }
 
-  switchTab(tab: Tab): void {
-    this.activeTab = tab;
-  }
-
   draw(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     if (!this.visible) return;
 
@@ -45,7 +44,7 @@ export class LeaderboardScreen {
 
     // Title
     const titleSize = Math.min(18, Math.floor(width / 24));
-    ctx.font = `${titleSize}px "Press Start 2P", monospace`;
+    ctx.font = `${titleSize}px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = COLORS.score;
@@ -56,7 +55,7 @@ export class LeaderboardScreen {
 
     // Tabs
     const tabSize = Math.min(10, Math.floor(width / 40));
-    ctx.font = `${tabSize}px "Press Start 2P", monospace`;
+    ctx.font = `${tabSize}px ${FONT_FAMILY}`;
     const tabY = 70;
 
     ctx.fillStyle = this.activeTab === 'all-time' ? COLORS.uiAccent : '#666';
@@ -72,6 +71,7 @@ export class LeaderboardScreen {
       ctx.textAlign = 'center';
       ctx.fillStyle = COLORS.uiText;
       ctx.fillText('LOADING...', width / 2, height / 2);
+      this.drawCloseButton(ctx, width, height);
       ctx.restore();
       return;
     }
@@ -79,10 +79,10 @@ export class LeaderboardScreen {
     // Entries
     const entries = this.activeTab === 'all-time' ? this.allTimeEntries : this.dailyEntries;
     const entrySize = Math.min(9, Math.floor(width / 45));
-    ctx.font = `${entrySize}px "Press Start 2P", monospace`;
+    ctx.font = `${entrySize}px ${FONT_FAMILY}`;
     const startY = 100;
     const rowHeight = 22;
-    const maxVisible = Math.floor((height - startY - 40) / rowHeight);
+    const maxVisible = Math.floor((height - startY - 60) / rowHeight);
 
     if (entries.length === 0) {
       ctx.textAlign = 'center';
@@ -108,17 +108,34 @@ export class LeaderboardScreen {
       }
     }
 
-    // Close instruction
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#666';
-    ctx.font = `${Math.min(8, Math.floor(width / 50))}px "Press Start 2P", monospace`;
-    ctx.fillText('TAP TABS TO SWITCH • ESC TO CLOSE', width / 2, height - 20);
-
+    this.drawCloseButton(ctx, width, height);
     ctx.restore();
   }
 
-  /** Handle click — returns 'tab-switch' or 'close' or null */
+  private drawCloseButton(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+    const closeSize = Math.min(10, Math.floor(width / 40));
+    ctx.font = `${closeSize}px ${FONT_FAMILY}`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff4444';
+    const closeY = height - 30;
+    ctx.fillText('CLOSE', width / 2, closeY);
+    const closeMetrics = ctx.measureText('CLOSE');
+    this.closeBounds = {
+      x: width / 2 - closeMetrics.width / 2 - 10,
+      y: closeY - closeSize,
+      width: closeMetrics.width + 20,
+      height: closeSize * 2.5,
+    };
+  }
+
   handleClick(x: number, y: number, width: number): 'close' | null {
+    // Close button
+    const cb = this.closeBounds;
+    if (x >= cb.x && x <= cb.x + cb.width && y >= cb.y && y <= cb.y + cb.height) {
+      return 'close';
+    }
+
+    // Tab switching
     const tabY = 70;
     if (y >= tabY - 15 && y <= tabY + 15) {
       if (x < width / 2) {

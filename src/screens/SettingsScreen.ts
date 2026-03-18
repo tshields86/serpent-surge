@@ -7,6 +7,7 @@ export interface GameSettings {
   muted: boolean;
   colorblindMode: boolean;
   reducedMotion: boolean;
+  playerName: string;
 }
 
 const DEFAULT_SETTINGS: GameSettings = {
@@ -16,7 +17,13 @@ const DEFAULT_SETTINGS: GameSettings = {
   muted: false,
   colorblindMode: false,
   reducedMotion: false,
+  playerName: 'AAA',
 };
+
+const FONT_FAMILY = '"Press Start 2P", monospace';
+
+const NAME_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-'.split('');
+const MAX_NAME_LENGTH = 10;
 
 interface SettingsRow {
   label: string;
@@ -37,6 +44,9 @@ export class SettingsScreen {
   private settings: GameSettings = { ...DEFAULT_SETTINGS };
   private visible = false;
   private closeBounds = { x: 0, y: 0, width: 0, height: 0 };
+  private nameCharBounds: { x: number; y: number; width: number; height: number }[] = [];
+  private nameAddBounds = { x: 0, y: 0, width: 0, height: 0 };
+  private nameDelBounds = { x: 0, y: 0, width: 0, height: 0 };
 
   show(settings: GameSettings): void {
     this.settings = { ...settings };
@@ -65,7 +75,7 @@ export class SettingsScreen {
 
     // Title
     const titleSize = Math.min(18, Math.floor(width / 24));
-    ctx.font = `${titleSize}px "Press Start 2P", monospace`;
+    ctx.font = `${titleSize}px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = COLORS.uiAccent;
@@ -74,19 +84,24 @@ export class SettingsScreen {
     ctx.fillText('SETTINGS', width / 2, 50);
     ctx.shadowBlur = 0;
 
-    // Rows
+    // Player name row
     const rowHeight = 50;
     const startY = 100;
     const labelSize = Math.min(10, Math.floor(width / 40));
     const rowWidth = Math.min(320, width - 40);
     const rowX = (width - rowWidth) / 2;
 
+    this.drawNameRow(ctx, rowX, startY, rowWidth, rowHeight, labelSize);
+
+    // Setting rows (offset by 1 for name row)
+    const settingsStartY = startY + rowHeight;
+
     for (let i = 0; i < ROWS.length; i++) {
       const row = ROWS[i]!;
-      const y = startY + i * rowHeight;
+      const y = settingsStartY + i * rowHeight;
 
       // Label
-      ctx.font = `${labelSize}px "Press Start 2P", monospace`;
+      ctx.font = `${labelSize}px ${FONT_FAMILY}`;
       ctx.textAlign = 'left';
       ctx.fillStyle = COLORS.uiText;
       ctx.fillText(row.label, rowX, y + rowHeight / 2);
@@ -115,9 +130,9 @@ export class SettingsScreen {
     }
 
     // Close button
-    const closeBtnY = startY + ROWS.length * rowHeight + 30;
+    const closeBtnY = settingsStartY + ROWS.length * rowHeight + 30;
     const closeSize = Math.min(12, Math.floor(width / 35));
-    ctx.font = `${closeSize}px "Press Start 2P", monospace`;
+    ctx.font = `${closeSize}px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ff4444';
     ctx.fillText('CLOSE', width / 2, closeBtnY);
@@ -131,10 +146,78 @@ export class SettingsScreen {
 
     // Hint
     ctx.fillStyle = '#666';
-    ctx.font = `${Math.min(9, Math.floor(width / 45))}px "Press Start 2P", monospace`;
+    ctx.font = `${Math.min(9, Math.floor(width / 45))}px ${FONT_FAMILY}`;
     ctx.fillText('TAP TO TOGGLE • ESC TO CLOSE', width / 2, height - 30);
 
     ctx.restore();
+  }
+
+  private drawNameRow(
+    ctx: CanvasRenderingContext2D,
+    rowX: number,
+    y: number,
+    rowWidth: number,
+    rowHeight: number,
+    labelSize: number,
+  ): void {
+    // Label
+    ctx.font = `${labelSize}px ${FONT_FAMILY}`;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = COLORS.uiText;
+    ctx.fillText('Name', rowX, y + rowHeight / 2);
+
+    // Character display — each letter is tappable to cycle
+    const name = this.settings.playerName;
+    const charSize = Math.min(12, Math.floor(labelSize * 1.2));
+    ctx.font = `${charSize}px ${FONT_FAMILY}`;
+    const charW = charSize * 1.8;
+    const totalCharsWidth = name.length * charW;
+    const controlsWidth = charW * 2.4; // space for +/- buttons
+    const nameStartX = rowX + rowWidth - totalCharsWidth - controlsWidth;
+    const charY = y + rowHeight / 2;
+
+    this.nameCharBounds = [];
+    for (let i = 0; i < name.length; i++) {
+      const cx = nameStartX + i * charW;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = COLORS.score;
+      ctx.fillText(name[i]!, cx + charW / 2, charY);
+
+      // Up/down arrows
+      const arrowSize = Math.max(6, charSize * 0.5);
+      ctx.font = `${arrowSize}px ${FONT_FAMILY}`;
+      ctx.fillStyle = '#666';
+      ctx.fillText('\u25B2', cx + charW / 2, charY - charSize * 0.9);
+      ctx.fillText('\u25BC', cx + charW / 2, charY + charSize * 0.9);
+      ctx.font = `${charSize}px ${FONT_FAMILY}`;
+
+      this.nameCharBounds.push({
+        x: cx,
+        y: y,
+        width: charW,
+        height: rowHeight,
+      });
+    }
+
+    // Add (+) and delete (-) buttons
+    const btnX = nameStartX + name.length * charW + 4;
+    ctx.textAlign = 'center';
+
+    if (name.length < MAX_NAME_LENGTH) {
+      ctx.fillStyle = COLORS.uiAccent;
+      ctx.fillText('+', btnX + charW * 0.4, charY);
+      this.nameAddBounds = { x: btnX, y, width: charW, height: rowHeight };
+    } else {
+      this.nameAddBounds = { x: 0, y: 0, width: 0, height: 0 };
+    }
+
+    if (name.length > 1) {
+      ctx.fillStyle = '#ff4444';
+      ctx.fillText('-', btnX + charW * 1.4, charY);
+      this.nameDelBounds = { x: btnX + charW, y, width: charW, height: rowHeight };
+    } else {
+      this.nameDelBounds = { x: 0, y: 0, width: 0, height: 0 };
+    }
   }
 
   /** Handle click — returns 'changed' if settings changed, 'close' if close clicked, false otherwise */
@@ -147,8 +230,41 @@ export class SettingsScreen {
       return 'close';
     }
 
+    // Check name character cycling
+    const name = this.settings.playerName;
+    for (let i = 0; i < this.nameCharBounds.length; i++) {
+      const b = this.nameCharBounds[i]!;
+      if (x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height) {
+        const ch = name[i]!;
+        const idx = NAME_CHARS.indexOf(ch.toUpperCase());
+        // Top half = next char, bottom half = prev char
+        const midY = b.y + b.height / 2;
+        const nextIdx = y < midY
+          ? (idx + 1) % NAME_CHARS.length
+          : (idx - 1 + NAME_CHARS.length) % NAME_CHARS.length;
+        this.settings.playerName =
+          name.substring(0, i) + NAME_CHARS[nextIdx]! + name.substring(i + 1);
+        return 'changed';
+      }
+    }
+
+    // Check add button
+    const ab = this.nameAddBounds;
+    if (ab.width > 0 && x >= ab.x && x <= ab.x + ab.width && y >= ab.y && y <= ab.y + ab.height) {
+      this.settings.playerName += 'A';
+      return 'changed';
+    }
+
+    // Check delete button
+    const db = this.nameDelBounds;
+    if (db.width > 0 && x >= db.x && x <= db.x + db.width && y >= db.y && y <= db.y + db.height) {
+      this.settings.playerName = this.settings.playerName.slice(0, -1);
+      return 'changed';
+    }
+
+    // Settings rows (offset by 1 for name row)
     const rowHeight = 50;
-    const startY = 100;
+    const startY = 100 + rowHeight; // after name row
     const rowWidth = Math.min(320, width - 40);
     const rowX = (width - rowWidth) / 2;
 

@@ -14,6 +14,7 @@ import { DeathScreen } from '../screens/DeathScreen';
 import { TitleScreen } from '../screens/TitleScreen';
 import { PowerUpScreen } from '../screens/PowerUpScreen';
 import { SettingsScreen, GameSettings } from '../screens/SettingsScreen';
+import { LeaderboardScreen } from '../screens/LeaderboardScreen';
 import { AudioManager } from '../audio/AudioManager';
 import { MusicPlayer } from '../audio/Music';
 import { PowerUpId, PowerUpInstance, acquirePowerUp, hasPowerUp, getStackCount, rollPowerUpOfferings } from './PowerUp';
@@ -51,6 +52,7 @@ export class Game {
   private titleScreen: TitleScreen;
   private powerUpScreen: PowerUpScreen;
   private settingsScreen: SettingsScreen;
+  private leaderboardScreen: LeaderboardScreen;
   private audio: AudioManager;
   private music: MusicPlayer;
   private input: InputManager;
@@ -119,6 +121,7 @@ export class Game {
     this.titleScreen = new TitleScreen();
     this.powerUpScreen = new PowerUpScreen();
     this.settingsScreen = new SettingsScreen();
+    this.leaderboardScreen = new LeaderboardScreen();
     this.audio = new AudioManager();
     this.music = new MusicPlayer();
     this.input = new InputManager();
@@ -135,6 +138,8 @@ export class Game {
       if (e.key === 'Escape') {
         if (this.settingsScreen.isVisible()) {
           this.settingsScreen.hide();
+        } else if (this.leaderboardScreen.isVisible()) {
+          this.leaderboardScreen.hide();
         } else {
           this.togglePause();
         }
@@ -148,7 +153,7 @@ export class Game {
   }
 
   private onDirection(dir: Direction): void {
-    if (this.settingsScreen.isVisible()) return;
+    if (this.settingsScreen.isVisible() || this.leaderboardScreen.isVisible()) return;
     if (this.state === GameState.TITLE) {
       this.startRun();
       return;
@@ -275,6 +280,14 @@ export class Game {
 
   private onClick(e: MouseEvent): void {
     this.ensureAudioContext();
+    // Leaderboard screen handles clicks when visible
+    if (this.leaderboardScreen.isVisible()) {
+      const result = this.leaderboardScreen.handleClick(e.offsetX, e.offsetY, this.renderer.canvas.width);
+      if (result === 'close') {
+        this.leaderboardScreen.hide();
+      }
+      return;
+    }
     // Settings screen handles clicks when visible (from any state)
     if (this.settingsScreen.isVisible()) {
       const result = this.settingsScreen.handleClick(e.offsetX, e.offsetY, this.renderer.canvas.width);
@@ -328,6 +341,11 @@ export class Game {
         this.deathScreen.share(this.renderer.canvas, this.score);
         return;
       }
+      const lbBounds = this.deathScreen.getLeaderboardBounds();
+      if (this.isInBounds(e.offsetX, e.offsetY, lbBounds)) {
+        this.showLeaderboard();
+        return;
+      }
     }
   }
 
@@ -341,6 +359,16 @@ export class Game {
   private onTap(e: TouchEvent): void {
     e.preventDefault();
     this.ensureAudioContext();
+    // Leaderboard screen handles taps when visible
+    if (this.leaderboardScreen.isVisible()) {
+      const pos = this.getTapPos(e);
+      if (!pos) return;
+      const result = this.leaderboardScreen.handleClick(pos.x, pos.y, this.renderer.canvas.width);
+      if (result === 'close') {
+        this.leaderboardScreen.hide();
+      }
+      return;
+    }
     // Settings screen handles taps when visible
     if (this.settingsScreen.isVisible()) {
       const pos = this.getTapPos(e);
@@ -405,6 +433,11 @@ export class Game {
       const shareBounds = this.deathScreen.getShareBounds();
       if (this.isInBounds(x, y, shareBounds)) {
         this.deathScreen.share(this.renderer.canvas, this.score);
+        return;
+      }
+      const lbBounds = this.deathScreen.getLeaderboardBounds();
+      if (this.isInBounds(x, y, lbBounds)) {
+        this.showLeaderboard();
         return;
       }
     }
@@ -1135,6 +1168,9 @@ export class Game {
       if (this.settingsScreen.isVisible()) {
         this.settingsScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
       }
+      if (this.leaderboardScreen.isVisible()) {
+        this.leaderboardScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+      }
       return;
     }
 
@@ -1268,6 +1304,9 @@ export class Game {
         this.deathLength,
         this.totalFoodEaten,
       );
+      if (this.leaderboardScreen.isVisible()) {
+        this.leaderboardScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+      }
     }
   }
 
@@ -1727,7 +1766,7 @@ export class Game {
     const wasDaily = this.isDailyChallenge;
     const seed = this.dailySeed;
     this.leaderboard.submitScore({
-      player_name: 'Anonymous',
+      player_name: this.persistedData?.playerName ?? 'AAA',
       score: this.score,
       arenas_cleared: this.arena.currentArena - 1,
       food_eaten: this.totalFoodEaten,
@@ -1898,6 +1937,9 @@ export class Game {
       case 'collection':
         // TODO: wire up collection screen
         break;
+      case 'leaderboard':
+        this.showLeaderboard();
+        break;
     }
   }
 
@@ -1917,8 +1959,22 @@ export class Game {
       muted: this.persistedData?.settings?.muted ?? false,
       colorblindMode: this.persistedData?.settings?.colorblindMode ?? false,
       reducedMotion: this.persistedData?.settings?.reducedMotion ?? false,
+      playerName: this.persistedData?.playerName ?? 'AAA',
     };
     this.settingsScreen.show(settings);
+  }
+
+  private showLeaderboard(): void {
+    this.leaderboardScreen.show();
+    this.leaderboardScreen.setLoading(true);
+    Promise.all([
+      this.leaderboard.getTopScores(),
+      this.leaderboard.getDailyScores(todaySeed()),
+    ]).then(([allTime, daily]) => {
+      this.leaderboardScreen.setEntries(allTime, daily);
+    }).catch(() => {
+      this.leaderboardScreen.setLoading(false);
+    });
   }
 
   private applySettings(settings: GameSettings): void {
@@ -1934,6 +1990,7 @@ export class Game {
 
     // Persist
     if (this.persistedData) {
+      this.persistedData.playerName = settings.playerName;
       this.persistedData.settings = {
         ...this.persistedData.settings,
         musicVolume: settings.musicVolume,

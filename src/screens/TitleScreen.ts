@@ -3,7 +3,7 @@ import { COLORS } from '../utils/constants';
 const FONT_FAMILY = '"Press Start 2P", monospace';
 
 export interface TitleAction {
-  action: 'start' | 'settings' | 'daily' | 'collection';
+  action: 'start' | 'settings' | 'daily' | 'collection' | 'leaderboard';
 }
 
 interface ButtonBounds {
@@ -18,6 +18,7 @@ export class TitleScreen {
   private settingsBounds: ButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
   private dailyBounds: ButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
   private collectionBounds: ButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
+  private leaderboardBounds: ButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
   update(dt: number): void {
     this.pulseTimer += dt;
   }
@@ -100,9 +101,21 @@ export class TitleScreen {
       height: Math.max(44, btnSize * 2.5),
     };
 
+    // Leaderboard
+    ctx.fillStyle = COLORS.score;
+    const lbY = btnStartY + btnSpacing * 2;
+    ctx.fillText('LEADERBOARD', centerX, lbY);
+    const lbMetrics = ctx.measureText('LEADERBOARD');
+    this.leaderboardBounds = {
+      x: centerX - lbMetrics.width / 2 - 10,
+      y: lbY - btnSize,
+      width: lbMetrics.width + 20,
+      height: Math.max(44, btnSize * 2.5),
+    };
+
     // Settings
     ctx.fillStyle = '#888';
-    const settingsY = btnStartY + btnSpacing * 2;
+    const settingsY = btnStartY + btnSpacing * 3;
     ctx.fillText('SETTINGS', centerX, settingsY);
     const settingsMetrics = ctx.measureText('SETTINGS');
     this.settingsBounds = {
@@ -126,6 +139,7 @@ export class TitleScreen {
   handleClick(x: number, y: number): TitleAction | null {
     if (this.isInBounds(x, y, this.dailyBounds)) return { action: 'daily' };
     if (this.isInBounds(x, y, this.collectionBounds)) return { action: 'collection' };
+    if (this.isInBounds(x, y, this.leaderboardBounds)) return { action: 'leaderboard' };
     if (this.isInBounds(x, y, this.settingsBounds)) return { action: 'settings' };
     // Anywhere else starts the game
     return { action: 'start' };

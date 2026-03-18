@@ -7,6 +7,7 @@ export interface PersistedData {
   unlockedIds: string[];
   achievementIds: string[];
   selectedSkin: string;
+  playerName: string;
   dailyBest: { seed: number; score: number } | null;
   settings: {
     muted: boolean;
@@ -27,6 +28,7 @@ const DEFAULT_DATA: PersistedData = {
   unlockedIds: [],
   achievementIds: [],
   selectedSkin: 'default',
+  playerName: 'AAA',
   dailyBest: null,
   settings: {
     muted: false,

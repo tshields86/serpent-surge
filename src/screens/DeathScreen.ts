@@ -7,6 +7,7 @@ export class DeathScreen {
   private opacity = 0;
   private fadeSpeed = 2; // per second
   private shareBounds = { x: 0, y: 0, width: 0, height: 0 };
+  private leaderboardBounds = { x: 0, y: 0, width: 0, height: 0 };
   private shareMessage = '';
   private shareMessageTimer = 0;
 
@@ -98,11 +99,28 @@ export class DeathScreen {
 
     this.shareBounds = { x: shareX, y: shareY, width: shareWidth, height: shareHeight };
 
+    // "LEADERBOARD" button
+    const lbY = shareY + shareHeight + 12;
+    const lbWidth = Math.min(240, width * 0.6);
+    const lbHeight = 44;
+    const lbX = centerX - lbWidth / 2;
+
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.roundRect(lbX, lbY, lbWidth, lbHeight, 8);
+    ctx.fill();
+
+    ctx.font = `${shareFontSize}px ${FONT_FAMILY}`;
+    ctx.fillStyle = COLORS.score;
+    ctx.fillText('LEADERBOARD', centerX, lbY + lbHeight / 2);
+
+    this.leaderboardBounds = { x: lbX, y: lbY, width: lbWidth, height: lbHeight };
+
     // Share feedback message
     if (this.shareMessageTimer > 0 && this.shareMessage) {
       ctx.font = `${Math.min(9, Math.floor(width / 45))}px ${FONT_FAMILY}`;
       ctx.fillStyle = COLORS.uiAccent;
-      ctx.fillText(this.shareMessage, centerX, shareY + shareHeight + 20);
+      ctx.fillText(this.shareMessage, centerX, lbY + lbHeight + 20);
     }
 
     ctx.restore();
@@ -135,6 +153,10 @@ export class DeathScreen {
 
   getShareBounds(): { x: number; y: number; width: number; height: number } {
     return { ...this.shareBounds };
+  }
+
+  getLeaderboardBounds(): { x: number; y: number; width: number; height: number } {
+    return { ...this.leaderboardBounds };
   }
 
   async share(canvas: HTMLCanvasElement, score: number): Promise<void> {
