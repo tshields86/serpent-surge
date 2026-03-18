@@ -84,14 +84,15 @@ export class UI {
     ctx.fillText(`SCORE ${this.scoreDisplay.toLocaleString()}`, padding, centerY);
     ctx.restore();
 
-    // Arena + Wave info (right side)
+    // Arena + Wave info (centered)
     const smallSize = Math.min(10, Math.floor(hudTop.width / 45));
     ctx.font = `${smallSize}px ${FONT_FAMILY}`;
+    ctx.textAlign = 'center';
+    const centerX = hudTop.width / 2;
     ctx.fillStyle = COLORS.uiText;
-    ctx.textAlign = 'right';
-    ctx.fillText(`ARENA ${data.arenaNumber}`, hudTop.width - padding, centerY - smallSize);
+    ctx.fillText(`ARENA ${data.arenaNumber}`, centerX, centerY - smallSize);
     ctx.fillStyle = COLORS.uiAccent;
-    ctx.fillText(data.waveProgress, hudTop.width - padding, centerY + smallSize);
+    ctx.fillText(data.waveProgress, centerX, centerY + smallSize);
 
     ctx.restore();
   }

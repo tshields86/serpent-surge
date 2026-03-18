@@ -17,8 +17,9 @@ export class MusicPlayer {
   private gameArpSynth: Tone.Synth | null = null;
   private gameArpLoop: Tone.Loop | null = null;
 
-  private deathDrone: Tone.Synth | null = null;
-  private deathLoop: Tone.Loop | null = null;
+  private deathPad: Tone.PolySynth | null = null;
+  private deathInterval: ReturnType<typeof setInterval> | null = null;
+  private deathChordIdx = 0;
 
   async init(): Promise<void> {
     if (this.initialized) return;
@@ -68,17 +69,12 @@ export class MusicPlayer {
       arpIdx++;
     }, '8n');
 
-    // Death: low drone
-    this.deathDrone = new Tone.Synth({
-      oscillator: { type: 'sine' },
-      envelope: { attack: 1.0, decay: 2.0, sustain: 0.8, release: 2.0 },
-      volume: this.volume - 3,
+    // Death: slow synthwave minor chord progression
+    this.deathPad = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'triangle' },
+      envelope: { attack: 0.8, decay: 1.0, sustain: 0.6, release: 0.3 },
+      volume: this.volume - 6,
     }).toDestination();
-
-    this.deathLoop = new Tone.Loop((time) => {
-      if (this.muted || !this.deathDrone) return;
-      this.deathDrone.triggerAttackRelease('C1', '2m', time);
-    }, '2m');
 
     this.initialized = true;
   }
@@ -86,40 +82,66 @@ export class MusicPlayer {
   transition(newState: MusicState): void {
     if (!this.initialized || newState === this.currentState) return;
 
-    // Stop current
     this.stopAll();
-
     this.currentState = newState;
 
-    // Start new
+    if (newState === 'off') return;
+
+    const transport = Tone.getTransport();
+
+    if (newState === 'death') {
+      // Bypass transport — slow minor chord progression
+      this.deathChordIdx = 0;
+      this.playDeathChord();
+      this.deathInterval = setInterval(() => this.playDeathChord(), 3000);
+      return;
+    }
+
+    // Transport-based music for menu and gameplay
+    const bpmMap: Record<string, number> = { menu: 70, gameplay: 120 };
+    transport.bpm.value = bpmMap[newState] ?? 120;
+    transport.position = 0;
+
     switch (newState) {
       case 'menu':
         this.menuLoop?.start(0);
-        Tone.getTransport().bpm.value = 70;
-        Tone.getTransport().start();
         break;
       case 'gameplay':
         this.gameBassLoop?.start(0);
         this.gameArpLoop?.start(0);
-        Tone.getTransport().bpm.value = 120;
-        Tone.getTransport().start();
-        break;
-      case 'death':
-        this.deathLoop?.start(0);
-        Tone.getTransport().bpm.value = 60;
-        Tone.getTransport().start();
-        break;
-      case 'off':
         break;
     }
+
+    transport.start();
   }
 
   private stopAll(): void {
-    Tone.getTransport().stop();
+    const transport = Tone.getTransport();
+    transport.stop();
+    transport.cancel();
     this.menuLoop?.stop(0);
     this.gameBassLoop?.stop(0);
     this.gameArpLoop?.stop(0);
-    this.deathLoop?.stop(0);
+    if (this.deathInterval) {
+      clearInterval(this.deathInterval);
+      this.deathInterval = null;
+    }
+    // Immediately silence any ringing death notes
+    this.deathPad?.releaseAll();
+  }
+
+  private readonly deathChords: string[][] = [
+    ['A2', 'C3', 'E3'],   // Am
+    ['D3', 'F3', 'A3'],   // Dm
+    ['E2', 'G#2', 'B2'],  // E (dominant)
+    ['A2', 'C3', 'E3'],   // Am (resolve)
+  ];
+
+  private playDeathChord(): void {
+    if (this.muted || !this.deathPad) return;
+    const chord = this.deathChords[this.deathChordIdx % this.deathChords.length]!;
+    this.deathChordIdx++;
+    this.deathPad.triggerAttackRelease(chord, 2.5);
   }
 
   setVolume(db: number): void {
@@ -127,7 +149,7 @@ export class MusicPlayer {
     if (this.menuPad) this.menuPad.volume.value = db;
     if (this.gameBassSynth) this.gameBassSynth.volume.value = db - 5;
     if (this.gameArpSynth) this.gameArpSynth.volume.value = db - 10;
-    if (this.deathDrone) this.deathDrone.volume.value = db - 3;
+    if (this.deathPad) this.deathPad.volume.value = db - 6;
   }
 
   setMuted(muted: boolean): void {

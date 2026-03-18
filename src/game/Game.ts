@@ -118,7 +118,7 @@ export class Game {
     this.input.onDirectionInput((dir) => this.onDirection(dir));
 
     canvas.addEventListener('click', (e) => this.onClick(e));
-    canvas.addEventListener('touchend', (e) => this.onTap(e));
+    canvas.addEventListener('touchend', (e) => this.onTap(e), { passive: false });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.togglePause();
     });
@@ -191,9 +191,13 @@ export class Game {
     }
   }
 
+  private async initAudio(): Promise<void> {
+    await this.audio.init();
+    await this.music.init();
+  }
+
   private startRun(): void {
-    this.audio.init();
-    this.music.init().then(() => this.music.transition('gameplay'));
+    this.initAudio().then(() => this.music.transition('gameplay'));
     this.snake = this.createSnake();
     this.arena.reset();
     this.foods = [];
@@ -230,13 +234,27 @@ export class Game {
     this.state = GameState.PLAYING;
   }
 
+  private isInBounds(x: number, y: number, b: { x: number; y: number; width: number; height: number }): boolean {
+    return x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height;
+  }
+
   private onClick(e: MouseEvent): void {
     if (this.state === GameState.TITLE) {
       this.startRun();
       return;
     }
-    if (this.state === GameState.PAUSED) {
+    if (this.state === GameState.PLAYING && this.isInBounds(e.offsetX, e.offsetY, this.pauseBtnBounds)) {
       this.togglePause();
+      return;
+    }
+    if (this.state === GameState.PAUSED) {
+      const b = this.pauseQuitBounds;
+      if (e.offsetX >= b.x && e.offsetX <= b.x + b.width &&
+          e.offsetY >= b.y && e.offsetY <= b.y + b.height) {
+        this.quitToTitle();
+      } else {
+        this.togglePause();
+      }
       return;
     }
     if (this.state === GameState.POWER_UP_SELECT) {
@@ -257,31 +275,47 @@ export class Game {
     }
   }
 
+  private getTapPos(e: TouchEvent): { x: number; y: number } | null {
+    const touch = e.changedTouches[0];
+    if (!touch) return null;
+    const rect = this.renderer.canvas.getBoundingClientRect();
+    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+  }
+
   private onTap(e: TouchEvent): void {
+    e.preventDefault();
     if (this.state === GameState.TITLE) {
       this.startRun();
       return;
     }
+    if (this.state === GameState.PLAYING) {
+      const pos = this.getTapPos(e);
+      if (pos && this.isInBounds(pos.x, pos.y, this.pauseBtnBounds)) {
+        this.togglePause();
+        return;
+      }
+    }
     if (this.state === GameState.PAUSED) {
-      this.togglePause();
+      const pos = this.getTapPos(e);
+      if (!pos) return;
+      if (this.isInBounds(pos.x, pos.y, this.pauseQuitBounds)) {
+        this.quitToTitle();
+      } else {
+        this.togglePause();
+      }
       return;
     }
     if (this.state === GameState.POWER_UP_SELECT) {
-      const touch = e.changedTouches[0];
-      if (!touch) return;
-      const rect = this.renderer.canvas.getBoundingClientRect();
-      this.powerUpScreen.handleClick(
-        touch.clientX - rect.left,
-        touch.clientY - rect.top,
-      );
+      const pos = this.getTapPos(e);
+      if (!pos) return;
+      this.powerUpScreen.handleClick(pos.x, pos.y);
       return;
     }
     if (this.state === GameState.DEATH && this.deathScreen.isReady()) {
-      const touch = e.changedTouches[0];
-      if (!touch) return;
-      const rect = this.renderer.canvas.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
+      const pos = this.getTapPos(e);
+      if (!pos) return;
+      const x = pos.x;
+      const y = pos.y;
       const bounds = this.deathScreen.getButtonBounds(
         this.renderer.canvas.width,
         this.renderer.canvas.height,
@@ -1060,6 +1094,11 @@ export class Game {
       timeDilationTimer: this.timeDilationTimer,
     });
 
+    // Pause button (top-right, 44x44 touch target)
+    if (this.state === GameState.PLAYING) {
+      this.drawPauseButton();
+    }
+
     // Transition overlay
     if ((this.state === GameState.WAVE_TRANSITION || this.state === GameState.ARENA_TRANSITION)
         && this.transitionMessage) {
@@ -1603,6 +1642,42 @@ export class Game {
     }
   }
 
+  private pauseBtnBounds = { x: 0, y: 0, width: 0, height: 0 };
+  private pauseQuitBounds = { x: 0, y: 0, width: 0, height: 0 };
+
+  private drawPauseButton(): void {
+    const ctx = this.renderer.ctx;
+    const { hudTop } = this.renderer.layout;
+    const centerY = hudTop.y + hudTop.height / 2;
+    const fontSize = Math.min(18, Math.floor(ctx.canvas.width / 25));
+    const padding = 16;
+
+    ctx.save();
+    ctx.font = `${fontSize}px "Press Start 2P", monospace`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+
+    // Measure while font is set
+    const metrics = ctx.measureText('II');
+    const textW = metrics.width || 30;
+
+    // Green glow matching title aesthetic
+    ctx.shadowColor = COLORS.snakeGlow;
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = COLORS.uiAccent;
+    ctx.fillText('II', ctx.canvas.width - padding, centerY);
+    ctx.restore();
+
+    // Hit area: 44x44 minimum touch target centered on the text
+    const hitSize = Math.max(44, fontSize + 16);
+    this.pauseBtnBounds = {
+      x: ctx.canvas.width - padding - textW - 10,
+      y: centerY - hitSize / 2,
+      width: textW + 20,
+      height: hitSize,
+    };
+  }
+
   private drawPauseMenu(): void {
     const ctx = this.renderer.ctx;
     const { width, height } = ctx.canvas;
@@ -1618,17 +1693,37 @@ export class Game {
     ctx.fillStyle = COLORS.uiAccent;
     ctx.shadowColor = COLORS.snakeGlow;
     ctx.shadowBlur = 15;
-    ctx.fillText('PAUSED', width / 2, height / 2 - 40);
+    ctx.fillText('PAUSED', width / 2, height / 2 - 60);
     ctx.shadowBlur = 0;
 
     const itemSize = Math.min(12, Math.floor(width / 35));
     ctx.font = `${itemSize}px "Press Start 2P", monospace`;
     ctx.fillStyle = COLORS.uiText;
-    ctx.fillText('TAP TO RESUME', width / 2, height / 2 + 20);
+    ctx.fillText('TAP TO RESUME', width / 2, height / 2);
+
+    // Quit Run button
+    ctx.fillStyle = '#ff4444';
+    const quitY = height / 2 + 50;
+    const quitText = 'QUIT RUN';
+    ctx.fillText(quitText, width / 2, quitY);
+    const quitMetrics = ctx.measureText(quitText);
+    const quitH = itemSize * 1.5;
+    this.pauseQuitBounds = {
+      x: width / 2 - quitMetrics.width / 2 - 10,
+      y: quitY - quitH / 2,
+      width: quitMetrics.width + 20,
+      height: quitH,
+    };
+
     ctx.fillStyle = '#666';
-    ctx.fillText('ESC TO RESUME', width / 2, height / 2 + 55);
+    ctx.fillText('ESC TO RESUME', width / 2, height / 2 + 95);
 
     ctx.restore();
+  }
+
+  private quitToTitle(): void {
+    this.state = GameState.TITLE;
+    this.music.transition('menu');
   }
 
   restart(): void {
