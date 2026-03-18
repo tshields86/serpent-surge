@@ -1,3 +1,4 @@
+import * as Tone from 'tone';
 import { Snake, Direction } from './Snake';
 import { Grid } from './Grid';
 import { InputManager } from './Input';
@@ -209,13 +210,16 @@ export class Game {
 
   /** Must be called directly inside a user gesture handler (click/tap) for mobile */
   private ensureAudioContext(): void {
+    // Tone.start() MUST be called synchronously within a user gesture for mobile browsers.
+    // Calling it multiple times is safe — Tone.js deduplicates internally.
+    Tone.start();
+    // Also resume the raw AudioContext in case the browser suspended it
+    this.audio.resume();
+
     if (!this.audioInitialized) {
       this.audioInitialized = true;
-      // Tone.start() must be invoked within a user gesture for mobile browsers
-      this.audio.init().then(() => this.music.init());
+      this.audio.init().then(() => this.music.init()).catch(() => {});
     }
-    // Always try to resume in case the context was suspended by the browser
-    this.audio.resume();
   }
 
   private async initAudio(): Promise<void> {

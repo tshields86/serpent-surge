@@ -2,6 +2,7 @@ import * as Tone from 'tone';
 
 export class AudioManager {
   private initialized = false;
+  private initPromise: Promise<void> | null = null;
   private muted = false;
   private eatSynth: Tone.Synth | null = null;
   private goldenEatSynth: Tone.PolySynth | null = null;
@@ -14,14 +15,26 @@ export class AudioManager {
 
   /** Resume audio context — call from user gesture handlers on mobile */
   resume(): void {
-    const ctx = Tone.getContext();
-    if (ctx.state === 'suspended') {
-      ctx.resume();
+    try {
+      const rawCtx = Tone.getContext().rawContext;
+      if (rawCtx && rawCtx.state === 'suspended') {
+        // rawContext.resume() is needed for mobile browsers
+        rawCtx.resume();
+      }
+    } catch (_) {
+      // Ignore errors if context is not yet available
     }
   }
 
   async init(): Promise<void> {
     if (this.initialized) return;
+    // Prevent concurrent init calls from racing
+    if (this.initPromise) return this.initPromise;
+    this.initPromise = this._doInit();
+    return this.initPromise;
+  }
+
+  private async _doInit(): Promise<void> {
     await Tone.start();
 
     this.eatSynth = new Tone.Synth({

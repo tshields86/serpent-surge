@@ -4,6 +4,7 @@ type MusicState = 'menu' | 'gameplay' | 'death' | 'off';
 
 export class MusicPlayer {
   private initialized = false;
+  private initPromise: Promise<void> | null = null;
   private currentState: MusicState = 'off';
   private volume = -20;
   private muted = false;
@@ -23,6 +24,12 @@ export class MusicPlayer {
 
   async init(): Promise<void> {
     if (this.initialized) return;
+    if (this.initPromise) return this.initPromise;
+    this.initPromise = this._doInit();
+    return this.initPromise;
+  }
+
+  private async _doInit(): Promise<void> {
     await Tone.start();
 
     // Menu: warm pad chords
