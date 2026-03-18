@@ -25,6 +25,7 @@ import { SKIN_DEFS } from '../data/skins';
 import { AchievementTracker } from '../meta/Achievements';
 import { SkinColors } from '../rendering/SnakeRenderer';
 import { BossSnake, createBoss, updateBoss, checkBossCollision, damageBoss, isBossArena } from './Boss';
+import { createSeededRng, todaySeed } from '../utils/math';
 
 export enum GameState {
   TITLE = 'TITLE',
@@ -94,6 +95,9 @@ export class Game {
   private deathLength = 0;
   private highScore = 0;
   private persistedData: PersistedData | null = null;
+  private isDailyChallenge = false;
+  private dailySeed = 0;
+  private originalMathRandom: (() => number) | null = null;
   private activeSkin: SkinColors = {
     bodyColor: SKIN_DEFS[0]!.bodyColor,
     headColor: SKIN_DEFS[0]!.headColor,
@@ -1086,7 +1090,9 @@ export class Game {
 
   private render(): void {
     if (this.state === GameState.TITLE) {
-      this.titleScreen.draw(this.renderer.ctx, this.highScore, this.persistedData?.totalScales);
+      const dailyBest = this.persistedData?.dailyBest?.seed === todaySeed()
+        ? this.persistedData.dailyBest.score : undefined;
+      this.titleScreen.draw(this.renderer.ctx, this.highScore, this.persistedData?.totalScales, dailyBest);
       this.effects.drawCRT(this.renderer.ctx);
       if (this.settingsScreen.isVisible()) {
         this.settingsScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
@@ -1667,6 +1673,12 @@ export class Game {
       this.highScore = this.score;
     }
 
+    // Restore Math.random if daily challenge
+    if (this.isDailyChallenge && this.originalMathRandom) {
+      Math.random = this.originalMathRandom;
+      this.originalMathRandom = null;
+    }
+
     // Persist stats
     if (this.persistedData) {
       this.persistedData.highScore = this.highScore;
@@ -1674,8 +1686,16 @@ export class Game {
       const scalesEarned = calculateScales(this.score, this.arena.currentArena - 1, this.totalFoodEaten);
       this.persistedData.totalScales += scalesEarned;
       this.persistedData.achievementIds = this.achievements.getState().unlockedIds;
+      // Save daily best
+      if (this.isDailyChallenge) {
+        const current = this.persistedData.dailyBest;
+        if (!current || current.seed !== this.dailySeed || this.score > current.score) {
+          this.persistedData.dailyBest = { seed: this.dailySeed, score: this.score };
+        }
+      }
       saveData(this.persistedData);
     }
+    this.isDailyChallenge = false;
 
     const cellSize = this.renderer.layout.cellSize;
     for (const seg of this.snake.segments) {
@@ -1797,6 +1817,12 @@ export class Game {
   }
 
   private quitToTitle(): void {
+    // Restore Math.random if in daily challenge
+    if (this.isDailyChallenge && this.originalMathRandom) {
+      Math.random = this.originalMathRandom;
+      this.originalMathRandom = null;
+      this.isDailyChallenge = false;
+    }
     this.state = GameState.TITLE;
     this.music.transition('menu');
   }
@@ -1816,13 +1842,20 @@ export class Game {
         this.openSettings();
         break;
       case 'daily':
-        // TODO: wire up daily challenge mode
-        this.startRun();
+        this.startDailyChallenge();
         break;
       case 'collection':
         // TODO: wire up collection screen
         break;
     }
+  }
+
+  private startDailyChallenge(): void {
+    this.dailySeed = todaySeed();
+    this.originalMathRandom = Math.random;
+    Math.random = createSeededRng(this.dailySeed);
+    this.isDailyChallenge = true;
+    this.startRun();
   }
 
   private openSettings(): void {

@@ -22,7 +22,7 @@ export class TitleScreen {
     this.pulseTimer += dt;
   }
 
-  draw(ctx: CanvasRenderingContext2D, highScore: number, totalScales?: number): void {
+  draw(ctx: CanvasRenderingContext2D, highScore: number, totalScales?: number, dailyBest?: number): void {
     const { width, height } = ctx.canvas;
     const centerX = width / 2;
 
@@ -76,8 +76,11 @@ export class TitleScreen {
     // Daily Challenge
     ctx.fillStyle = '#ffd700';
     const dailyY = btnStartY;
-    ctx.fillText('DAILY CHALLENGE', centerX, dailyY);
-    const dailyMetrics = ctx.measureText('DAILY CHALLENGE');
+    const dailyLabel = dailyBest !== undefined && dailyBest > 0
+      ? `DAILY CHALLENGE (${dailyBest})`
+      : 'DAILY CHALLENGE';
+    ctx.fillText(dailyLabel, centerX, dailyY);
+    const dailyMetrics = ctx.measureText(dailyLabel);
     this.dailyBounds = {
       x: centerX - dailyMetrics.width / 2 - 10,
       y: dailyY - btnSize,
