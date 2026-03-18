@@ -315,8 +315,8 @@ Implement one at a time, test each:
 
 ## Phase 4 — Launch & Platform
 
-### 4.1 — Leaderboard (Supabase)
-- [x] Supabase project setup
+### 4.1 — Leaderboard (Firebase)
+- [x] Firebase project setup
 - [x] Leaderboard table + anonymous auth
 - [x] Submit score on death, offline queue for sync
 - [x] Leaderboard screen: all-time top 50, daily top 50, personal history
@@ -345,7 +345,7 @@ Implement one at a time, test each:
 - [x] Icons, screenshots, description, privacy policy, age rating
 
 ### 4.7 — Analytics
-- [x] Minimal tracking via Supabase: runs, arenas reached, popular power-ups, daily challenge participation
+- [x] Minimal tracking via Firebase: runs, arenas reached, popular power-ups, daily challenge participation
 
 ### 4.8 — Accessibility
 - [x] Colorblind mode (patterns/shapes supplement color)

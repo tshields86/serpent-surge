@@ -214,14 +214,14 @@
 
   - I haven't gotten this far in the game
 
-## Leaderboard (Supabase)
+## Leaderboard (Firebase)
 - [ ] Score submitted on death
 - [ ] All-time top 50 viewable
 - [ ] Daily top 50 viewable
 - [ ] Personal history viewable
 - [ ] Works offline (queues for sync)
 
-- Supabase isn't set up so I can't validate this
+- Firebase isn't set up so I can't validate this
 
 ## Social Sharing
 - [ ] Death screen has share option

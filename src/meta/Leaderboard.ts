@@ -1,8 +1,6 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
-// Configure these environment variables for your Supabase project
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+import { collection, addDoc, getDocs, query, where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
+import { signInAnonymously } from 'firebase/auth';
+import { db, auth } from './firebase';
 
 export interface LeaderboardEntry {
   id?: string;
@@ -16,108 +14,102 @@ export interface LeaderboardEntry {
 }
 
 export class Leaderboard {
-  private client: SupabaseClient | null = null;
+  private ready = false;
   private offlineQueue: LeaderboardEntry[] = [];
   private initialized = false;
 
   async init(): Promise<void> {
     if (this.initialized) return;
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      console.warn('Supabase not configured — leaderboard disabled');
+    if (!db || !auth) {
+      console.warn('Firebase not configured — leaderboard disabled');
       return;
     }
 
-    this.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // Anonymous auth
-    const { error } = await this.client.auth.signInAnonymously();
-    if (error) {
-      console.warn('Anonymous auth failed:', error.message);
-      this.client = null;
+    try {
+      await signInAnonymously(auth);
+    } catch (e) {
+      console.warn('Anonymous auth failed:', e);
       return;
     }
 
+    this.ready = true;
     this.initialized = true;
-
-    // Flush offline queue
     await this.flushQueue();
   }
 
-  /** Submit a score to the leaderboard */
   async submitScore(entry: Omit<LeaderboardEntry, 'id' | 'created_at'>): Promise<void> {
-    if (!this.client) {
+    if (!db || !this.ready) {
       this.offlineQueue.push(entry as LeaderboardEntry);
       return;
     }
 
-    const { error } = await this.client
-      .from('leaderboard')
-      .insert(entry);
-
-    if (error) {
-      console.warn('Failed to submit score:', error.message);
+    try {
+      await addDoc(collection(db, 'leaderboard'), {
+        ...entry,
+        created_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn('Failed to submit score:', e);
       this.offlineQueue.push(entry as LeaderboardEntry);
     }
   }
 
-  /** Fetch all-time top scores */
   async getTopScores(limit = 50): Promise<LeaderboardEntry[]> {
-    if (!this.client) return [];
+    if (!db || !this.ready) return [];
 
-    const { data, error } = await this.client
-      .from('leaderboard')
-      .select('*')
-      .eq('is_daily', false)
-      .order('score', { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      console.warn('Failed to fetch leaderboard:', error.message);
+    try {
+      const q = query(
+        collection(db, 'leaderboard'),
+        where('is_daily', '==', false),
+        orderBy('score', 'desc'),
+        firestoreLimit(limit),
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as LeaderboardEntry);
+    } catch (e) {
+      console.warn('Failed to fetch leaderboard:', e);
       return [];
     }
-
-    return data ?? [];
   }
 
-  /** Fetch daily top scores for a given seed */
   async getDailyScores(seed: number, limit = 50): Promise<LeaderboardEntry[]> {
-    if (!this.client) return [];
+    if (!db || !this.ready) return [];
 
-    const { data, error } = await this.client
-      .from('leaderboard')
-      .select('*')
-      .eq('is_daily', true)
-      .eq('daily_seed', seed)
-      .order('score', { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      console.warn('Failed to fetch daily leaderboard:', error.message);
+    try {
+      const q = query(
+        collection(db, 'leaderboard'),
+        where('is_daily', '==', true),
+        where('daily_seed', '==', seed),
+        orderBy('score', 'desc'),
+        firestoreLimit(limit),
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as LeaderboardEntry);
+    } catch (e) {
+      console.warn('Failed to fetch daily leaderboard:', e);
       return [];
     }
-
-    return data ?? [];
   }
 
-  /** Flush offline queue */
   private async flushQueue(): Promise<void> {
-    if (!this.client || this.offlineQueue.length === 0) return;
+    if (!db || this.offlineQueue.length === 0) return;
 
     const queue = [...this.offlineQueue];
     this.offlineQueue = [];
 
     for (const entry of queue) {
-      const { error } = await this.client
-        .from('leaderboard')
-        .insert(entry);
-
-      if (error) {
-        console.warn('Failed to flush queued score:', error.message);
+      try {
+        await addDoc(collection(db, 'leaderboard'), {
+          ...entry,
+          created_at: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.warn('Failed to flush queued score:', e);
       }
     }
   }
 
   get isAvailable(): boolean {
-    return this.initialized && this.client !== null;
+    return this.initialized && this.ready;
   }
 }

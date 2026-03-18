@@ -6,7 +6,7 @@ Last updated: 2026-03-17
 
 Serpent Surge collects minimal data:
 
-- **Game scores**: Submitted to our leaderboard service (Supabase) when online. Scores are associated with anonymous identifiers only.
+- **Game scores**: Submitted to our leaderboard service (Firebase/Firestore) when online. Scores are associated with anonymous identifiers only.
 - **Game settings**: Stored locally on your device via IndexedDB. Never transmitted to any server.
 - **Daily Challenge scores**: Submitted with the daily seed for leaderboard comparison.
 
@@ -19,11 +19,11 @@ Serpent Surge collects minimal data:
 
 ## Third-Party Services
 
-- **Supabase** (leaderboard): Processes anonymous score submissions. See [Supabase Privacy Policy](https://supabase.com/privacy).
+- **Firebase** (leaderboard & analytics): Processes anonymous score submissions via Cloud Firestore. See [Google Privacy Policy](https://policies.google.com/privacy) and [Firebase Data Privacy](https://firebase.google.com/support/privacy).
 
 ## Data Storage
 
-All gameplay data (high scores, settings, unlocks, achievements) is stored locally on your device. Leaderboard entries are stored on Supabase servers.
+All gameplay data (high scores, settings, unlocks, achievements) is stored locally on your device. Leaderboard entries are stored on Firebase (Google Cloud) servers.
 
 ## Contact
 

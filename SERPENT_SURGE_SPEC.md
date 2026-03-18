@@ -25,7 +25,7 @@ Classic Snake meets roguelike progression. Each run is a unique combination of p
 - **Audio**: Tone.js for retro synth SFX + Web Audio API
 - **PWA**: Workbox for service worker, manifest.json
 - **Persistence**: IndexedDB via idb-keyval (run history, unlocks, settings)
-- **Leaderboard**: Supabase (free tier, real-time, auth) — phase 2
+- **Leaderboard**: Firebase (Firestore + Anonymous Auth) — phase 2
 - **Native wrapper**: Capacitor — phase 3
 
 ### Performance Targets
@@ -473,7 +473,7 @@ What makes it special:
 - [ ] Responsive layout polish for all screen sizes
 
 ### Phase 4 — Launch & Platform (Target: 2 weeks)
-- [ ] Supabase leaderboard integration
+- [ ] Firebase leaderboard integration
 - [ ] Social sharing (screenshot of death screen)
 - [ ] Capacitor wrapper for iOS/Android
 - [ ] App Store / Play Store submission

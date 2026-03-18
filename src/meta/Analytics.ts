@@ -1,7 +1,5 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from './firebase';
 
 export interface RunEvent {
   arenas_reached: number;
@@ -13,28 +11,23 @@ export interface RunEvent {
 }
 
 export class Analytics {
-  private client: SupabaseClient | null = null;
-
   async init(): Promise<void> {
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
-    this.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // No separate init needed — Firebase is initialized in firebase.ts
   }
 
-  /** Log a completed run */
   async logRun(event: RunEvent): Promise<void> {
-    if (!this.client) return;
+    if (!db) return;
     try {
-      await this.client.from('analytics_runs').insert(event);
+      await addDoc(collection(db, 'analytics_runs'), event);
     } catch {
       // Silent fail — analytics not critical
     }
   }
 
-  /** Log daily challenge participation */
   async logDailyChallenge(seed: number, score: number): Promise<void> {
-    if (!this.client) return;
+    if (!db) return;
     try {
-      await this.client.from('analytics_daily').insert({ seed, score });
+      await addDoc(collection(db, 'analytics_daily'), { seed, score });
     } catch {
       // Silent fail
     }

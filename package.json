@@ -18,7 +18,7 @@
   "dependencies": {
     "@capacitor/core": "^8.2.0",
     "@capacitor/haptics": "^8.0.1",
-    "@supabase/supabase-js": "^2.99.2",
+    "firebase": "^12.10.0",
     "idb-keyval": "^6.2.2",
     "tone": "^15.1.22"
   }
