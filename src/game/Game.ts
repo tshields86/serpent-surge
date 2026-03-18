@@ -27,6 +27,8 @@ import { AchievementTracker } from '../meta/Achievements';
 import { SkinColors } from '../rendering/SnakeRenderer';
 import { BossSnake, createBoss, updateBoss, checkBossCollision, damageBoss, isBossArena } from './Boss';
 import { createSeededRng, todaySeed } from '../utils/math';
+import { Leaderboard } from '../meta/Leaderboard';
+import { Analytics } from '../meta/Analytics';
 
 export enum GameState {
   TITLE = 'TITLE',
@@ -89,6 +91,8 @@ export class Game {
   private achievements = new AchievementTracker();
   private achievementToast: { icon: string; name: string; timer: number } | null = null;
   private boss: BossSnake | null = null;
+  private leaderboard = new Leaderboard();
+  private analytics = new Analytics();
 
   // Run stats
   score = 0;
@@ -439,6 +443,8 @@ export class Game {
         };
       }
     });
+    this.leaderboard.init().catch(() => {});
+    this.analytics.init().catch(() => {});
     requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -1716,6 +1722,30 @@ export class Game {
       }
       saveData(this.persistedData);
     }
+
+    // Submit to leaderboard and analytics (fire-and-forget)
+    const wasDaily = this.isDailyChallenge;
+    const seed = this.dailySeed;
+    this.leaderboard.submitScore({
+      player_name: 'Anonymous',
+      score: this.score,
+      arenas_cleared: this.arena.currentArena - 1,
+      food_eaten: this.totalFoodEaten,
+      is_daily: wasDaily,
+      daily_seed: wasDaily ? seed : null,
+    }).catch(() => {});
+    this.analytics.logRun({
+      arenas_reached: this.arena.currentArena,
+      score: this.score,
+      food_eaten: this.totalFoodEaten,
+      power_ups_used: this.heldPowerUps.map(p => p.id),
+      is_daily: wasDaily,
+      is_endless: false,
+    }).catch(() => {});
+    if (wasDaily) {
+      this.analytics.logDailyChallenge(seed, this.score).catch(() => {});
+    }
+
     this.isDailyChallenge = false;
 
     const cellSize = this.renderer.layout.cellSize;
