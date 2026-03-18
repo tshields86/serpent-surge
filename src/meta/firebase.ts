@@ -1,21 +1,25 @@
-import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getAuth, Auth } from 'firebase/auth';
+import type { Firestore } from 'firebase/firestore';
+import type { Auth } from 'firebase/auth';
 
 const apiKey = import.meta.env.VITE_FIREBASE_API_KEY as string | undefined;
 const authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined;
 const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined;
 
-let app: FirebaseApp | null = null;
-let db: Firestore | null = null;
-let auth: Auth | null = null;
+export const firebaseConfigured = !!(apiKey && authDomain && projectId);
 
-if (apiKey && authDomain && projectId) {
-  app = initializeApp({ apiKey, authDomain, projectId });
-  db = getFirestore(app);
-  auth = getAuth(app);
-} else {
-  console.warn('Firebase not configured — leaderboard and analytics disabled');
+let cached: { db: Firestore; auth: Auth } | null = null;
+
+export async function getFirebase(): Promise<{ db: Firestore; auth: Auth } | null> {
+  if (!firebaseConfigured) return null;
+  if (cached) return cached;
+
+  const [{ initializeApp }, { getFirestore }, { getAuth }] = await Promise.all([
+    import('firebase/app'),
+    import('firebase/firestore'),
+    import('firebase/auth'),
+  ]);
+
+  const app = initializeApp({ apiKey, authDomain, projectId });
+  cached = { db: getFirestore(app), auth: getAuth(app) };
+  return cached;
 }
-
-export { db, auth };

@@ -1,6 +1,5 @@
-import { collection, addDoc, getDocs, query, where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
-import { signInAnonymously } from 'firebase/auth';
-import { db, auth } from './firebase';
+import type { Firestore } from 'firebase/firestore';
+import { firebaseConfigured, getFirebase } from './firebase';
 
 export interface LeaderboardEntry {
   id?: string;
@@ -14,37 +13,42 @@ export interface LeaderboardEntry {
 }
 
 export class Leaderboard {
-  private ready = false;
+  private db: Firestore | null = null;
   private offlineQueue: LeaderboardEntry[] = [];
   private initialized = false;
 
   async init(): Promise<void> {
     if (this.initialized) return;
-    if (!db || !auth) {
+    if (!firebaseConfigured) {
       console.warn('Firebase not configured — leaderboard disabled');
       return;
     }
 
+    const firebase = await getFirebase();
+    if (!firebase) return;
+
+    const { signInAnonymously } = await import('firebase/auth');
     try {
-      await signInAnonymously(auth);
+      await signInAnonymously(firebase.auth);
     } catch (e) {
       console.warn('Anonymous auth failed:', e);
       return;
     }
 
-    this.ready = true;
+    this.db = firebase.db;
     this.initialized = true;
     await this.flushQueue();
   }
 
   async submitScore(entry: Omit<LeaderboardEntry, 'id' | 'created_at'>): Promise<void> {
-    if (!db || !this.ready) {
+    if (!this.db) {
       this.offlineQueue.push(entry as LeaderboardEntry);
       return;
     }
 
+    const { collection, addDoc } = await import('firebase/firestore');
     try {
-      await addDoc(collection(db, 'leaderboard'), {
+      await addDoc(collection(this.db, 'leaderboard'), {
         ...entry,
         created_at: new Date().toISOString(),
       });
@@ -55,11 +59,12 @@ export class Leaderboard {
   }
 
   async getTopScores(limit = 50): Promise<LeaderboardEntry[]> {
-    if (!db || !this.ready) return [];
+    if (!this.db) return [];
 
+    const { collection, query, where, orderBy, limit: firestoreLimit, getDocs } = await import('firebase/firestore');
     try {
       const q = query(
-        collection(db, 'leaderboard'),
+        collection(this.db, 'leaderboard'),
         where('is_daily', '==', false),
         orderBy('score', 'desc'),
         firestoreLimit(limit),
@@ -73,11 +78,12 @@ export class Leaderboard {
   }
 
   async getDailyScores(seed: number, limit = 50): Promise<LeaderboardEntry[]> {
-    if (!db || !this.ready) return [];
+    if (!this.db) return [];
 
+    const { collection, query, where, orderBy, limit: firestoreLimit, getDocs } = await import('firebase/firestore');
     try {
       const q = query(
-        collection(db, 'leaderboard'),
+        collection(this.db, 'leaderboard'),
         where('is_daily', '==', true),
         where('daily_seed', '==', seed),
         orderBy('score', 'desc'),
@@ -92,14 +98,15 @@ export class Leaderboard {
   }
 
   private async flushQueue(): Promise<void> {
-    if (!db || this.offlineQueue.length === 0) return;
+    if (!this.db || this.offlineQueue.length === 0) return;
 
+    const { collection, addDoc } = await import('firebase/firestore');
     const queue = [...this.offlineQueue];
     this.offlineQueue = [];
 
     for (const entry of queue) {
       try {
-        await addDoc(collection(db, 'leaderboard'), {
+        await addDoc(collection(this.db, 'leaderboard'), {
           ...entry,
           created_at: new Date().toISOString(),
         });
@@ -110,6 +117,6 @@ export class Leaderboard {
   }
 
   get isAvailable(): boolean {
-    return this.initialized && this.ready;
+    return this.initialized && this.db !== null;
   }
 }

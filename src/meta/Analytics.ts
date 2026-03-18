@@ -1,5 +1,5 @@
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import type { Firestore } from 'firebase/firestore';
+import { firebaseConfigured, getFirebase } from './firebase';
 
 export interface RunEvent {
   arenas_reached: number;
@@ -11,23 +11,29 @@ export interface RunEvent {
 }
 
 export class Analytics {
+  private db: Firestore | null = null;
+
   async init(): Promise<void> {
-    // No separate init needed — Firebase is initialized in firebase.ts
+    if (!firebaseConfigured) return;
+    const firebase = await getFirebase();
+    if (firebase) this.db = firebase.db;
   }
 
   async logRun(event: RunEvent): Promise<void> {
-    if (!db) return;
+    if (!this.db) return;
     try {
-      await addDoc(collection(db, 'analytics_runs'), event);
+      const { collection, addDoc } = await import('firebase/firestore');
+      await addDoc(collection(this.db, 'analytics_runs'), event);
     } catch {
       // Silent fail — analytics not critical
     }
   }
 
   async logDailyChallenge(seed: number, score: number): Promise<void> {
-    if (!db) return;
+    if (!this.db) return;
     try {
-      await addDoc(collection(db, 'analytics_daily'), { seed, score });
+      const { collection, addDoc } = await import('firebase/firestore');
+      await addDoc(collection(this.db, 'analytics_daily'), { seed, score });
     } catch {
       // Silent fail
     }
