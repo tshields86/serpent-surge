@@ -52,4 +52,4 @@ Games > Casual (secondary)
 No violence, no user-generated content, no in-app purchases.
 
 ## Privacy Policy URL
-https://serpent-surge.vercel.app/privacy.html
+https://serpentsurge.vercel.app/privacy.html

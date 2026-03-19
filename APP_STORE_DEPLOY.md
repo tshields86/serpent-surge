@@ -5,7 +5,7 @@
 ### Completed
 - [x] Apple Developer Account created ($99/year)
 - [x] Google Play Developer Account created ($25 one-time)
-- [x] Privacy policy page live at https://serpent-surge.vercel.app/privacy
+- [x] Privacy policy page live at https://serpentsurge.vercel.app/privacy
 - [x] App ID set: `com.serpentsurge.app`
 - [x] Version set to 1.0.0
 - [x] iOS native project initialized (`ios/`)
@@ -58,7 +58,7 @@ Capture polished screenshots of key game screens. Need multiple device sizes.
   - [ ] Fill in app name, subtitle, description, keywords (see `STORE_LISTING.md`)
   - [ ] Upload screenshots for each required device size
   - [ ] Set category: Games → Arcade
-  - [ ] Set privacy policy URL: `https://serpent-surge.vercel.app/privacy`
+  - [ ] Set privacy policy URL: `https://serpentsurge.vercel.app/privacy`
   - [ ] Complete age rating questionnaire (should be 4+)
   - [ ] App Privacy section: report data collected (leaderboard names, gameplay analytics)
   - [ ] Submit for review
@@ -75,7 +75,7 @@ Capture polished screenshots of key game screens. Need multiple device sizes.
   - [ ] Fill in app name, short description, full description (see `STORE_LISTING.md`)
   - [ ] Upload screenshots and feature graphic
   - [ ] Set category: Game → Arcade
-  - [ ] Set privacy policy URL: `https://serpent-surge.vercel.app/privacy`
+  - [ ] Set privacy policy URL: `https://serpentsurge.vercel.app/privacy`
   - [ ] Complete content rating questionnaire (IARC)
   - [ ] Complete data safety form (player name/initials, gameplay stats, Firebase)
   - [ ] Set target audience (not designed for children)
