@@ -75,7 +75,7 @@ export class TitleScreen {
     const btnStartY = height * 0.66;
     const btnSpacing = btnSize * 3.5;
 
-    // Daily Challenge
+    // Daily Challenge (featured — gold)
     ctx.fillStyle = '#ffd700';
     const dailyY = btnStartY;
     const dailyLabel = dailyBest !== undefined && dailyBest > 0
@@ -90,33 +90,9 @@ export class TitleScreen {
       height: Math.max(44, btnSize * 2.5),
     };
 
-    // Collection
-    ctx.fillStyle = COLORS.uiAccent;
-    const collY = btnStartY + btnSpacing;
-    ctx.fillText('COLLECTION', centerX, collY);
-    const collMetrics = ctx.measureText('COLLECTION');
-    this.collectionBounds = {
-      x: centerX - collMetrics.width / 2 - 10,
-      y: collY - btnSize,
-      width: collMetrics.width + 20,
-      height: Math.max(44, btnSize * 2.5),
-    };
-
-    // Leaderboard
-    ctx.fillStyle = COLORS.score;
-    const lbY = btnStartY + btnSpacing * 2;
-    ctx.fillText('LEADERBOARD', centerX, lbY);
-    const lbMetrics = ctx.measureText('LEADERBOARD');
-    this.leaderboardBounds = {
-      x: centerX - lbMetrics.width / 2 - 10,
-      y: lbY - btnSize,
-      width: lbMetrics.width + 20,
-      height: Math.max(44, btnSize * 2.5),
-    };
-
-    // How To Play
-    ctx.fillStyle = COLORS.uiText;
-    const htpY = btnStartY + btnSpacing * 3;
+    // How To Play (help — cyan)
+    ctx.fillStyle = '#66ccff';
+    const htpY = btnStartY + btnSpacing;
     ctx.fillText('HOW TO PLAY', centerX, htpY);
     const htpMetrics = ctx.measureText('HOW TO PLAY');
     this.howToPlayBounds = {
@@ -126,7 +102,31 @@ export class TitleScreen {
       height: Math.max(44, btnSize * 2.5),
     };
 
-    // Settings
+    // Collection (progression — green)
+    ctx.fillStyle = COLORS.uiAccent;
+    const collY = btnStartY + btnSpacing * 2;
+    ctx.fillText('COLLECTION', centerX, collY);
+    const collMetrics = ctx.measureText('COLLECTION');
+    this.collectionBounds = {
+      x: centerX - collMetrics.width / 2 - 10,
+      y: collY - btnSize,
+      width: collMetrics.width + 20,
+      height: Math.max(44, btnSize * 2.5),
+    };
+
+    // Leaderboard (progression — green)
+    ctx.fillStyle = COLORS.uiAccent;
+    const lbY = btnStartY + btnSpacing * 3;
+    ctx.fillText('LEADERBOARD', centerX, lbY);
+    const lbMetrics = ctx.measureText('LEADERBOARD');
+    this.leaderboardBounds = {
+      x: centerX - lbMetrics.width / 2 - 10,
+      y: lbY - btnSize,
+      width: lbMetrics.width + 20,
+      height: Math.max(44, btnSize * 2.5),
+    };
+
+    // Settings (utility — gray)
     ctx.fillStyle = '#888';
     const settingsY = btnStartY + btnSpacing * 4;
     ctx.fillText('SETTINGS', centerX, settingsY);
