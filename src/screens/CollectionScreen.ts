@@ -23,7 +23,7 @@ export class CollectionScreen {
     if (!this.visible) return;
     // Semi-transparent backdrop
     ctx.save();
-    ctx.fillStyle = 'rgba(10, 10, 10, 0.95)';
+    ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, width, height);
 
     // Title

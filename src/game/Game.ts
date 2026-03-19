@@ -20,6 +20,7 @@ import { HowToPlayScreen } from '../screens/HowToPlayScreen';
 import { AudioManager } from '../audio/AudioManager';
 import { MusicPlayer } from '../audio/Music';
 import { PowerUpId, PowerUpInstance, acquirePowerUp, hasPowerUp, getStackCount, rollPowerUpOfferings } from './PowerUp';
+import { POWERUP_DEFS } from '../data/powerups';
 import { ActiveSynergy, getActiveSynergies, detectNewSynergies } from './Synergy';
 import { checkWallCollision, checkSelfCollision } from './Collision';
 import { BASE_TICK_RATE, COLORS, GRID_SIZE, MAX_DELTA } from '../utils/constants';
@@ -98,6 +99,7 @@ export class Game {
   private achievements = new AchievementTracker();
   private achievementToast: { icon: string; name: string; timer: number } | null = null;
   private boss: BossSnake | null = null;
+  private screenshotMode = false;
   private leaderboard = new Leaderboard();
   private analytics = new Analytics();
 
@@ -493,6 +495,10 @@ export class Game {
 
   start(): void {
     this.lastTimestamp = performance.now();
+    if (this.screenshotMode) {
+      requestAnimationFrame((t) => this.loop(t));
+      return;
+    }
     loadData().then(data => {
       this.persistedData = data;
       this.highScore = data.highScore;
@@ -533,7 +539,7 @@ export class Game {
     const delta = Math.min(timestamp - this.lastTimestamp, MAX_DELTA);
     this.lastTimestamp = timestamp;
 
-    if (this.state === GameState.PLAYING && this.countdownTimer <= 0) {
+    if (this.state === GameState.PLAYING && this.countdownTimer <= 0 && !this.screenshotMode) {
       // Speed modifiers
       let effectiveTickRate = this.currentTickRate;
       if (this.speedBoostTimer > 0) {
@@ -2067,6 +2073,167 @@ export class Game {
         this.audio.playEat();
       }
     }
+  }
+
+  /** Set up a pre-built game state for app store screenshots */
+  setupScreenshot(scene: string): void {
+    this.screenshotMode = true;
+    // Give the renderer a frame to initialize layout
+    requestAnimationFrame(() => {
+      switch (scene) {
+        case 'gameplay':
+          this.setupGameplayScreenshot();
+          break;
+        case 'powerup':
+          this.setupPowerUpScreenshot();
+          break;
+        case 'death':
+          this.setupDeathScreenshot();
+          break;
+        case 'collection':
+          this.setupCollectionScreenshot();
+          break;
+        case 'leaderboard':
+          this.setupLeaderboardScreenshot();
+          break;
+        // 'title' is default — no setup needed
+      }
+    });
+  }
+
+  private setupGameplayScreenshot(): void {
+    this.state = GameState.PLAYING;
+    this.score = 1250;
+    this.totalFoodEaten = 28;
+    this.currentTick = 200;
+
+    // Arena 2, Wave 2 — mid-game feel
+    this.arena.currentArena = 2;
+    this.arena.currentWave = 2;
+    this.arena.waveFoodEaten = 4;
+    this.arena.waveFoodQuota = 9;
+
+    // Build an interesting S-shaped snake with 14 segments
+    const segments = [
+      { x: 14, y: 8 },  // head — moving right
+      { x: 13, y: 8 },
+      { x: 12, y: 8 },
+      { x: 11, y: 8 },
+      { x: 10, y: 8 },
+      { x: 10, y: 9 },
+      { x: 10, y: 10 },
+      { x: 11, y: 10 },
+      { x: 12, y: 10 },
+      { x: 13, y: 10 },
+      { x: 13, y: 11 },
+      { x: 13, y: 12 },
+      { x: 12, y: 12 },
+      { x: 11, y: 12 },
+    ];
+    this.snake = new Snake({ x: 14, y: 8 }, 1, Direction.RIGHT);
+    this.snake.segments = segments;
+    this.snake.previousSegments = segments.map(s => ({ ...s }));
+
+    // Variety of food
+    this.foods = [
+      { position: { x: 17, y: 8 }, type: FoodType.APPLE, spawnTick: 190 },
+      { position: { x: 5, y: 14 }, type: FoodType.GOLDEN_APPLE, spawnTick: 185 },
+      { position: { x: 3, y: 4 }, type: FoodType.SPEED_FRUIT, spawnTick: 180 },
+    ];
+
+    // Hazards — visually interesting mix
+    this.hazards = [
+      { position: { x: 2, y: 8 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 100 },
+      { position: { x: 3, y: 8 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 100 },
+      { position: { x: 7, y: 15 }, type: HazardType.SPIKE_TRAP, state: 'active' as const, ticksRemaining: null, spawnTick: 100 },
+      { position: { x: 16, y: 3 }, type: HazardType.WARP_HOLE, state: 'active' as const, ticksRemaining: null, spawnTick: 100, id: 0, partnerId: 1 },
+      { position: { x: 4, y: 17 }, type: HazardType.WARP_HOLE, state: 'active' as const, ticksRemaining: null, spawnTick: 100, id: 1, partnerId: 0 },
+      { position: { x: 18, y: 14 }, type: HazardType.MAGNET, state: 'active' as const, ticksRemaining: null, spawnTick: 100, id: 2 },
+    ];
+
+    // Held power-ups — show variety of rarities in HUD
+    this.heldPowerUps = [
+      { id: PowerUpId.GHOST_MODE, stackCount: 2, usesRemaining: null },
+      { id: PowerUpId.DASH, stackCount: 1, usesRemaining: null },
+      { id: PowerUpId.SHOCKWAVE, stackCount: 1, usesRemaining: null },
+      { id: PowerUpId.SINGULARITY, stackCount: 1, usesRemaining: null },
+    ];
+
+    this.interpolation = 0;
+    this.countdownTimer = 0;
+  }
+
+  private setupPowerUpScreenshot(): void {
+    // Start from gameplay state so the game board renders behind
+    this.setupGameplayScreenshot();
+    this.state = GameState.POWER_UP_SELECT;
+
+    // Hand-pick visually interesting offerings with rarity variety
+    const offerings = [
+      POWERUP_DEFS.find(d => d.id === PowerUpId.WALL_WRAP)!,      // Common (white)
+      POWERUP_DEFS.find(d => d.id === PowerUpId.TIME_DILATION)!,   // Uncommon (blue)
+      POWERUP_DEFS.find(d => d.id === PowerUpId.OUROBOROS)!,       // Legendary (gold)
+    ];
+    this.powerUpScreen.setOfferings(offerings, true);
+    // Force fade-in to complete
+    for (let i = 0; i < 20; i++) this.powerUpScreen.update(0.05);
+  }
+
+  private setupDeathScreenshot(): void {
+    // Set up gameplay state first so the board renders underneath
+    this.setupGameplayScreenshot();
+    this.state = GameState.DEATH;
+    this.score = 2150;
+    this.deathLength = 22;
+    this.totalFoodEaten = 42;
+    // Force death screen to fully faded in
+    this.deathScreen.reset();
+    for (let i = 0; i < 20; i++) this.deathScreen.update(0.1);
+  }
+
+  private setupCollectionScreenshot(): void {
+    // Show collection overlay on title screen
+    this.state = GameState.TITLE;
+    this.persistedData = {
+      highScore: 2150,
+      totalScales: 350,
+      totalRuns: 15,
+      unlockedIds: ['STARTING_LENGTH_4'],
+      settings: { muted: false, colorblindMode: false, reducedMotion: false, musicVolume: 70, sfxVolume: 80, crtEnabled: true },
+      playerName: 'ACE',
+      selectedSkin: 'default',
+      achievementIds: [],
+      dailyBest: null,
+    };
+    this.highScore = 2150;
+    this.collectionScreen.show();
+  }
+
+  private setupLeaderboardScreenshot(): void {
+    this.state = GameState.TITLE;
+    this.highScore = 2150;
+    this.leaderboardScreen.show();
+    this.leaderboardScreen.setEntries(
+      [
+        { player_name: 'ACE', score: 4250, arenas_cleared: 5, food_eaten: 82, is_daily: false, daily_seed: null },
+        { player_name: 'VPR', score: 3800, arenas_cleared: 4, food_eaten: 71, is_daily: false, daily_seed: null },
+        { player_name: 'SSS', score: 3100, arenas_cleared: 4, food_eaten: 63, is_daily: false, daily_seed: null },
+        { player_name: 'ZAP', score: 2750, arenas_cleared: 3, food_eaten: 55, is_daily: false, daily_seed: null },
+        { player_name: 'NYX', score: 2400, arenas_cleared: 3, food_eaten: 48, is_daily: false, daily_seed: null },
+        { player_name: 'MAX', score: 2150, arenas_cleared: 3, food_eaten: 42, is_daily: false, daily_seed: null },
+        { player_name: 'KAI', score: 1800, arenas_cleared: 2, food_eaten: 35, is_daily: false, daily_seed: null },
+        { player_name: 'RAY', score: 1500, arenas_cleared: 2, food_eaten: 30, is_daily: false, daily_seed: null },
+        { player_name: 'BUG', score: 1200, arenas_cleared: 2, food_eaten: 25, is_daily: false, daily_seed: null },
+        { player_name: 'OWL', score: 900, arenas_cleared: 1, food_eaten: 18, is_daily: false, daily_seed: null },
+      ],
+      [
+        { player_name: 'ACE', score: 3200, arenas_cleared: 4, food_eaten: 60, is_daily: true, daily_seed: 0 },
+        { player_name: 'ZAP', score: 2900, arenas_cleared: 3, food_eaten: 52, is_daily: true, daily_seed: 0 },
+        { player_name: 'NYX', score: 2100, arenas_cleared: 3, food_eaten: 40, is_daily: true, daily_seed: 0 },
+        { player_name: 'VPR', score: 1750, arenas_cleared: 2, food_eaten: 33, is_daily: true, daily_seed: 0 },
+        { player_name: 'KAI', score: 1400, arenas_cleared: 2, food_eaten: 28, is_daily: true, daily_seed: 0 },
+      ],
+    );
   }
 
   private applySettings(settings: GameSettings): void {

@@ -39,7 +39,7 @@ export class LeaderboardScreen {
     if (!this.visible) return;
 
     ctx.save();
-    ctx.fillStyle = 'rgba(10, 10, 10, 0.95)';
+    ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, width, height);
 
     // Title
