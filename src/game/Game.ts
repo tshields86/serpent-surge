@@ -16,6 +16,7 @@ import { PowerUpScreen } from '../screens/PowerUpScreen';
 import { SettingsScreen, GameSettings } from '../screens/SettingsScreen';
 import { LeaderboardScreen } from '../screens/LeaderboardScreen';
 import { CollectionScreen } from '../screens/CollectionScreen';
+import { HowToPlayScreen } from '../screens/HowToPlayScreen';
 import { AudioManager } from '../audio/AudioManager';
 import { MusicPlayer } from '../audio/Music';
 import { PowerUpId, PowerUpInstance, acquirePowerUp, hasPowerUp, getStackCount, rollPowerUpOfferings } from './PowerUp';
@@ -55,6 +56,7 @@ export class Game {
   private settingsScreen: SettingsScreen;
   private leaderboardScreen: LeaderboardScreen;
   private collectionScreen: CollectionScreen;
+  private howToPlayScreen: HowToPlayScreen;
   private audio: AudioManager;
   private music: MusicPlayer;
   private input: InputManager;
@@ -126,6 +128,7 @@ export class Game {
     this.settingsScreen = new SettingsScreen();
     this.leaderboardScreen = new LeaderboardScreen();
     this.collectionScreen = new CollectionScreen();
+    this.howToPlayScreen = new HowToPlayScreen();
     this.audio = new AudioManager();
     this.music = new MusicPlayer();
     this.input = new InputManager();
@@ -140,7 +143,9 @@ export class Game {
     canvas.addEventListener('touchend', (e) => this.onTap(e), { passive: false });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (this.settingsScreen.isVisible()) {
+        if (this.howToPlayScreen.isVisible()) {
+          this.howToPlayScreen.hide();
+        } else if (this.settingsScreen.isVisible()) {
           this.settingsScreen.hide();
         } else if (this.leaderboardScreen.isVisible()) {
           this.leaderboardScreen.hide();
@@ -163,7 +168,7 @@ export class Game {
   }
 
   private onDirection(dir: Direction): void {
-    if (this.settingsScreen.isVisible() || this.leaderboardScreen.isVisible() || this.collectionScreen.isVisible()) return;
+    if (this.settingsScreen.isVisible() || this.leaderboardScreen.isVisible() || this.collectionScreen.isVisible() || this.howToPlayScreen.isVisible()) return;
     if (this.state === GameState.TITLE) {
       this.startRun();
       return;
@@ -291,6 +296,14 @@ export class Game {
 
   private onClick(e: MouseEvent): void {
     this.ensureAudioContext();
+    // How to play screen handles clicks when visible
+    if (this.howToPlayScreen.isVisible()) {
+      const result = this.howToPlayScreen.handleClick(e.offsetX, e.offsetY);
+      if (result === 'close') {
+        this.howToPlayScreen.hide();
+      }
+      return;
+    }
     // Collection screen handles clicks when visible
     if (this.collectionScreen.isVisible()) {
       this.handleCollectionClick(e.offsetX, e.offsetY);
@@ -376,6 +389,16 @@ export class Game {
   private onTap(e: TouchEvent): void {
     e.preventDefault();
     this.ensureAudioContext();
+    // How to play screen handles taps when visible
+    if (this.howToPlayScreen.isVisible()) {
+      const pos = this.getTapPos(e);
+      if (!pos) return;
+      const result = this.howToPlayScreen.handleClick(pos.x, pos.y);
+      if (result === 'close') {
+        this.howToPlayScreen.hide();
+      }
+      return;
+    }
     // Collection screen handles taps when visible
     if (this.collectionScreen.isVisible()) {
       const pos = this.getTapPos(e);
@@ -1207,6 +1230,9 @@ export class Game {
           unlockedIds: this.persistedData.unlockedIds,
         });
       }
+      if (this.howToPlayScreen.isVisible()) {
+        this.howToPlayScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+      }
       return;
     }
 
@@ -1975,6 +2001,9 @@ export class Game {
         break;
       case 'leaderboard':
         this.showLeaderboard();
+        break;
+      case 'howtoplay':
+        this.howToPlayScreen.show();
         break;
     }
   }

@@ -3,7 +3,7 @@ import { COLORS } from '../utils/constants';
 const FONT_FAMILY = '"Press Start 2P", monospace';
 
 export interface TitleAction {
-  action: 'start' | 'settings' | 'daily' | 'collection' | 'leaderboard';
+  action: 'start' | 'settings' | 'daily' | 'collection' | 'leaderboard' | 'howtoplay';
 }
 
 interface ButtonBounds {
@@ -19,6 +19,7 @@ export class TitleScreen {
   private dailyBounds: ButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
   private collectionBounds: ButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
   private leaderboardBounds: ButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
+  private howToPlayBounds: ButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
   update(dt: number): void {
     this.pulseTimer += dt;
   }
@@ -113,9 +114,21 @@ export class TitleScreen {
       height: Math.max(44, btnSize * 2.5),
     };
 
+    // How To Play
+    ctx.fillStyle = COLORS.uiText;
+    const htpY = btnStartY + btnSpacing * 3;
+    ctx.fillText('HOW TO PLAY', centerX, htpY);
+    const htpMetrics = ctx.measureText('HOW TO PLAY');
+    this.howToPlayBounds = {
+      x: centerX - htpMetrics.width / 2 - 10,
+      y: htpY - btnSize,
+      width: htpMetrics.width + 20,
+      height: Math.max(44, btnSize * 2.5),
+    };
+
     // Settings
     ctx.fillStyle = '#888';
-    const settingsY = btnStartY + btnSpacing * 3;
+    const settingsY = btnStartY + btnSpacing * 4;
     ctx.fillText('SETTINGS', centerX, settingsY);
     const settingsMetrics = ctx.measureText('SETTINGS');
     this.settingsBounds = {
@@ -140,6 +153,7 @@ export class TitleScreen {
     if (this.isInBounds(x, y, this.dailyBounds)) return { action: 'daily' };
     if (this.isInBounds(x, y, this.collectionBounds)) return { action: 'collection' };
     if (this.isInBounds(x, y, this.leaderboardBounds)) return { action: 'leaderboard' };
+    if (this.isInBounds(x, y, this.howToPlayBounds)) return { action: 'howtoplay' };
     if (this.isInBounds(x, y, this.settingsBounds)) return { action: 'settings' };
     // Anywhere else starts the game
     return { action: 'start' };
