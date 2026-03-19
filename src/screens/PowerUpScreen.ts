@@ -17,12 +17,15 @@ export class PowerUpScreen {
   private selectedIndex = -1;
   private selectTimer = 0;
   private fadeIn = 0;
+  private rerollBounds: CardLayout = { x: 0, y: 0, width: 0, height: 0 };
+  private rerollAvailable = false;
 
-  setOfferings(offerings: PowerUpDefinition[]): void {
+  setOfferings(offerings: PowerUpDefinition[], rerollAvailable = false): void {
     this.offerings = offerings;
     this.selectedIndex = -1;
     this.selectTimer = 0;
     this.fadeIn = 0;
+    this.rerollAvailable = rerollAvailable;
   }
 
   update(dt: number): void {
@@ -46,9 +49,16 @@ export class PowerUpScreen {
     return null;
   }
 
-  /** Check if click hits a card, return index or -1 */
+  /** Check if click hits a card, return index, -2 for reroll, or -1 for miss */
   handleClick(x: number, y: number): number {
     if (this.selectedIndex >= 0) return -1; // already selected
+    // Check reroll button
+    if (this.rerollAvailable) {
+      const rb = this.rerollBounds;
+      if (x >= rb.x && x <= rb.x + rb.width && y >= rb.y && y <= rb.y + rb.height) {
+        return -2;
+      }
+    }
     for (let i = 0; i < this.cardLayouts.length; i++) {
       const card = this.cardLayouts[i]!;
       if (x >= card.x && x <= card.x + card.width &&
@@ -165,6 +175,26 @@ export class PowerUpScreen {
       this.wrapText(ctx, def.description, x + cardWidth / 2, cardY + cardHeight * 0.72, cardWidth - 16, descSize + 4);
 
       ctx.restore();
+    }
+
+    // Reroll button
+    if (this.rerollAvailable && this.selectedIndex < 0) {
+      const rerollSize = Math.min(10, Math.floor(canvasWidth / 40));
+      ctx.font = `${rerollSize}px ${FONT_FAMILY}`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = COLORS.score;
+      const rerollY = canvasHeight * 0.78;
+      const rerollText = '\u21BB REROLL';
+      ctx.fillText(rerollText, canvasWidth / 2, rerollY);
+      const metrics = ctx.measureText(rerollText);
+      this.rerollBounds = {
+        x: canvasWidth / 2 - metrics.width / 2 - 10,
+        y: rerollY - rerollSize,
+        width: metrics.width + 20,
+        height: rerollSize * 2.5,
+      };
+    } else {
+      this.rerollBounds = { x: 0, y: 0, width: 0, height: 0 };
     }
 
     // Held power-ups at bottom

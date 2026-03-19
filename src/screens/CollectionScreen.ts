@@ -3,8 +3,24 @@ import { getUnlockStatus, ProgressionData, purchaseUnlock } from '../meta/Progre
 
 export class CollectionScreen {
   private scrollOffset = 0;
+  private visible = false;
+  private closeBounds = { x: 0, y: 0, width: 0, height: 0 };
+
+  show(): void {
+    this.visible = true;
+    this.scrollOffset = 0;
+  }
+
+  hide(): void {
+    this.visible = false;
+  }
+
+  isVisible(): boolean {
+    return this.visible;
+  }
 
   draw(ctx: CanvasRenderingContext2D, width: number, height: number, data: ProgressionData): void {
+    if (!this.visible) return;
     // Semi-transparent backdrop
     ctx.save();
     ctx.fillStyle = 'rgba(10, 10, 10, 0.95)';
@@ -29,7 +45,7 @@ export class CollectionScreen {
 
     // Unlock cards
     const unlocks = getUnlockStatus(data);
-    const cardWidth = Math.min(300, width - 40);
+    const cardWidth = Math.min(320, width - 40);
     const cardHeight = 70;
     const cardGap = 12;
     const startY = 120 - this.scrollOffset;
@@ -62,11 +78,28 @@ export class CollectionScreen {
       ctx.fillStyle = unlock.owned ? COLORS.uiAccent : COLORS.uiText;
       ctx.fillText(unlock.name, cardX + 12, y + 22);
 
-      // Description
+      // Description — word wrap within card
       const descSize = Math.min(8, Math.floor(width / 50));
       ctx.font = `${descSize}px "Press Start 2P", monospace`;
       ctx.fillStyle = '#999';
-      ctx.fillText(unlock.description, cardX + 12, y + 44);
+      const maxDescWidth = cardWidth - 24;
+      const words = unlock.description.split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
+      for (const word of words) {
+        const test = currentLine ? currentLine + ' ' + word : word;
+        if (ctx.measureText(test).width > maxDescWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = test;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+      const lineHeight = descSize + 4;
+      for (let l = 0; l < lines.length; l++) {
+        ctx.fillText(lines[l]!, cardX + 12, y + 44 + l * lineHeight);
+      }
 
       // Cost / Owned
       ctx.textAlign = 'right';
@@ -75,28 +108,51 @@ export class CollectionScreen {
         ctx.fillText('OWNED', cardX + cardWidth - 12, y + 22);
       } else {
         ctx.fillStyle = unlock.affordable ? COLORS.score : '#666';
-        ctx.fillText(`${unlock.cost}`, cardX + cardWidth - 12, y + 22);
+        ctx.font = `${nameSize}px "Press Start 2P", monospace`;
+        ctx.fillText(`${unlock.cost} \u2666`, cardX + cardWidth - 12, y + 22);
       }
     }
 
-    // Back instruction
-    const backSize = Math.min(10, Math.floor(width / 40));
-    ctx.font = `${backSize}px "Press Start 2P", monospace`;
+    // Hint — directly below the last card
+    const hintY = startY + unlocks.length * (cardHeight + cardGap) + 10;
+    const instrSize = Math.min(8, Math.floor(width / 50));
+    ctx.font = `${instrSize}px "Press Start 2P", monospace`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#666';
-    ctx.fillText('TAP UNLOCK TO PURCHASE • ESC TO BACK', width / 2, height - 30);
+    ctx.fillText('TAP TO SPEND SCALES', width / 2, hintY);
+
+    // Close button
+    const closeSize = Math.min(10, Math.floor(width / 40));
+    ctx.font = `${closeSize}px "Press Start 2P", monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff4444';
+    const closeY = height - 30;
+    ctx.fillText('CLOSE', width / 2, closeY);
+    const closeMetrics = ctx.measureText('CLOSE');
+    this.closeBounds = {
+      x: width / 2 - closeMetrics.width / 2 - 10,
+      y: closeY - closeSize,
+      width: closeMetrics.width + 20,
+      height: closeSize * 2.5,
+    };
 
     ctx.restore();
   }
 
-  /** Returns unlock ID if user clicked on a purchasable card, null otherwise */
+  /** Returns unlock ID if user clicked on a purchasable card, 'back' for close, null otherwise */
   handleClick(
     x: number, y: number,
     width: number, _height: number,
     data: ProgressionData,
   ): string | null {
+    // Check close button
+    const cb = this.closeBounds;
+    if (x >= cb.x && x <= cb.x + cb.width && y >= cb.y && y <= cb.y + cb.height) {
+      return 'back';
+    }
+
     const unlocks = getUnlockStatus(data);
-    const cardWidth = Math.min(300, width - 40);
+    const cardWidth = Math.min(320, width - 40);
     const cardHeight = 70;
     const cardGap = 12;
     const startY = 120 - this.scrollOffset;

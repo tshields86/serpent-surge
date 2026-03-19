@@ -15,6 +15,7 @@ import { TitleScreen } from '../screens/TitleScreen';
 import { PowerUpScreen } from '../screens/PowerUpScreen';
 import { SettingsScreen, GameSettings } from '../screens/SettingsScreen';
 import { LeaderboardScreen } from '../screens/LeaderboardScreen';
+import { CollectionScreen } from '../screens/CollectionScreen';
 import { AudioManager } from '../audio/AudioManager';
 import { MusicPlayer } from '../audio/Music';
 import { PowerUpId, PowerUpInstance, acquirePowerUp, hasPowerUp, getStackCount, rollPowerUpOfferings } from './PowerUp';
@@ -22,7 +23,7 @@ import { ActiveSynergy, getActiveSynergies, detectNewSynergies } from './Synergy
 import { checkWallCollision, checkSelfCollision } from './Collision';
 import { BASE_TICK_RATE, COLORS, GRID_SIZE, MAX_DELTA } from '../utils/constants';
 import { loadData, saveData, PersistedData } from '../utils/storage';
-import { calculateScales } from '../meta/Progression';
+import { calculateScales, hasUnlock } from '../meta/Progression';
 import { SKIN_DEFS } from '../data/skins';
 import { AchievementTracker } from '../meta/Achievements';
 import { SkinColors } from '../rendering/SnakeRenderer';
@@ -53,6 +54,7 @@ export class Game {
   private powerUpScreen: PowerUpScreen;
   private settingsScreen: SettingsScreen;
   private leaderboardScreen: LeaderboardScreen;
+  private collectionScreen: CollectionScreen;
   private audio: AudioManager;
   private music: MusicPlayer;
   private input: InputManager;
@@ -80,6 +82,7 @@ export class Game {
   private headBashUsed = false;     // Head Bash: used this wave?
   private timeDilationTimer = 0;    // Time Dilation: seconds remaining of slowdown
   private rewindUsed = false;       // Rewind: used this arena?
+  private rerollUsedThisArena = false; // Reroll unlock: used this arena?
   private rewindSnapshots: { segments: { x: number; y: number }[]; direction: Direction }[] = [];
   private lastDirectionInput: { dir: Direction; tick: number } | null = null; // Dash detection
   private ouroborosUsed = false;    // Ouroboros: used this arena?
@@ -122,6 +125,7 @@ export class Game {
     this.powerUpScreen = new PowerUpScreen();
     this.settingsScreen = new SettingsScreen();
     this.leaderboardScreen = new LeaderboardScreen();
+    this.collectionScreen = new CollectionScreen();
     this.audio = new AudioManager();
     this.music = new MusicPlayer();
     this.input = new InputManager();
@@ -140,6 +144,8 @@ export class Game {
           this.settingsScreen.hide();
         } else if (this.leaderboardScreen.isVisible()) {
           this.leaderboardScreen.hide();
+        } else if (this.collectionScreen.isVisible()) {
+          this.collectionScreen.hide();
         } else {
           this.togglePause();
         }
@@ -149,11 +155,15 @@ export class Game {
 
   private createSnake(): Snake {
     const center = this.grid.centerCell();
-    return new Snake(center);
+    const length = this.persistedData && hasUnlock(
+      { totalScales: this.persistedData.totalScales, unlockedIds: this.persistedData.unlockedIds },
+      'STARTING_LENGTH_4',
+    ) ? 4 : 3;
+    return new Snake(center, length);
   }
 
   private onDirection(dir: Direction): void {
-    if (this.settingsScreen.isVisible() || this.leaderboardScreen.isVisible()) return;
+    if (this.settingsScreen.isVisible() || this.leaderboardScreen.isVisible() || this.collectionScreen.isVisible()) return;
     if (this.state === GameState.TITLE) {
       this.startRun();
       return;
@@ -257,6 +267,7 @@ export class Game {
     this.headBashUsed = false;
     this.timeDilationTimer = 0;
     this.rewindUsed = false;
+    this.rerollUsedThisArena = false;
     this.rewindSnapshots = [];
     this.lastDirectionInput = null;
     this.countdownTimer = 0;
@@ -280,6 +291,11 @@ export class Game {
 
   private onClick(e: MouseEvent): void {
     this.ensureAudioContext();
+    // Collection screen handles clicks when visible
+    if (this.collectionScreen.isVisible()) {
+      this.handleCollectionClick(e.offsetX, e.offsetY);
+      return;
+    }
     // Leaderboard screen handles clicks when visible
     if (this.leaderboardScreen.isVisible()) {
       const result = this.leaderboardScreen.handleClick(e.offsetX, e.offsetY, this.renderer.canvas.width);
@@ -321,7 +337,8 @@ export class Game {
       return;
     }
     if (this.state === GameState.POWER_UP_SELECT) {
-      this.powerUpScreen.handleClick(e.offsetX, e.offsetY);
+      const result = this.powerUpScreen.handleClick(e.offsetX, e.offsetY);
+      if (result === -2) this.handleReroll();
       return;
     }
     if (this.state === GameState.DEATH && this.deathScreen.isReady()) {
@@ -359,6 +376,13 @@ export class Game {
   private onTap(e: TouchEvent): void {
     e.preventDefault();
     this.ensureAudioContext();
+    // Collection screen handles taps when visible
+    if (this.collectionScreen.isVisible()) {
+      const pos = this.getTapPos(e);
+      if (!pos) return;
+      this.handleCollectionClick(pos.x, pos.y);
+      return;
+    }
     // Leaderboard screen handles taps when visible
     if (this.leaderboardScreen.isVisible()) {
       const pos = this.getTapPos(e);
@@ -411,7 +435,8 @@ export class Game {
     if (this.state === GameState.POWER_UP_SELECT) {
       const pos = this.getTapPos(e);
       if (!pos) return;
-      this.powerUpScreen.handleClick(pos.x, pos.y);
+      const result = this.powerUpScreen.handleClick(pos.x, pos.y);
+      if (result === -2) this.handleReroll();
       return;
     }
     if (this.state === GameState.DEATH && this.deathScreen.isReady()) {
@@ -1094,7 +1119,11 @@ export class Game {
       // Arena cleared — show power-up selection
       const offerings = rollPowerUpOfferings(this.heldPowerUps);
       if (offerings.length > 0) {
-        this.powerUpScreen.setOfferings(offerings);
+        const canReroll = !this.rerollUsedThisArena && this.persistedData != null && hasUnlock(
+          { totalScales: this.persistedData.totalScales, unlockedIds: this.persistedData.unlockedIds },
+          'REROLL',
+        );
+        this.powerUpScreen.setOfferings(offerings, canReroll);
         this.state = GameState.POWER_UP_SELECT;
         this.audio.playArenaClear();
       } else {
@@ -1116,6 +1145,7 @@ export class Game {
       // Advance arena, reset snake and grid
       this.arena.advanceArena();
       this.rewindUsed = false;
+      this.rerollUsedThisArena = false;
       this.ouroborosUsed = false;
       this.splitSnake = null;
       this.splitTimer = 0;
@@ -1170,6 +1200,12 @@ export class Game {
       }
       if (this.leaderboardScreen.isVisible()) {
         this.leaderboardScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+      }
+      if (this.collectionScreen.isVisible() && this.persistedData) {
+        this.collectionScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height, {
+          totalScales: this.persistedData.totalScales,
+          unlockedIds: this.persistedData.unlockedIds,
+        });
       }
       return;
     }
@@ -1935,7 +1971,7 @@ export class Game {
         this.startDailyChallenge();
         break;
       case 'collection':
-        // TODO: wire up collection screen
+        this.collectionScreen.show();
         break;
       case 'leaderboard':
         this.showLeaderboard();
@@ -1975,6 +2011,33 @@ export class Game {
     }).catch(() => {
       this.leaderboardScreen.setLoading(false);
     });
+  }
+
+  private handleReroll(): void {
+    this.rerollUsedThisArena = true;
+    const offerings = rollPowerUpOfferings(this.heldPowerUps);
+    if (offerings.length > 0) {
+      this.powerUpScreen.setOfferings(offerings, false);
+    }
+  }
+
+  private handleCollectionClick(x: number, y: number): void {
+    if (!this.persistedData) return;
+    const data = { totalScales: this.persistedData.totalScales, unlockedIds: this.persistedData.unlockedIds };
+    const result = this.collectionScreen.handleClick(x, y, this.renderer.canvas.width, this.renderer.canvas.height, data);
+    if (result === 'back') {
+      this.collectionScreen.hide();
+      return;
+    }
+    if (result) {
+      const purchased = this.collectionScreen.tryPurchase(data, result);
+      if (purchased) {
+        this.persistedData.totalScales = purchased.totalScales;
+        this.persistedData.unlockedIds = purchased.unlockedIds;
+        saveData(this.persistedData);
+        this.audio.playEat();
+      }
+    }
   }
 
   private applySettings(settings: GameSettings): void {

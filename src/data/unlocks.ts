@@ -18,22 +18,4 @@ export const UNLOCK_DEFS: UnlockDefinition[] = [
     description: 'Reroll power-up offerings once per arena',
     cost: 200,
   },
-  {
-    id: 'ARENA_PREVIEW',
-    name: 'Arena Preview',
-    description: 'See hazard layout before each arena starts',
-    cost: 300,
-  },
-  {
-    id: 'EXTRA_LIFE',
-    name: 'Extra Life',
-    description: 'Survive one death per run (before Rewind)',
-    cost: 500,
-  },
-  {
-    id: 'ENDLESS_MODE',
-    name: 'Endless Mode',
-    description: 'Unlock Endless Mode — no arenas, infinite scaling',
-    cost: 750,
-  },
 ];
