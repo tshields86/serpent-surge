@@ -84,6 +84,9 @@ export class LeaderboardScreen {
     const rowHeight = 22;
     const maxVisible = Math.floor((height - startY - 60) / rowHeight);
 
+    const contentWidth = Math.min(320, width - 40);
+    const contentX = (width - contentWidth) / 2;
+
     if (entries.length === 0) {
       ctx.textAlign = 'center';
       ctx.fillStyle = '#666';
@@ -96,15 +99,15 @@ export class LeaderboardScreen {
         // Rank
         ctx.textAlign = 'left';
         ctx.fillStyle = i < 3 ? COLORS.score : COLORS.uiText;
-        ctx.fillText(`${i + 1}.`, 30, y);
+        ctx.fillText(`${i + 1}.`, contentX, y);
 
         // Name
-        ctx.fillText(entry.player_name, 70, y);
+        ctx.fillText(entry.player_name, contentX + 40, y);
 
         // Score
         ctx.textAlign = 'right';
         ctx.fillStyle = COLORS.score;
-        ctx.fillText(`${entry.score}`, width - 30, y);
+        ctx.fillText(`${entry.score}`, contentX + contentWidth, y);
       }
     }
 

@@ -129,25 +129,27 @@ export class SettingsScreen {
       }
     }
 
+    // Hint — directly below the last settings row
+    const hintY = settingsStartY + ROWS.length * rowHeight + 20;
+    ctx.fillStyle = '#666';
+    ctx.font = `${Math.min(8, Math.floor(width / 50))}px ${FONT_FAMILY}`;
+    ctx.textAlign = 'center';
+    ctx.fillText('TAP TO TOGGLE', width / 2, hintY);
+
     // Close button
-    const closeBtnY = settingsStartY + ROWS.length * rowHeight + 30;
-    const closeSize = Math.min(12, Math.floor(width / 35));
+    const closeSize = Math.min(10, Math.floor(width / 40));
     ctx.font = `${closeSize}px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ff4444';
-    ctx.fillText('CLOSE', width / 2, closeBtnY);
+    const closeY = height - 30;
+    ctx.fillText('CLOSE', width / 2, closeY);
     const closeMetrics = ctx.measureText('CLOSE');
     this.closeBounds = {
       x: width / 2 - closeMetrics.width / 2 - 10,
-      y: closeBtnY - closeSize,
+      y: closeY - closeSize,
       width: closeMetrics.width + 20,
-      height: closeSize * 2,
+      height: closeSize * 2.5,
     };
-
-    // Hint
-    ctx.fillStyle = '#666';
-    ctx.font = `${Math.min(9, Math.floor(width / 45))}px ${FONT_FAMILY}`;
-    ctx.fillText('TAP TO TOGGLE • ESC TO CLOSE', width / 2, height - 30);
 
     ctx.restore();
   }
