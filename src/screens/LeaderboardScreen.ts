@@ -47,8 +47,8 @@ export class LeaderboardScreen {
     ctx.font = `${titleSize}px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.shadowColor = COLORS.snakeGlow;
+    ctx.fillStyle = COLORS.score;
+    ctx.shadowColor = COLORS.score;
     ctx.shadowBlur = 10;
     ctx.fillText('LEADERBOARD', width / 2, 40);
     ctx.shadowBlur = 0;
