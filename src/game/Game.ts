@@ -2134,8 +2134,8 @@ export class Game {
 
   private setupGameplayScreenshot(): void {
     this.state = GameState.PLAYING;
-    this.score = 680;
-    this.totalFoodEaten = 15;
+    this.score = 350;
+    this.totalFoodEaten = 18;
     this.currentTick = 120;
 
     // Arena 1, Wave 3 — early-game
@@ -2186,7 +2186,7 @@ export class Game {
   private setupGameplay2Screenshot(): void {
     this.state = GameState.PLAYING;
     this.score = 1250;
-    this.totalFoodEaten = 28;
+    this.totalFoodEaten = 32;
     this.currentTick = 200;
 
     // Arena 2, Wave 2 — advanced mid-game
@@ -2255,6 +2255,8 @@ export class Game {
     this.arena.currentWave = 3;
     this.arena.waveFoodQuota = 11;
     this.arena.waveFoodEaten = this.arena.waveFoodQuota;
+    this.score = 1950;
+    this.totalFoodEaten = 48;
 
     // Hand-pick visually interesting offerings with rarity variety
     const offerings = [
@@ -2269,9 +2271,9 @@ export class Game {
 
   private setupDeathScreenshot(): void {
     this.state = GameState.DEATH;
-    this.score = 2150;
+    this.score = 2450;
     this.deathLength = 20;
-    this.totalFoodEaten = 42;
+    this.totalFoodEaten = 60;
     this.currentTick = 350;
 
     this.arena.currentArena = 3;
@@ -2340,7 +2342,7 @@ export class Game {
     // Show collection overlay on title screen
     this.state = GameState.TITLE;
     this.persistedData = {
-      highScore: 2150,
+      highScore: 2450,
       totalScales: 350,
       totalRuns: 15,
       unlockedIds: ['STARTING_LENGTH_4'],
@@ -2350,13 +2352,13 @@ export class Game {
       achievementIds: [],
       dailyBest: null,
     };
-    this.highScore = 2150;
+    this.highScore = 2450;
     this.collectionScreen.show();
   }
 
   private setupLeaderboardScreenshot(): void {
     this.state = GameState.TITLE;
-    this.highScore = 2150;
+    this.highScore = 2450;
     this.leaderboardScreen.show();
     this.leaderboardScreen.setEntries(
       [
@@ -2365,7 +2367,7 @@ export class Game {
         { player_name: 'SSS', score: 3100, arenas_cleared: 4, food_eaten: 63, is_daily: false, daily_seed: null },
         { player_name: 'ZAP', score: 2750, arenas_cleared: 3, food_eaten: 55, is_daily: false, daily_seed: null },
         { player_name: 'NYX', score: 2400, arenas_cleared: 3, food_eaten: 48, is_daily: false, daily_seed: null },
-        { player_name: 'MAX', score: 2150, arenas_cleared: 3, food_eaten: 42, is_daily: false, daily_seed: null },
+        { player_name: 'MAX', score: 2450, arenas_cleared: 3, food_eaten: 60, is_daily: false, daily_seed: null },
         { player_name: 'KAI', score: 1800, arenas_cleared: 2, food_eaten: 35, is_daily: false, daily_seed: null },
         { player_name: 'RAY', score: 1500, arenas_cleared: 2, food_eaten: 30, is_daily: false, daily_seed: null },
         { player_name: 'BUG', score: 1200, arenas_cleared: 2, food_eaten: 25, is_daily: false, daily_seed: null },
