@@ -2246,7 +2246,9 @@ export class Game {
     this.setupGameplay2Screenshot();
     this.state = GameState.POWER_UP_SELECT;
 
-    // Wave should look completed (quota met) since power-ups appear after clearing a wave
+    // Power-ups appear after clearing an arena (all 3 waves)
+    this.arena.currentWave = 3;
+    this.arena.waveFoodQuota = 9;
     this.arena.waveFoodEaten = this.arena.waveFoodQuota;
 
     // Hand-pick visually interesting offerings with rarity variety
