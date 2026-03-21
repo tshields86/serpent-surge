@@ -20,28 +20,35 @@
 
 ---
 
-### Screenshots Needed
-Capture polished screenshots of key game screens. Need multiple device sizes.
+### Screenshots
 
-**Screens to capture:**
-- [ ] Title screen
-- [ ] Active gameplay (snake eating food, hazards visible)
-- [ ] Power-up selection screen
-- [ ] Death/game-over screen with stats
-- [ ] Collection screen
-- [ ] Leaderboard screen
+Screenshots are captured using a built-in screenshot mode. Append `?screenshot=<scene>` to the dev server URL to load a pre-built game state with mock data (exciting mid-run snake, hazards, power-ups, scores, etc.).
 
-**iOS required sizes:**
-- [ ] 6.7" iPhone (1290x2796) — required for iPhone 14 Pro Max
-- [ ] 6.5" iPhone (1284x2778) — required for iPhone 13 Pro Max
-- [ ] 5.5" iPhone (1242x2208) — required for iPhone 8 Plus
-- [ ] iPad (2048x2732) — optional but recommended
+**Available scenes:** `title`, `gameplay`, `gameplay2`, `powerup`, `death`, `collection`, `leaderboard`
 
-**Google Play required sizes:**
-- [ ] Phone screenshots (1080x1920 or 9:16 ratio, min 2, max 8)
-- [ ] Feature graphic (1024x500 banner image)
+**Example:** `http://localhost:5174/?screenshot=gameplay`
 
-**Approach:** Use Playwright script or manual capture at each size. Save to `screenshots/store/`.
+The mock states are defined in `Game.setupScreenshot()` and related `setup*Screenshot()` methods in `src/game/Game.ts`. The game loop is frozen in screenshot mode so the state stays static.
+
+**To recapture:** Run `npm run dev`, then use Playwright MCP or a browser to navigate to each scene at each viewport size.
+
+**Screens captured:**
+- [x] Title screen
+- [x] Active gameplay — two variants (different snake shapes, arenas, hazards)
+- [x] Power-up selection screen
+- [x] Death/game-over screen (snake crashed into wall block)
+- [x] Collection screen
+- [x] Leaderboard screen
+
+**Sizes captured** (saved to `screenshots/store/`, committed to repo):
+- [x] 6.7" iPhone (430x932 CSS viewport) → `screenshots/store/ios-6.7/`
+- [x] 5.5" iPhone (414x736 CSS viewport) → `screenshots/store/ios-5.5/`
+- [x] iPad (1024x1366 CSS viewport) → `screenshots/store/ios-ipad/`
+- [x] Google Play phone (360x640 CSS viewport) → `screenshots/store/google-play/`
+- [ ] 6.5" iPhone — skipped, nearly identical to 6.7" (2px difference)
+- [ ] Feature graphic (1024x500 banner image) — needs separate design
+
+**Note:** Screenshots are at 1x CSS resolution. App stores may require device-pixel resolution (e.g. 1290x2796 for 6.7" iPhone at 3x). Upscale if needed or recapture with higher device scale factor.
 
 ---
 

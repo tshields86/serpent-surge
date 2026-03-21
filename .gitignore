@@ -1,8 +1,10 @@
 node_modules
 dist
 .DS_Store
-screenshots
 screenshot-*.png
+# Ignore dev screenshots but keep store screenshots
+screenshots/*
+!screenshots/store/
 .playwright-mcp
 
 # Environment
