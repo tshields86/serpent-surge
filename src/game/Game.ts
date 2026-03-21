@@ -2262,6 +2262,35 @@ export class Game {
     this.score = 1950;
     this.totalFoodEaten = 48;
 
+    // Snake grew from 18 to 22 after eating 16 more food to clear A2
+    const segments = [
+      { x: 14, y: 6 },  // head
+      { x: 13, y: 6 },
+      { x: 12, y: 6 },
+      { x: 11, y: 6 },
+      { x: 10, y: 6 },
+      { x: 10, y: 7 },
+      { x: 10, y: 8 },
+      { x: 11, y: 8 },
+      { x: 12, y: 8 },
+      { x: 13, y: 8 },
+      { x: 13, y: 9 },
+      { x: 13, y: 10 },
+      { x: 12, y: 10 },
+      { x: 11, y: 10 },
+      { x: 10, y: 10 },
+      { x: 10, y: 11 },
+      { x: 10, y: 12 },
+      { x: 11, y: 12 },
+      { x: 12, y: 12 },
+      { x: 13, y: 12 },
+      { x: 13, y: 13 },
+      { x: 13, y: 14 },
+    ];
+    this.snake = new Snake({ x: 14, y: 6 }, 1, Direction.RIGHT);
+    this.snake.segments = segments;
+    this.snake.previousSegments = segments.map(s => ({ ...s }));
+
     // Hand-pick visually interesting offerings with rarity variety
     const offerings = [
       POWERUP_DEFS.find(d => d.id === PowerUpId.WALL_WRAP)!,      // Common (white)
