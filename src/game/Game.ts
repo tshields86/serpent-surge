@@ -2251,8 +2251,9 @@ export class Game {
     this.state = GameState.POWER_UP_SELECT;
 
     // Power-ups appear after clearing an arena (all 3 waves)
+    // Arena 2, Wave 3 quota = (3 + 3*2) + (2-1)*2 = 11
     this.arena.currentWave = 3;
-    this.arena.waveFoodQuota = 9;
+    this.arena.waveFoodQuota = 11;
     this.arena.waveFoodEaten = this.arena.waveFoodQuota;
 
     // Hand-pick visually interesting offerings with rarity variety
