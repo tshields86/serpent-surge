@@ -1292,6 +1292,10 @@ export class Game {
       snakeLength: this.state === GameState.DEATH ? this.deathLength : this.snake.segments.length,
       waveProgress: this.arena.waveProgress,
       arenaNumber: this.arena.currentArena,
+      currentWave: this.arena.currentWave,
+      wavesPerArena: this.arena instanceof Arena ? this.arena.wavesPerArena : 1,
+      waveFoodEaten: this.arena instanceof Arena ? this.arena.waveFoodEaten : 0,
+      waveFoodQuota: this.arena instanceof Arena ? this.arena.waveFoodQuota : 1,
       heldPowerUps: this.heldPowerUps,
       ghostTimer: this.ghostTimer,
       timeDilationTimer: this.timeDilationTimer,
@@ -1885,32 +1889,52 @@ export class Game {
   private drawPauseButton(): void {
     const ctx = this.renderer.ctx;
     const { hudTop } = this.renderer.layout;
-    const centerY = hudTop.y + hudTop.height / 2;
-    const fontSize = Math.min(18, Math.floor(ctx.canvas.width / 25));
     const padding = 16;
+    const scaleFactor = Math.max(1, Math.min(1.5, hudTop.height / 105));
+
+    // Match the vertical span of SCORE label + score number (two rows of text)
+    const labelSize = Math.min(Math.floor(12 * scaleFactor), Math.floor(hudTop.width / 35));
+    const valueSize = Math.min(Math.floor(20 * scaleFactor), Math.floor(hudTop.width / 22));
+    const topY = hudTop.y + Math.floor(padding * 0.8);
+    const btnSize = labelSize + 4 + valueSize; // same height as label + gap + value
+    const btnX = ctx.canvas.width - padding - btnSize;
+    const btnY = topY; // align with top of SCORE/ARENA labels
+    const radius = Math.floor(btnSize * 0.2);
 
     ctx.save();
-    ctx.font = `${fontSize}px "Press Start 2P", monospace`;
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
 
-    // Measure while font is set
-    const metrics = ctx.measureText('II');
-    const textW = metrics.width || 30;
-
-    // Green glow matching title aesthetic
+    // Green glow
     ctx.shadowColor = COLORS.snakeGlow;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 10;
+
+    // Rounded rectangle border
+    ctx.strokeStyle = COLORS.uiAccent;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(btnX, btnY, btnSize, btnSize, radius);
+    ctx.stroke();
+
+    // Two vertical bars inside
+    ctx.shadowBlur = 0;
     ctx.fillStyle = COLORS.uiAccent;
-    ctx.fillText('II', ctx.canvas.width - padding, centerY);
+    const barW = Math.floor(btnSize * 0.15);
+    const barH = Math.floor(btnSize * 0.5);
+    const barY = btnY + Math.floor((btnSize - barH) / 2);
+    const gap = Math.floor(btnSize * 0.12);
+    const barX1 = btnX + Math.floor(btnSize / 2) - gap - barW;
+    const barX2 = btnX + Math.floor(btnSize / 2) + gap;
+
+    ctx.fillRect(barX1, barY, barW, barH);
+    ctx.fillRect(barX2, barY, barW, barH);
+
     ctx.restore();
 
-    // Hit area: 44x44 minimum touch target centered on the text
-    const hitSize = Math.max(44, fontSize + 16);
+    // Hit area: at least 44x44 touch target
+    const hitSize = Math.max(44, btnSize + 8);
     this.pauseBtnBounds = {
-      x: ctx.canvas.width - padding - textW - 10,
-      y: centerY - hitSize / 2,
-      width: textW + 20,
+      x: btnX - (hitSize - btnSize) / 2,
+      y: btnY - (hitSize - btnSize) / 2,
+      width: hitSize,
       height: hitSize,
     };
   }

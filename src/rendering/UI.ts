@@ -9,6 +9,10 @@ export interface HUDData {
   snakeLength: number;
   waveProgress: string;
   arenaNumber: number;
+  currentWave: number;
+  wavesPerArena: number;
+  waveFoodEaten: number;
+  waveFoodQuota: number;
   heldPowerUps: readonly PowerUpInstance[];
   ghostTimer?: number;
   timeDilationTimer?: number;
@@ -60,41 +64,91 @@ export class UI {
   ): void {
     const { hudTop } = layout;
     const padding = 16;
-    const scaleFactor = Math.max(1, Math.min(1.5, hudTop.height / 60));
-    const fontSize = Math.min(Math.floor(14 * scaleFactor), Math.floor(hudTop.width / 30));
+    const scaleFactor = Math.max(1, Math.min(1.5, hudTop.height / 105));
+    const labelSize = Math.min(Math.floor(12 * scaleFactor), Math.floor(hudTop.width / 35));
+    const valueSize = Math.min(Math.floor(20 * scaleFactor), Math.floor(hudTop.width / 22));
 
     ctx.save();
-    ctx.font = `${fontSize}px ${FONT_FAMILY}`;
-    ctx.textBaseline = 'middle';
+    ctx.textBaseline = 'top';
 
-    const centerY = hudTop.y + hudTop.height / 2;
+    const topY = hudTop.y + Math.floor(padding * 0.8);
 
-    // Score (left side) with pulse
+    // === SCORE (left side) ===
     ctx.save();
+    ctx.textAlign = 'left';
+
+    // "SCORE" label in green
+    ctx.font = `${labelSize}px ${FONT_FAMILY}`;
+    ctx.fillStyle = COLORS.uiAccent;
+    ctx.fillText('SCORE', padding, topY);
+
+    // Score value in yellow, with pulse
+    ctx.font = `${valueSize}px ${FONT_FAMILY}`;
+    const scoreNumY = topY + labelSize + 4;
     if (this.scorePulseTimer > 0) {
       const scorePulseScale = 1 + this.scorePulseTimer * 2;
-      const scoreText = `SCORE ${this.scoreDisplay.toLocaleString()}`;
+      const scoreText = this.scoreDisplay.toLocaleString();
       const metrics = ctx.measureText(scoreText);
       const textCenterX = padding + metrics.width / 2;
-      ctx.translate(textCenterX, centerY);
+      const textCenterY = scoreNumY + valueSize / 2;
+      ctx.translate(textCenterX, textCenterY);
       ctx.scale(scorePulseScale, scorePulseScale);
-      ctx.translate(-textCenterX, -centerY);
+      ctx.translate(-textCenterX, -textCenterY);
     }
     ctx.fillStyle = COLORS.score;
-    ctx.textAlign = 'left';
-    ctx.fillText(`SCORE ${this.scoreDisplay.toLocaleString()}`, padding, centerY);
+    ctx.fillText(this.scoreDisplay.toLocaleString(), padding, scoreNumY);
     ctx.restore();
 
-    // Arena + Wave info (centered)
-    const smallSize = Math.min(Math.floor(10 * scaleFactor), Math.floor(hudTop.width / 45));
-    ctx.font = `${smallSize}px ${FONT_FAMILY}`;
+    // === ARENA + WAVE (center) ===
+    ctx.save();
     ctx.textAlign = 'center';
     const centerX = hudTop.width / 2;
-    ctx.fillStyle = COLORS.uiText;
-    ctx.fillText(`ARENA ${data.arenaNumber}`, centerX, centerY - smallSize);
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.fillText(data.waveProgress, centerX, centerY + smallSize);
 
+    // "ARENA" label in green
+    ctx.font = `${labelSize}px ${FONT_FAMILY}`;
+    ctx.fillStyle = COLORS.uiAccent;
+    ctx.fillText('ARENA', centerX, topY);
+
+    // Arena number in yellow
+    ctx.font = `${valueSize}px ${FONT_FAMILY}`;
+    ctx.fillStyle = COLORS.score;
+    ctx.fillText(`${data.arenaNumber}`, centerX, topY + labelSize + 4);
+
+    // Wave text in green
+    const waveY = topY + labelSize + 4 + valueSize + 10;
+    const waveSize = Math.min(Math.floor(10 * scaleFactor), Math.floor(hudTop.width / 40));
+    ctx.font = `${waveSize}px ${FONT_FAMILY}`;
+    ctx.fillStyle = COLORS.uiAccent;
+    ctx.fillText(data.waveProgress, centerX, waveY);
+
+    // Progress bar below wave text
+    const barY = waveY + waveSize + 5;
+    const barWidth = Math.min(220 * scaleFactor, hudTop.width * 0.45);
+    const barHeight = Math.floor(8 * scaleFactor);
+    const barX = centerX - barWidth / 2;
+
+    // Calculate overall arena progress:
+    // total food across all waves up to current, plus current wave food eaten
+    const totalWaves = data.wavesPerArena;
+    const completedWaves = data.currentWave - 1;
+    // Approximate: each wave's quota contributes equally to the bar
+    const progress = data.waveFoodQuota > 0
+      ? (completedWaves + data.waveFoodEaten / data.waveFoodQuota) / totalWaves
+      : 0;
+
+    // Green border
+    ctx.strokeStyle = COLORS.uiAccent;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+    // Yellow fill
+    const fillWidth = Math.floor(barWidth * Math.min(1, progress));
+    if (fillWidth > 0) {
+      ctx.fillStyle = COLORS.score;
+      ctx.fillRect(barX + 1, barY + 1, fillWidth - 2, barHeight - 2);
+    }
+
+    ctx.restore();
     ctx.restore();
   }
 

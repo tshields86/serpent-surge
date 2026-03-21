@@ -30,6 +30,6 @@ export const COLORS = {
 } as const;
 
 // === LAYOUT ===
-export const HUD_HEIGHT_TOP = 60;
+export const HUD_HEIGHT_TOP = 105;
 export const HUD_HEIGHT_BOTTOM = 50;
 export const LAYOUT_PADDING = 16;
