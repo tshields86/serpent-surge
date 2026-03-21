@@ -2195,7 +2195,7 @@ export class Game {
     this.arena.waveFoodEaten = 4;
     this.arena.waveFoodQuota = 9;
 
-    // Build an interesting S-shaped snake with 14 segments
+    // Build an interesting S-shaped snake with 18 segments
     const segments = [
       { x: 14, y: 8 },  // head — moving right
       { x: 13, y: 8 },
@@ -2211,6 +2211,10 @@ export class Game {
       { x: 13, y: 12 },
       { x: 12, y: 12 },
       { x: 11, y: 12 },
+      { x: 10, y: 12 },
+      { x: 10, y: 13 },
+      { x: 10, y: 14 },
+      { x: 11, y: 14 },
     ];
     this.snake = new Snake({ x: 14, y: 8 }, 1, Direction.RIGHT);
     this.snake.segments = segments;
