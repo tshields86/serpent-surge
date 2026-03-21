@@ -2130,11 +2130,62 @@ export class Game {
 
   private setupGameplayScreenshot(): void {
     this.state = GameState.PLAYING;
+    this.score = 680;
+    this.totalFoodEaten = 15;
+    this.currentTick = 120;
+
+    // Arena 1, Wave 3 — early-game
+    this.arena.currentArena = 1;
+    this.arena.currentWave = 3;
+    this.arena.waveFoodEaten = 6;
+    this.arena.waveFoodQuota = 9;
+
+    // Snake moving upward in a zigzag pattern, 10 segments
+    const segments = [
+      { x: 6, y: 3 },   // head — moving up
+      { x: 6, y: 4 },
+      { x: 6, y: 5 },
+      { x: 7, y: 5 },
+      { x: 8, y: 5 },
+      { x: 8, y: 6 },
+      { x: 8, y: 7 },
+      { x: 7, y: 7 },
+      { x: 6, y: 7 },
+      { x: 5, y: 7 },
+    ];
+    this.snake = new Snake({ x: 6, y: 3 }, 1, Direction.UP);
+    this.snake.segments = segments;
+    this.snake.previousSegments = segments.map(s => ({ ...s }));
+
+    this.foods = [
+      { position: { x: 6, y: 1 }, type: FoodType.APPLE, spawnTick: 110 },
+      { position: { x: 15, y: 12 }, type: FoodType.GOLDEN_APPLE, spawnTick: 100 },
+    ];
+
+    this.hazards = [
+      { position: { x: 14, y: 5 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
+      { position: { x: 15, y: 5 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
+      { position: { x: 14, y: 6 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
+      { position: { x: 12, y: 9 }, type: HazardType.SPIKE_TRAP, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
+      { position: { x: 3, y: 15 }, type: HazardType.SPIKE_TRAP, state: 'inactive' as const, ticksRemaining: null, spawnTick: 80 },
+    ];
+
+    this.heldPowerUps = [
+      { id: PowerUpId.WALL_WRAP, stackCount: 1, usesRemaining: null },
+      { id: PowerUpId.SCAVENGER, stackCount: 1, usesRemaining: null },
+    ];
+
+    this.interpolation = 0;
+    this.countdownTimer = 0;
+  }
+
+  private setupGameplay2Screenshot(): void {
+    this.state = GameState.PLAYING;
     this.score = 1250;
     this.totalFoodEaten = 28;
     this.currentTick = 200;
 
-    // Arena 2, Wave 2 — mid-game feel
+    // Arena 2, Wave 2 — advanced mid-game
     this.arena.currentArena = 2;
     this.arena.currentWave = 2;
     this.arena.waveFoodEaten = 4;
@@ -2190,61 +2241,13 @@ export class Game {
     this.countdownTimer = 0;
   }
 
-  private setupGameplay2Screenshot(): void {
-    this.state = GameState.PLAYING;
-    this.score = 680;
-    this.totalFoodEaten = 15;
-    this.currentTick = 120;
-
-    // Arena 1, Wave 3 — end of first arena
-    this.arena.currentArena = 1;
-    this.arena.currentWave = 3;
-    this.arena.waveFoodEaten = 6;
-    this.arena.waveFoodQuota = 9;
-
-    // Snake moving upward in a zigzag pattern, 10 segments
-    const segments = [
-      { x: 6, y: 3 },   // head — moving up
-      { x: 6, y: 4 },
-      { x: 6, y: 5 },
-      { x: 7, y: 5 },
-      { x: 8, y: 5 },
-      { x: 8, y: 6 },
-      { x: 8, y: 7 },
-      { x: 7, y: 7 },
-      { x: 6, y: 7 },
-      { x: 5, y: 7 },
-    ];
-    this.snake = new Snake({ x: 6, y: 3 }, 1, Direction.UP);
-    this.snake.segments = segments;
-    this.snake.previousSegments = segments.map(s => ({ ...s }));
-
-    this.foods = [
-      { position: { x: 6, y: 1 }, type: FoodType.APPLE, spawnTick: 110 },
-      { position: { x: 15, y: 12 }, type: FoodType.GOLDEN_APPLE, spawnTick: 100 },
-    ];
-
-    this.hazards = [
-      { position: { x: 14, y: 5 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
-      { position: { x: 15, y: 5 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
-      { position: { x: 14, y: 6 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
-      { position: { x: 12, y: 9 }, type: HazardType.SPIKE_TRAP, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
-      { position: { x: 3, y: 15 }, type: HazardType.SPIKE_TRAP, state: 'inactive' as const, ticksRemaining: null, spawnTick: 80 },
-    ];
-
-    this.heldPowerUps = [
-      { id: PowerUpId.WALL_WRAP, stackCount: 1, usesRemaining: null },
-      { id: PowerUpId.SCAVENGER, stackCount: 1, usesRemaining: null },
-    ];
-
-    this.interpolation = 0;
-    this.countdownTimer = 0;
-  }
-
   private setupPowerUpScreenshot(): void {
-    // Start from gameplay state so the game board renders behind
-    this.setupGameplayScreenshot();
+    // Start from advanced gameplay state so the game board renders behind
+    this.setupGameplay2Screenshot();
     this.state = GameState.POWER_UP_SELECT;
+
+    // Wave should look completed (quota met) since power-ups appear after clearing a wave
+    this.arena.waveFoodEaten = this.arena.waveFoodQuota;
 
     // Hand-pick visually interesting offerings with rarity variety
     const offerings = [
