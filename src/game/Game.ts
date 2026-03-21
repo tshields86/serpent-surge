@@ -2108,6 +2108,9 @@ export class Game {
         case 'gameplay':
           this.setupGameplayScreenshot();
           break;
+        case 'gameplay2':
+          this.setupGameplay2Screenshot();
+          break;
         case 'powerup':
           this.setupPowerUpScreenshot();
           break;
@@ -2187,6 +2190,57 @@ export class Game {
     this.countdownTimer = 0;
   }
 
+  private setupGameplay2Screenshot(): void {
+    this.state = GameState.PLAYING;
+    this.score = 680;
+    this.totalFoodEaten = 15;
+    this.currentTick = 120;
+
+    // Arena 1, Wave 3 — end of first arena
+    this.arena.currentArena = 1;
+    this.arena.currentWave = 3;
+    this.arena.waveFoodEaten = 6;
+    this.arena.waveFoodQuota = 9;
+
+    // Snake moving upward in a zigzag pattern, 10 segments
+    const segments = [
+      { x: 6, y: 3 },   // head — moving up
+      { x: 6, y: 4 },
+      { x: 6, y: 5 },
+      { x: 7, y: 5 },
+      { x: 8, y: 5 },
+      { x: 8, y: 6 },
+      { x: 8, y: 7 },
+      { x: 7, y: 7 },
+      { x: 6, y: 7 },
+      { x: 5, y: 7 },
+    ];
+    this.snake = new Snake({ x: 6, y: 3 }, 1, Direction.UP);
+    this.snake.segments = segments;
+    this.snake.previousSegments = segments.map(s => ({ ...s }));
+
+    this.foods = [
+      { position: { x: 6, y: 1 }, type: FoodType.APPLE, spawnTick: 110 },
+      { position: { x: 15, y: 12 }, type: FoodType.GOLDEN_APPLE, spawnTick: 100 },
+    ];
+
+    this.hazards = [
+      { position: { x: 14, y: 5 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
+      { position: { x: 15, y: 5 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
+      { position: { x: 14, y: 6 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
+      { position: { x: 12, y: 9 }, type: HazardType.SPIKE_TRAP, state: 'active' as const, ticksRemaining: null, spawnTick: 80 },
+      { position: { x: 3, y: 15 }, type: HazardType.SPIKE_TRAP, state: 'inactive' as const, ticksRemaining: null, spawnTick: 80 },
+    ];
+
+    this.heldPowerUps = [
+      { id: PowerUpId.WALL_WRAP, stackCount: 1, usesRemaining: null },
+      { id: PowerUpId.SCAVENGER, stackCount: 1, usesRemaining: null },
+    ];
+
+    this.interpolation = 0;
+    this.countdownTimer = 0;
+  }
+
   private setupPowerUpScreenshot(): void {
     // Start from gameplay state so the game board renders behind
     this.setupGameplayScreenshot();
@@ -2204,12 +2258,69 @@ export class Game {
   }
 
   private setupDeathScreenshot(): void {
-    // Set up gameplay state first so the board renders underneath
-    this.setupGameplayScreenshot();
     this.state = GameState.DEATH;
     this.score = 2150;
-    this.deathLength = 22;
+    this.deathLength = 20;
     this.totalFoodEaten = 42;
+    this.currentTick = 350;
+
+    this.arena.currentArena = 3;
+    this.arena.currentWave = 2;
+    this.arena.waveFoodEaten = 3;
+    this.arena.waveFoodQuota = 11;
+
+    // Snake crashed into a wall block — head touching the hazard
+    const segments = [
+      { x: 16, y: 6 },  // head — slammed into wall block at (17,6)
+      { x: 15, y: 6 },
+      { x: 14, y: 6 },
+      { x: 13, y: 6 },
+      { x: 12, y: 6 },
+      { x: 11, y: 6 },
+      { x: 11, y: 7 },
+      { x: 11, y: 8 },
+      { x: 11, y: 9 },
+      { x: 12, y: 9 },
+      { x: 13, y: 9 },
+      { x: 14, y: 9 },
+      { x: 14, y: 10 },
+      { x: 14, y: 11 },
+      { x: 13, y: 11 },
+      { x: 12, y: 11 },
+      { x: 11, y: 11 },
+      { x: 10, y: 11 },
+      { x: 9, y: 11 },
+      { x: 8, y: 11 },
+    ];
+    this.snake = new Snake({ x: 16, y: 6 }, 1, Direction.RIGHT);
+    this.snake.segments = segments;
+    this.snake.previousSegments = segments.map(s => ({ ...s }));
+
+    this.foods = [
+      { position: { x: 4, y: 3 }, type: FoodType.APPLE, spawnTick: 340 },
+    ];
+
+    // Wall blocks the snake crashed into + other hazards
+    this.hazards = [
+      { position: { x: 17, y: 6 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 200 },
+      { position: { x: 17, y: 7 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 200 },
+      { position: { x: 18, y: 6 }, type: HazardType.WALL_BLOCK, state: 'active' as const, ticksRemaining: null, spawnTick: 200 },
+      { position: { x: 5, y: 14 }, type: HazardType.SPIKE_TRAP, state: 'active' as const, ticksRemaining: null, spawnTick: 200 },
+      { position: { x: 3, y: 8 }, type: HazardType.WARP_HOLE, state: 'active' as const, ticksRemaining: null, spawnTick: 200, id: 0, partnerId: 1 },
+      { position: { x: 16, y: 16 }, type: HazardType.WARP_HOLE, state: 'active' as const, ticksRemaining: null, spawnTick: 200, id: 1, partnerId: 0 },
+    ];
+
+    this.heldPowerUps = [
+      { id: PowerUpId.GHOST_MODE, stackCount: 1, usesRemaining: null },
+      { id: PowerUpId.DASH, stackCount: 2, usesRemaining: null },
+      { id: PowerUpId.REWIND, stackCount: 1, usesRemaining: null },
+      { id: PowerUpId.SINGULARITY, stackCount: 1, usesRemaining: null },
+      { id: PowerUpId.AFTERIMAGE, stackCount: 1, usesRemaining: null },
+    ];
+
+    this.interpolation = 0;
+    this.countdownTimer = 0;
+
     // Force death screen to fully faded in
     this.deathScreen.reset();
     for (let i = 0; i < 20; i++) this.deathScreen.update(0.1);
