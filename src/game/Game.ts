@@ -632,7 +632,7 @@ export class Game {
       }
     }
 
-    if (this.state === GameState.TITLE) {
+    if (this.state === GameState.TITLE && !this.screenshotMode) {
       this.titleScreen.update(dtSec);
     }
     if (this.state === GameState.DEATH) {
@@ -2123,7 +2123,11 @@ export class Game {
         case 'leaderboard':
           this.setupLeaderboardScreenshot();
           break;
-        // 'title' is default — no setup needed
+        case 'title':
+          // Advance pulse timer to peak brightness for "TAP TO START"
+          // sin(timer * 3) = 1 at timer = π/6 ≈ 0.524s
+          this.titleScreen.update(Math.PI / 6);
+          break;
       }
     });
   }
