@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /leaderboard/{entry} {
+      // Authenticated users (anonymous auth) can read all entries
+      allow read: if request.auth != null;
+
+      // Authenticated users can create entries only
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['player_name', 'score', 'arenas_cleared', 'food_eaten', 'is_daily', 'daily_seed', 'created_at'])
+        && request.resource.data.score is int
+        && request.resource.data.player_name is string
+        && request.resource.data.player_name.size() <= 10;
+
+      // No client-side updates or deletes
+      allow update, delete: if false;
+    }
+  }
+}

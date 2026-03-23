@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Serpent Surge - Feature Graphic Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  body {
+    background: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Press Start 2P', monospace;
+    color: #e0e0e0;
+  }
+  canvas {
+    border: 1px solid #333;
+    margin: 20px;
+    max-width: 90vw;
+  }
+  button {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    padding: 12px 32px;
+    background: #00ff41;
+    color: #0a0a0a;
+    border: none;
+    cursor: pointer;
+    margin: 10px;
+  }
+  button:hover { background: #39ff14; }
+  h1 { font-size: 14px; color: #00ff41; margin-top: 20px; }
+  p { font-size: 10px; color: #888; }
+</style>
+</head>
+<body>
+<h1>Google Play Feature Graphic (1024x500)</h1>
+<canvas id="canvas" width="1024" height="500"></canvas>
+<div>
+  <button id="download">DOWNLOAD PNG</button>
+</div>
+<p>Click download to save as serpent-surge-feature-graphic.png</p>
+
+<script>
+const W = 1024;
+const H = 500;
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Colors from the game
+const BG = '#0a0a0a';
+const GREEN = '#00ff41';
+const GREEN_BRIGHT = '#39ff14';
+const GRID = '#1a1a1a';
+
+function drawBackground() {
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawGrid() {
+  const spacing = 25;
+  ctx.strokeStyle = GRID;
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += spacing) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  for (let y = 0; y < H; y += spacing) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+
+  // Slightly brighter grid near center for depth
+  const grad = ctx.createRadialGradient(W/2, H/2, 50, W/2, H/2, 400);
+  grad.addColorStop(0, 'rgba(0, 255, 65, 0.03)');
+  grad.addColorStop(1, 'rgba(0, 255, 65, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawSnake() {
+  // S-curve snake path across the canvas
+  const segments = [];
+  const cellSize = 22;
+  const segCount = 38;
+
+  for (let i = 0; i < segCount; i++) {
+    const t = i / (segCount - 1);
+    const x = 80 + t * (W - 160);
+    const y = H/2 + Math.sin(t * Math.PI * 2.5 - 0.3) * 80 - 10;
+    segments.push({ x, y });
+  }
+
+  // Glow layer
+  ctx.save();
+  ctx.shadowColor = GREEN;
+  ctx.shadowBlur = cellSize * 1.2;
+  ctx.globalAlpha = 0.3;
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i];
+    ctx.fillStyle = GREEN;
+    ctx.beginPath();
+    ctx.roundRect(s.x - cellSize/2, s.y - cellSize/2, cellSize, cellSize, 4);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Second glow pass for stronger bloom
+  ctx.save();
+  ctx.shadowColor = GREEN;
+  ctx.shadowBlur = cellSize * 2.5;
+  ctx.globalAlpha = 0.15;
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i];
+    ctx.fillStyle = GREEN;
+    ctx.beginPath();
+    ctx.roundRect(s.x - cellSize/2, s.y - cellSize/2, cellSize, cellSize, 4);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Solid segments
+  ctx.save();
+  ctx.shadowColor = GREEN;
+  ctx.shadowBlur = 8;
+
+  for (let i = segments.length - 1; i >= 0; i--) {
+    const s = segments[i];
+    const isHead = i === 0;
+
+    if (isHead) {
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = GREEN_BRIGHT;
+      ctx.beginPath();
+      ctx.roundRect(s.x - cellSize/2 - 1, s.y - cellSize/2 - 1, cellSize + 2, cellSize + 2, 5);
+      ctx.fill();
+
+      // Eyes (facing left since head is at the left side of the path)
+      const cx = s.x;
+      const cy = s.y;
+      const eyeR = 3;
+      const eyeOff = 6;
+      // Direction: look along the path
+      const next = segments[1];
+      const dx = s.x - next.x;
+      const dy = s.y - next.y;
+      const ang = Math.atan2(dy, dx);
+      const perpX = -Math.sin(ang) * eyeOff;
+      const perpY = Math.cos(ang) * eyeOff;
+      const fwdX = Math.cos(ang) * 3;
+      const fwdY = Math.sin(ang) * 3;
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.arc(cx + perpX + fwdX, cy + perpY + fwdY, eyeR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx - perpX + fwdX, cy - perpY + fwdY, eyeR, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#000000';
+      ctx.globalAlpha = 1;
+      const pupilR = eyeR * 0.55;
+      ctx.beginPath();
+      ctx.arc(cx + perpX + fwdX * 1.5, cy + perpY + fwdY * 1.5, pupilR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx - perpX + fwdX * 1.5, cy - perpY + fwdY * 1.5, pupilR, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Slight brightness gradient: brighter near head, dimmer at tail
+      const t = i / segments.length;
+      const alpha = 1 - t * 0.35;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = GREEN;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.roundRect(s.x - cellSize/2, s.y - cellSize/2, cellSize, cellSize, 4);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawParticles() {
+  // Scatter glowing particles around the snake path
+  const rng = mulberry32(42);
+  ctx.save();
+
+  for (let i = 0; i < 60; i++) {
+    const x = rng() * W;
+    const y = rng() * H;
+    const r = 1 + rng() * 3;
+    const alpha = 0.1 + rng() * 0.4;
+
+    // Distance from center line affects color
+    const distFromCenter = Math.abs(y - H/2) / (H/2);
+
+    ctx.globalAlpha = alpha * (1 - distFromCenter * 0.5);
+    ctx.shadowColor = GREEN;
+    ctx.shadowBlur = r * 4;
+    ctx.fillStyle = GREEN;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // A few larger "food" dots
+  const foodColors = ['#ff073a', '#ffd700', '#00bfff', '#ff6600'];
+  for (let i = 0; i < 8; i++) {
+    const x = 100 + rng() * (W - 200);
+    const y = 60 + rng() * (H - 120);
+    const r = 4 + rng() * 4;
+    const color = foodColors[Math.floor(rng() * foodColors.length)];
+
+    ctx.globalAlpha = 0.5 + rng() * 0.3;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = r * 3;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawTitle() {
+  const font = '"Press Start 2P", monospace';
+  const centerX = W / 2;
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Large title with heavy glow
+  ctx.font = `52px ${font}`;
+
+  // Multi-layer glow for intense neon effect
+  ctx.shadowColor = GREEN;
+  ctx.shadowBlur = 40;
+  ctx.fillStyle = GREEN;
+  ctx.globalAlpha = 0.3;
+  ctx.fillText('SERPENT SURGE', centerX, H/2 - 55);
+
+  ctx.shadowBlur = 25;
+  ctx.globalAlpha = 0.5;
+  ctx.fillText('SERPENT SURGE', centerX, H/2 - 55);
+
+  ctx.shadowBlur = 15;
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('SERPENT SURGE', centerX, H/2 - 55);
+
+  // Bright green overlay
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = GREEN_BRIGHT;
+  ctx.shadowBlur = 0;
+  ctx.fillText('SERPENT SURGE', centerX, H/2 - 55);
+  ctx.globalCompositeOperation = 'source-over';
+
+  // Re-draw with the final look: bright green with white core
+  ctx.shadowColor = GREEN;
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = GREEN_BRIGHT;
+  ctx.fillText('SERPENT SURGE', centerX, H/2 - 55);
+
+  // Thin white core for that neon tube look
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('SERPENT SURGE', centerX, H/2 - 55);
+  ctx.globalAlpha = 1;
+
+  // Tagline
+  ctx.font = `14px ${font}`;
+  ctx.shadowColor = GREEN;
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = '#e0e0e0';
+  ctx.globalAlpha = 0.85;
+  ctx.fillText('ROGUELIKE SNAKE REIMAGINED', centerX, H/2 + 10);
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+function drawCRT() {
+  // Scanlines
+  ctx.save();
+  for (let y = 0; y < H; y += 3) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(0, y, W, 1);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.015)';
+    ctx.fillRect(0, y + 1, W, 1);
+  }
+
+  // Vignette
+  const gradient = ctx.createRadialGradient(W/2, H/2, H * 0.25, W/2, H/2, W * 0.55);
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+function drawBorderGlow() {
+  // Subtle green border glow
+  ctx.save();
+  ctx.shadowColor = GREEN;
+  ctx.shadowBlur = 30;
+  ctx.strokeStyle = GREEN;
+  ctx.globalAlpha = 0.15;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(10, 10, W - 20, H - 20);
+
+  ctx.shadowBlur = 15;
+  ctx.globalAlpha = 0.3;
+  ctx.strokeRect(10, 10, W - 20, H - 20);
+  ctx.restore();
+}
+
+// Simple seeded RNG for reproducible particle placement
+function mulberry32(seed) {
+  return function() {
+    seed |= 0;
+    seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function render() {
+  drawBackground();
+  drawGrid();
+  drawParticles();
+  drawSnake();
+  drawTitle();
+  drawCRT();
+  drawBorderGlow();
+}
+
+// Wait for font to load, then render
+document.fonts.ready.then(() => {
+  // Small delay to ensure font is fully available
+  setTimeout(render, 200);
+});
+
+// Download button
+document.getElementById('download').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'serpent-surge-feature-graphic.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+});
+</script>
+</body>
+</html>

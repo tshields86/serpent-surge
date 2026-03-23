@@ -13,6 +13,8 @@ export class AudioManager {
   private chimeSynth: Tone.Synth | null = null;
   private whooshSynth: Tone.NoiseSynth | null = null;
 
+  private keepAliveId: ReturnType<typeof setInterval> | null = null;
+
   /** Resume audio context — call from user gesture handlers on mobile */
   resume(): void {
     try {
@@ -23,6 +25,21 @@ export class AudioManager {
       }
     } catch (_) {
       // Ignore errors if context is not yet available
+    }
+
+    // iOS WKWebView aggressively suspends the audio context.
+    // Poll and resume it to prevent music from cutting out.
+    if (!this.keepAliveId) {
+      this.keepAliveId = setInterval(() => {
+        try {
+          const rawCtx = Tone.getContext().rawContext;
+          if (rawCtx && rawCtx.state === 'suspended') {
+            rawCtx.resume();
+          }
+        } catch (_) {
+          // Ignore
+        }
+      }, 1000);
     }
   }
 

@@ -1,5 +1,6 @@
 import { COLORS } from '../utils/constants';
 import { LeaderboardEntry } from '../meta/Leaderboard';
+import { safeAreaInsetTop } from '../rendering/Renderer';
 
 const FONT_FAMILY = '"Press Start 2P", monospace';
 
@@ -42,6 +43,9 @@ export class LeaderboardScreen {
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, width, height);
 
+    // Offset all content below the safe area (notch/Dynamic Island)
+    ctx.translate(0, safeAreaInsetTop);
+
     // Title
     const titleSize = Math.min(18, Math.floor(width / 24));
     ctx.font = `${titleSize}px ${FONT_FAMILY}`;
@@ -82,7 +86,7 @@ export class LeaderboardScreen {
     ctx.font = `${entrySize}px ${FONT_FAMILY}`;
     const startY = 100;
     const rowHeight = 22;
-    const maxVisible = Math.floor((height - startY - 60) / rowHeight);
+    const maxVisible = Math.floor((height - safeAreaInsetTop - startY - 60) / rowHeight);
 
     const contentWidth = Math.min(320, width - 40);
     const contentX = (width - contentWidth) / 2;
@@ -120,7 +124,7 @@ export class LeaderboardScreen {
     ctx.font = `${closeSize}px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ff4444';
-    const closeY = height - 30;
+    const closeY = height - safeAreaInsetTop - 30;
     ctx.fillText('CLOSE', width / 2, closeY);
     const closeMetrics = ctx.measureText('CLOSE');
     this.closeBounds = {
@@ -132,15 +136,18 @@ export class LeaderboardScreen {
   }
 
   handleClick(x: number, y: number, width: number): 'close' | null {
+    // Adjust for safe area offset applied during draw
+    const adjustedY = y - safeAreaInsetTop;
+
     // Close button
     const cb = this.closeBounds;
-    if (x >= cb.x && x <= cb.x + cb.width && y >= cb.y && y <= cb.y + cb.height) {
+    if (x >= cb.x && x <= cb.x + cb.width && adjustedY >= cb.y && adjustedY <= cb.y + cb.height) {
       return 'close';
     }
 
     // Tab switching
     const tabY = 70;
-    if (y >= tabY - 15 && y <= tabY + 15) {
+    if (adjustedY >= tabY - 15 && adjustedY <= tabY + 15) {
       if (x < width / 2) {
         this.activeTab = 'all-time';
       } else {

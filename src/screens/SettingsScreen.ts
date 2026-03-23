@@ -1,4 +1,5 @@
 import { COLORS } from '../utils/constants';
+import { safeAreaInsetTop } from '../rendering/Renderer';
 
 export interface GameSettings {
   musicVolume: number;  // 0-100
@@ -73,6 +74,9 @@ export class SettingsScreen {
     ctx.fillStyle = 'rgba(10, 10, 10, 0.92)';
     ctx.fillRect(0, 0, width, height);
 
+    // Offset all content below the safe area (notch/Dynamic Island)
+    ctx.translate(0, safeAreaInsetTop);
+
     // Title
     const titleSize = Math.min(18, Math.floor(width / 24));
     ctx.font = `${titleSize}px ${FONT_FAMILY}`;
@@ -141,7 +145,7 @@ export class SettingsScreen {
     ctx.font = `${closeSize}px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ff4444';
-    const closeY = height - 30;
+    const closeY = height - safeAreaInsetTop - 30;
     ctx.fillText('CLOSE', width / 2, closeY);
     const closeMetrics = ctx.measureText('CLOSE');
     this.closeBounds = {
@@ -223,8 +227,10 @@ export class SettingsScreen {
   }
 
   /** Handle click — returns 'changed' if settings changed, 'close' if close clicked, false otherwise */
-  handleClick(x: number, y: number, width: number): 'changed' | 'close' | false {
+  handleClick(x: number, rawY: number, width: number): 'changed' | 'close' | false {
     if (!this.visible) return false;
+    // Adjust for safe area offset applied during draw
+    const y = rawY - safeAreaInsetTop;
 
     // Check close button
     const cb = this.closeBounds;

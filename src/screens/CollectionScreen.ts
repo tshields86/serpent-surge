@@ -1,5 +1,6 @@
 import { COLORS } from '../utils/constants';
 import { getUnlockStatus, ProgressionData, purchaseUnlock } from '../meta/Progression';
+import { safeAreaInsetTop } from '../rendering/Renderer';
 
 export class CollectionScreen {
   private scrollOffset = 0;
@@ -25,6 +26,9 @@ export class CollectionScreen {
     ctx.save();
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, width, height);
+
+    // Offset all content below the safe area (notch/Dynamic Island)
+    ctx.translate(0, safeAreaInsetTop);
 
     // Title
     const titleSize = Math.min(20, Math.floor(width / 22));
@@ -126,7 +130,7 @@ export class CollectionScreen {
     ctx.font = `${closeSize}px "Press Start 2P", monospace`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ff4444';
-    const closeY = height - 30;
+    const closeY = height - safeAreaInsetTop - 30;
     ctx.fillText('CLOSE', width / 2, closeY);
     const closeMetrics = ctx.measureText('CLOSE');
     this.closeBounds = {
@@ -141,10 +145,12 @@ export class CollectionScreen {
 
   /** Returns unlock ID if user clicked on a purchasable card, 'back' for close, null otherwise */
   handleClick(
-    x: number, y: number,
+    x: number, rawY: number,
     width: number, _height: number,
     data: ProgressionData,
   ): string | null {
+    // Adjust for safe area offset applied during draw
+    const y = rawY - safeAreaInsetTop;
     // Check close button
     const cb = this.closeBounds;
     if (x >= cb.x && x <= cb.x + cb.width && y >= cb.y && y <= cb.y + cb.height) {

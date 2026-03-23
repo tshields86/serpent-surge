@@ -46,7 +46,7 @@ The mock states are defined in `Game.setupScreenshot()` and related `setup*Scree
 - [x] iPad (1024x1366 CSS viewport) → `screenshots/store/ios-ipad/`
 - [x] Google Play phone (360x640 CSS viewport) → `screenshots/store/google-play/`
 - [ ] 6.5" iPhone — skipped, nearly identical to 6.7" (2px difference)
-- [ ] Feature graphic (1024x500 banner image) — needs separate design
+- [x] Feature graphic (1024x500 banner image) → `screenshots/store/serpent-surge-feature-graphic.png`
 
 **Note:** Screenshots are at 1x CSS resolution. App stores may require device-pixel resolution (e.g. 1290x2796 for 6.7" iPhone at 3x). Upscale if needed or recapture with higher device scale factor.
 

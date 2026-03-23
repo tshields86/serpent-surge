@@ -1,4 +1,5 @@
 import { COLORS } from '../utils/constants';
+import { safeAreaInsetTop } from '../rendering/Renderer';
 
 const FONT_FAMILY = '"Press Start 2P", monospace';
 
@@ -47,6 +48,9 @@ export class HowToPlayScreen {
     // Backdrop
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, width, height);
+
+    // Offset all content below the safe area (notch/Dynamic Island)
+    ctx.translate(0, safeAreaInsetTop);
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -104,7 +108,7 @@ export class HowToPlayScreen {
     }
 
     // Page dots
-    const dotY = height - 65;
+    const dotY = height - safeAreaInsetTop - 65;
     const dotSpacing = 16;
     const dotsWidth = (TOTAL_PAGES - 1) * dotSpacing;
     const dotStartX = width / 2 - dotsWidth / 2;
@@ -121,7 +125,7 @@ export class HowToPlayScreen {
     ctx.font = `${closeSize}px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ff4444';
-    const closeY = height - 30;
+    const closeY = height - safeAreaInsetTop - 30;
     ctx.fillText('CLOSE', width / 2, closeY);
     const closeMetrics = ctx.measureText('CLOSE');
     this.closeBounds = {
@@ -134,8 +138,10 @@ export class HowToPlayScreen {
     ctx.restore();
   }
 
-  handleClick(x: number, y: number): 'close' | null {
+  handleClick(x: number, rawY: number): 'close' | null {
     if (!this.visible) return null;
+    // Adjust for safe area offset applied during draw
+    const y = rawY - safeAreaInsetTop;
 
     // Close button
     const cb = this.closeBounds;
