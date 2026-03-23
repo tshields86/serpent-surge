@@ -7,6 +7,10 @@ screenshots/*
 !screenshots/store/
 .playwright-mcp
 
+# Xcode / Swift Package Manager
+**/xcshareddata/swiftpm/
+*.xcuserdatad
+
 # Environment
 .env
 .env.local
