@@ -13,13 +13,18 @@ export async function getFirebase(): Promise<{ db: Firestore; auth: Auth } | nul
   if (!firebaseConfigured) return null;
   if (cached) return cached;
 
-  const [{ initializeApp }, { getFirestore }, { getAuth }] = await Promise.all([
+  const [{ initializeApp }, { getFirestore }, { initializeAuth, indexedDBLocalPersistence }] = await Promise.all([
     import('firebase/app'),
     import('firebase/firestore'),
     import('firebase/auth'),
   ]);
 
   const app = initializeApp({ apiKey, authDomain, projectId });
-  cached = { db: getFirestore(app), auth: getAuth(app) };
+  // Use initializeAuth with indexedDB persistence to avoid issues with
+  // Capacitor's capacitor:// scheme where getAuth() hangs on signInAnonymously
+  const auth = initializeAuth(app, {
+    persistence: indexedDBLocalPersistence,
+  });
+  cached = { db: getFirestore(app), auth };
   return cached;
 }
