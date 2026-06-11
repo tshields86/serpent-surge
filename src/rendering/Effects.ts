@@ -1,3 +1,6 @@
+// CRT atmosphere — spec §2.4. The offscreen canvas is pre-baked once per
+// resize so the per-frame cost is a single drawImage.
+
 export class Effects {
   private crtCanvas: HTMLCanvasElement | null = null;
   private crtWidth = 0;
@@ -21,24 +24,22 @@ export class Effects {
     offscreen.height = height;
     const octx = offscreen.getContext('2d')!;
 
-    // Scanlines: alternating light lines every 3px for visible CRT effect
-    // Use a subtle light tint so scanlines show on the dark background
-    for (let y = 0; y < height; y += 3) {
-      // Dark gap between scanlines
-      octx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    // Scanlines: 4px row — 1px dark line at y+2, the rest transparent.
+    // Multiplied at draw time so they read as a fine grain over phosphor green.
+    octx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    for (let y = 2; y < height; y += 4) {
       octx.fillRect(0, y, width, 1);
-      // Faint bright scanline
-      octx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-      octx.fillRect(0, y + 1, width, 1);
     }
 
-    // Vignette: radial gradient darkening at edges
+    // Bezel vignette — a soft inset shadow ring around the screen edge.
+    // Emulates the `inset 0 0 90px rgba(0,0,0,.9)` shadow on the mock's phone frame.
     const gradient = octx.createRadialGradient(
-      width / 2, height / 2, height * 0.3,
-      width / 2, height / 2, height * 0.75,
+      width / 2, height / 2, Math.min(width, height) * 0.4,
+      width / 2, height / 2, Math.max(width, height) * 0.72,
     );
     gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+    gradient.addColorStop(0.85, 'rgba(0, 0, 0, 0.55)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.9)');
     octx.fillStyle = gradient;
     octx.fillRect(0, 0, width, height);
 
