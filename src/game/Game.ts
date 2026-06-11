@@ -1225,7 +1225,13 @@ export class Game {
     if (this.state === GameState.TITLE) {
       const dailyBest = this.persistedData?.dailyBest?.seed === todaySeed()
         ? this.persistedData.dailyBest.score : undefined;
-      this.titleScreen.draw(this.renderer.ctx, this.highScore, this.persistedData?.totalScales, dailyBest);
+      this.titleScreen.draw(
+        this.renderer.ctx,
+        this.highScore,
+        this.persistedData?.totalScales,
+        dailyBest,
+        this.persistedData?.settings?.reducedMotion ?? false,
+      );
       this.effects.drawCRT(this.renderer.ctx);
       if (this.settingsScreen.isVisible()) {
         this.settingsScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
