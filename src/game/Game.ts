@@ -1974,6 +1974,20 @@ export class Game {
         case 'settings':
           this.openSettings();
           break;
+        case 'howtoplay-food':
+          this.state = GameState.TITLE;
+          this.howToPlayScreen.show();
+          this.howToPlayScreen.setPage(1);
+          break;
+        case 'howtoplay-hazards':
+          this.state = GameState.TITLE;
+          this.howToPlayScreen.show();
+          this.howToPlayScreen.setPage(2);
+          break;
+        case 'howtoplay':
+          this.state = GameState.TITLE;
+          this.howToPlayScreen.show();
+          break;
         case 'title':
           // Advance pulse timer to peak brightness for "TAP TO START"
           // sin(timer * 3) = 1 at timer = π/6 ≈ 0.524s

@@ -1,24 +1,40 @@
-import { COLORS } from '../utils/constants';
+// How to Play — docs/DESIGN_SPEC.md §5 (mock: docs/mocks/serpent-surge-items.html).
+//
+// Food and Hazards pages now render the live ItemRenderer glyphs as legend art,
+// and hazards carry a DEADLY/NEUTRAL tag so the legend matches the canvas. Text
+// pages use the shared chrome — green title, gold subtitle, green-dim body
+// (VT323), and the shared green CLOSE / carousel dots.
+
 import { safeAreaInsetTop } from '../rendering/Renderer';
+import {
+  applyScaledGlow,
+  bodyFont,
+  clearGlow,
+  COLOR,
+  displayFont,
+  drawCarouselDots,
+  drawCloseButton,
+  drawHazardTag,
+  drawScreenSubtitle,
+  drawScreenTitle,
+  fillBackground,
+  hitTest,
+  TEXT,
+  type Bounds,
+} from '../theme';
+import { drawFood, drawHazard } from '../rendering/ItemRenderer';
+import { FoodType } from '../game/Food';
+import { HazardType } from '../game/Hazard';
 
-const FONT_FAMILY = '"Press Start 2P", monospace';
-
-const PAGE_TITLES = [
-  'CONTROLS',
-  'FOOD TYPES',
-  'HAZARDS',
-  'WAVES & ARENAS',
-  'POWER-UPS',
-  'SCALES & UNLOCKS',
-];
-const TOTAL_PAGES = PAGE_TITLES.length;
-
-interface Bounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+const PAGES = [
+  { key: 'controls',  subtitle: '' },
+  { key: 'food',      subtitle: 'FOOD TYPES' },
+  { key: 'hazards',   subtitle: 'HAZARDS' },
+  { key: 'waves',     subtitle: 'WAVES & ARENAS' },
+  { key: 'powerups',  subtitle: 'POWER-UPS' },
+  { key: 'scales',    subtitle: 'SCALES & UNLOCKS' },
+] as const;
+const TOTAL_PAGES = PAGES.length;
 
 export class HowToPlayScreen {
   private visible = false;
@@ -31,411 +47,372 @@ export class HowToPlayScreen {
     this.visible = true;
     this.currentPage = 0;
   }
-
-  hide(): void {
-    this.visible = false;
-  }
-
-  isVisible(): boolean {
-    return this.visible;
+  hide(): void { this.visible = false; }
+  isVisible(): boolean { return this.visible; }
+  /** Jump to a specific page. Used by the screenshot harness. */
+  setPage(index: number): void {
+    this.currentPage = Math.max(0, Math.min(TOTAL_PAGES - 1, index));
   }
 
   draw(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     if (!this.visible) return;
 
     ctx.save();
-
-    // Backdrop
-    ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(0, 0, width, height);
-
-    // Offset all content below the safe area (notch/Dynamic Island)
+    fillBackground(ctx, width, height);
     ctx.translate(0, safeAreaInsetTop);
+    const usableHeight = height - safeAreaInsetTop;
+    const scale = pickScale(width);
 
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    // ===== Shared chrome =====
+    const titleY = Math.floor(usableHeight * 0.06);
+    drawScreenTitle(ctx, 'HOW TO PLAY', width / 2, titleY, scale);
 
-    // Title
-    const titleSize = Math.min(18, Math.floor(width / 24));
-    ctx.font = `${titleSize}px ${FONT_FAMILY}`;
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.shadowColor = COLORS.snakeGlow;
-    ctx.shadowBlur = 10;
-    ctx.fillText('HOW TO PLAY', width / 2, 45);
-    ctx.shadowBlur = 0;
-
-    // Page subtitle
-    const subtitleSize = Math.min(11, Math.floor(width / 34));
-    ctx.font = `${subtitleSize}px ${FONT_FAMILY}`;
-    ctx.fillStyle = COLORS.score;
-    ctx.fillText(PAGE_TITLES[this.currentPage]!, width / 2, 80);
-
-    // Content area
-    const contentWidth = Math.min(320, width - 40);
-    const contentX = (width - contentWidth) / 2;
-    const startY = 110;
-
-    switch (this.currentPage) {
-      case 0: this.drawControlsPage(ctx, contentX, contentWidth, startY); break;
-      case 1: this.drawFoodPage(ctx, contentX, contentWidth, startY); break;
-      case 2: this.drawHazardsPage(ctx, contentX, contentWidth, startY); break;
-      case 3: this.drawWavesPage(ctx, contentX, contentWidth, startY); break;
-      case 4: this.drawPowerUpsPage(ctx, contentX, contentWidth, startY); break;
-      case 5: this.drawScalesPage(ctx, contentX, contentWidth, startY); break;
+    const page = PAGES[this.currentPage]!;
+    let contentY = titleY + 28 * scale;
+    if (page.subtitle) {
+      drawScreenSubtitle(ctx, page.subtitle, width / 2, contentY, scale);
+      contentY += 28 * scale;
+    } else {
+      contentY += 16 * scale;
     }
 
-    // Navigation arrows
-    const arrowSize = Math.min(16, Math.floor(width / 28));
-    const arrowY = height / 2;
-    ctx.font = `${arrowSize}px ${FONT_FAMILY}`;
+    // ===== Page body =====
+    const padding = Math.max(20, width * 0.06);
+    const contentWidth = Math.min(380 * scale, width - padding * 2);
+    const contentX = (width - contentWidth) / 2;
 
+    switch (page.key) {
+      case 'controls': this.drawControls(ctx, contentX, contentY, contentWidth, scale); break;
+      case 'food':     this.drawFoodLegend(ctx, contentX, contentY, contentWidth, scale); break;
+      case 'hazards':  this.drawHazardsLegend(ctx, contentX, contentY, contentWidth, scale); break;
+      case 'waves':    this.drawTextSections(ctx, contentX, contentY, contentWidth, scale, WAVE_SECTIONS); break;
+      case 'powerups': this.drawTextSections(ctx, contentX, contentY, contentWidth, scale, POWERUP_SECTIONS); break;
+      case 'scales':   this.drawTextSections(ctx, contentX, contentY, contentWidth, scale, SCALES_SECTIONS); break;
+    }
+
+    // ===== Prev / Next tap targets (no visible arrow — dots indicate position) =====
+    const navArrowSize = 22 * scale;
+    const navY = usableHeight / 2;
     if (this.currentPage > 0) {
-      ctx.fillStyle = COLORS.uiAccent;
-      ctx.textAlign = 'center';
-      ctx.fillText('\u25C0', 24, arrowY);
-      this.prevBounds = { x: 0, y: arrowY - 22, width: 48, height: 44 };
+      drawNavArrow(ctx, padding * 0.5, navY, navArrowSize, 'left', scale);
+      this.prevBounds = { x: 0, y: navY - navArrowSize, width: padding * 1.5, height: navArrowSize * 2 };
     } else {
       this.prevBounds = { x: 0, y: 0, width: 0, height: 0 };
     }
-
     if (this.currentPage < TOTAL_PAGES - 1) {
-      ctx.fillStyle = COLORS.uiAccent;
-      ctx.textAlign = 'center';
-      ctx.fillText('\u25B6', width - 24, arrowY);
-      this.nextBounds = { x: width - 48, y: arrowY - 22, width: 48, height: 44 };
+      drawNavArrow(ctx, width - padding * 0.5, navY, navArrowSize, 'right', scale);
+      this.nextBounds = { x: width - padding * 1.5, y: navY - navArrowSize, width: padding * 1.5, height: navArrowSize * 2 };
     } else {
       this.nextBounds = { x: 0, y: 0, width: 0, height: 0 };
     }
 
-    // Page dots
-    const dotY = height - safeAreaInsetTop - 65;
-    const dotSpacing = 16;
-    const dotsWidth = (TOTAL_PAGES - 1) * dotSpacing;
-    const dotStartX = width / 2 - dotsWidth / 2;
+    // ===== Dots + CLOSE =====
+    const dotsY = usableHeight - Math.max(64, 64 * scale);
+    drawCarouselDots(ctx, width / 2, dotsY, TOTAL_PAGES, this.currentPage, scale);
 
-    for (let i = 0; i < TOTAL_PAGES; i++) {
-      ctx.beginPath();
-      ctx.arc(dotStartX + i * dotSpacing, dotY, i === this.currentPage ? 4 : 3, 0, Math.PI * 2);
-      ctx.fillStyle = i === this.currentPage ? COLORS.uiAccent : '#444';
-      ctx.fill();
-    }
-
-    // Close button
-    const closeSize = Math.min(10, Math.floor(width / 40));
-    ctx.font = `${closeSize}px ${FONT_FAMILY}`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ff4444';
-    const closeY = height - safeAreaInsetTop - 30;
-    ctx.fillText('CLOSE', width / 2, closeY);
-    const closeMetrics = ctx.measureText('CLOSE');
-    this.closeBounds = {
-      x: width / 2 - closeMetrics.width / 2 - 10,
-      y: closeY - closeSize,
-      width: closeMetrics.width + 20,
-      height: closeSize * 2.5,
-    };
+    const closeY = usableHeight - Math.max(36, 36 * scale);
+    this.closeBounds = drawCloseButton(ctx, width / 2, closeY, scale);
 
     ctx.restore();
   }
 
+  // ---- Pages ----
+
+  private drawControls(
+    ctx: CanvasRenderingContext2D,
+    x: number, y: number, w: number, scale: number,
+  ): void {
+    let cy = y;
+    cy = drawHeading(ctx, 'MOBILE', x, cy, scale);
+    cy = drawBody(ctx, 'Swipe in any direction to turn. Swipe again to queue your next move.', x, cy, w, scale);
+    cy += 14 * scale;
+
+    cy = drawHeading(ctx, 'KEYBOARD', x, cy, scale);
+    cy = drawKeyRow(ctx, 'ARROW KEYS / WASD', 'Move', x, cy, scale);
+    cy = drawKeyRow(ctx, 'ENTER / TAP', 'Start game', x, cy, scale);
+    cy = drawKeyRow(ctx, 'ESC', 'Pause · Back', x, cy, scale);
+    cy += 14 * scale;
+
+    cy = drawHeading(ctx, 'GOAL', x, cy, scale);
+    drawBody(ctx, 'Eat food, clear waves, avoid walls and your own tail. Survive as long as you can.', x, cy, w, scale);
+  }
+
+  private drawFoodLegend(
+    ctx: CanvasRenderingContext2D,
+    x: number, y: number, w: number, scale: number,
+  ): void {
+    const items: { type: FoodType; name: string; effect: string; desc: string }[] = [
+      { type: FoodType.APPLE,         name: 'APPLE',        effect: '+10 PTS · +1 LENGTH',     desc: 'Basic food. Eat to grow and score.' },
+      { type: FoodType.GOLDEN_APPLE,  name: 'GOLDEN APPLE', effect: '+50 PTS · +1 LENGTH',     desc: 'Rare and valuable. Pulsing gold glow.' },
+      { type: FoodType.SHRINK_PELLET, name: 'SHRINK PELLET',effect: '+25 PTS · −2 LENGTH',     desc: 'Makes you shorter. Great for tight spaces.' },
+      { type: FoodType.SPEED_FRUIT,   name: 'SPEED FRUIT',  effect: '+15 PTS · 1.5× SPEED',    desc: 'Temporary speed boost for 3 seconds.' },
+      { type: FoodType.BOMB_FRUIT,    name: 'BOMB FRUIT',   effect: '+30 PTS · CLEARS HAZARDS',desc: 'Destroys hazards in a 3×3 area.' },
+    ];
+
+    let cy = y;
+    const now = performance.now();
+    for (const item of items) {
+      cy = drawItemRow(ctx, cy, x, w, scale, (gx, gy, size) => {
+        drawFood(ctx, item.type, gx + size / 2, gy + size / 2, size, now);
+      }, item.name, item.effect, item.desc);
+    }
+  }
+
+  private drawHazardsLegend(
+    ctx: CanvasRenderingContext2D,
+    x: number, y: number, w: number, scale: number,
+  ): void {
+    const items: { type: HazardType; name: string; tag: 'deadly' | 'neutral'; desc: string }[] = [
+      { type: HazardType.WALL_BLOCK,   name: 'WALL BLOCK',   tag: 'deadly',  desc: 'Static obstacle. Destroyed by Bomb Fruit or Head Bash.' },
+      { type: HazardType.SPIKE_TRAP,   name: 'SPIKE TRAP',   tag: 'deadly',  desc: 'Toggles every few ticks. Safe when retracted, deadly when red.' },
+      { type: HazardType.POISON_TRAIL, name: 'POISON TRAIL', tag: 'deadly',  desc: 'Fades after 8 ticks. Avoid the purple glow until it clears.' },
+      { type: HazardType.WARP_HOLE,    name: 'WARP HOLE',    tag: 'neutral', desc: 'Comes in pairs. Enter one, exit the other. Disorienting, not deadly.' },
+      { type: HazardType.MAGNET,       name: 'MAGNET',       tag: 'neutral', desc: 'Pulls nearby food toward it each tick. Plan your route.' },
+    ];
+
+    let cy = y;
+    const now = performance.now();
+    for (const item of items) {
+      cy = drawItemRow(ctx, cy, x, w, scale, (gx, gy, size) => {
+        drawHazard(ctx, item.type, 'active', null, gx + size / 2, gy + size / 2, size, now);
+      }, item.name, '', item.desc, item.tag);
+    }
+  }
+
+  private drawTextSections(
+    ctx: CanvasRenderingContext2D,
+    x: number, y: number, w: number, scale: number,
+    sections: readonly [string, string][],
+  ): void {
+    let cy = y;
+    for (const [heading, body] of sections) {
+      cy = drawHeading(ctx, heading, x, cy, scale);
+      cy = drawBody(ctx, body, x, cy, w, scale);
+      cy += 12 * scale;
+    }
+  }
+
   handleClick(x: number, rawY: number): 'close' | null {
     if (!this.visible) return null;
-    // Adjust for safe area offset applied during draw
     const y = rawY - safeAreaInsetTop;
-
-    // Close button
-    const cb = this.closeBounds;
-    if (x >= cb.x && x <= cb.x + cb.width && y >= cb.y && y <= cb.y + cb.height) {
-      return 'close';
-    }
-
-    // Previous page
-    const pb = this.prevBounds;
-    if (pb.width > 0 && x >= pb.x && x <= pb.x + pb.width && y >= pb.y && y <= pb.y + pb.height) {
-      this.currentPage--;
+    if (hitTest(this.closeBounds, x, y)) return 'close';
+    if (this.prevBounds.width > 0 && hitTest(this.prevBounds, x, y)) {
+      this.currentPage = Math.max(0, this.currentPage - 1);
       return null;
     }
-
-    // Next page
-    const nb = this.nextBounds;
-    if (nb.width > 0 && x >= nb.x && x <= nb.x + nb.width && y >= nb.y && y <= nb.y + nb.height) {
-      this.currentPage++;
+    if (this.nextBounds.width > 0 && hitTest(this.nextBounds, x, y)) {
+      this.currentPage = Math.min(TOTAL_PAGES - 1, this.currentPage + 1);
       return null;
     }
-
     return null;
   }
-
-  // --- Page renderers ---
-
-  private drawControlsPage(ctx: CanvasRenderingContext2D, x: number, w: number, y: number): void {
-    const bodySize = Math.min(8, Math.floor(ctx.canvas.width / 50));
-    const headingSize = Math.min(9, Math.floor(ctx.canvas.width / 45));
-    const lineH = bodySize + 8;
-
-    let cy = y;
-
-    // Mobile controls
-    ctx.font = `${headingSize}px ${FONT_FAMILY}`;
-    ctx.textAlign = 'left';
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.fillText('MOBILE', x, cy);
-    cy += lineH + 4;
-
-    ctx.font = `${bodySize}px ${FONT_FAMILY}`;
-    ctx.fillStyle = COLORS.uiText;
-    const mobileLines = this.wrapText(ctx, 'Swipe in any direction to turn the snake. Swipe while turning to queue your next move.', w);
-    for (const line of mobileLines) {
-      ctx.fillText(line, x, cy);
-      cy += lineH;
-    }
-
-    cy += lineH;
-
-    // Keyboard controls
-    ctx.font = `${headingSize}px ${FONT_FAMILY}`;
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.fillText('KEYBOARD', x, cy);
-    cy += lineH + 4;
-
-    ctx.font = `${bodySize}px ${FONT_FAMILY}`;
-    ctx.fillStyle = COLORS.uiText;
-
-    const controls = [
-      ['ARROW KEYS / WASD', 'Move'],
-      ['ENTER / TAP', 'Start game'],
-      ['ESC', 'Pause / Back'],
-    ];
-    for (const [key, desc] of controls) {
-      ctx.fillStyle = COLORS.score;
-      ctx.fillText(key!, x, cy);
-      cy += lineH;
-      ctx.fillStyle = '#999';
-      ctx.fillText(desc!, x + 10, cy);
-      cy += lineH + 2;
-    }
-
-    cy += lineH;
-
-    // Goal
-    ctx.font = `${headingSize}px ${FONT_FAMILY}`;
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.fillText('GOAL', x, cy);
-    cy += lineH + 4;
-
-    ctx.font = `${bodySize}px ${FONT_FAMILY}`;
-    ctx.fillStyle = COLORS.uiText;
-    const goalLines = this.wrapText(ctx, 'Eat food to grow and clear waves. Avoid walls, hazards, and your own tail. Survive as long as you can!', w);
-    for (const line of goalLines) {
-      ctx.fillText(line, x, cy);
-      cy += lineH;
-    }
-  }
-
-  private drawFoodPage(ctx: CanvasRenderingContext2D, x: number, w: number, y: number): void {
-    const nameSize = Math.min(9, Math.floor(ctx.canvas.width / 45));
-    const descSize = Math.min(8, Math.floor(ctx.canvas.width / 50));
-    const lineH = descSize + 6;
-    const itemGap = 14;
-
-    const foods: [string, string, string, string][] = [
-      [COLORS.apple, 'APPLE', '+10 pts, +1 length', 'Basic food. Eat to grow and score.'],
-      [COLORS.goldenApple, 'GOLDEN APPLE', '+50 pts, +1 length', 'Rare and valuable. Pulsing gold glow.'],
-      [COLORS.shrinkPellet, 'SHRINK PELLET', '+25 pts, -2 length', 'Makes you shorter. Great for tight spaces.'],
-      [COLORS.speedFruit, 'SPEED FRUIT', '+15 pts, 1.5x speed', 'Temporary speed boost for 3 seconds.'],
-      [COLORS.bombFruit, 'BOMB FRUIT', '+30 pts, clears hazards', 'Destroys hazards in a 3x3 area.'],
-    ];
-
-    let cy = y;
-    for (const [color, name, stats, desc] of foods) {
-      // Color swatch
-      ctx.beginPath();
-      ctx.arc(x + 8, cy, 6, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-
-      // Name
-      ctx.font = `${nameSize}px ${FONT_FAMILY}`;
-      ctx.textAlign = 'left';
-      ctx.fillStyle = COLORS.uiText;
-      ctx.fillText(name, x + 22, cy + 2);
-
-      // Stats
-      cy += lineH + 2;
-      ctx.font = `${descSize}px ${FONT_FAMILY}`;
-      ctx.fillStyle = COLORS.score;
-      ctx.fillText(stats, x + 22, cy);
-
-      // Description
-      cy += lineH;
-      ctx.fillStyle = '#999';
-      const lines = this.wrapText(ctx, desc, w - 22);
-      for (const line of lines) {
-        ctx.fillText(line, x + 22, cy);
-        cy += lineH;
-      }
-
-      cy += itemGap;
-    }
-  }
-
-  private drawHazardsPage(ctx: CanvasRenderingContext2D, x: number, w: number, y: number): void {
-    const nameSize = Math.min(9, Math.floor(ctx.canvas.width / 45));
-    const descSize = Math.min(8, Math.floor(ctx.canvas.width / 50));
-    const lineH = descSize + 6;
-    const itemGap = 14;
-
-    const hazards: [string, string, string][] = [
-      ['#8b0000', 'WALL BLOCK', 'Static obstacle. Deadly on contact. Can be destroyed by Bomb Fruit or Head Bash.'],
-      ['#ff0040', 'SPIKE TRAP', 'Toggles on and off every few ticks. Safe when retracted, deadly when red.'],
-      ['#7b00ff', 'POISON TRAIL', 'Fades after 8 ticks. Avoid the purple glow until it disappears.'],
-      ['#7722cc', 'WARP HOLE', 'Comes in pairs. Enter one, exit the other. Not harmful but disorienting!'],
-      ['#ff3333', 'MAGNET', 'Pulls nearby food toward it each tick. Plan your route carefully.'],
-    ];
-
-    let cy = y;
-    for (const [color, name, desc] of hazards) {
-      // Color swatch
-      ctx.beginPath();
-      ctx.arc(x + 8, cy, 6, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-
-      // Name
-      ctx.font = `${nameSize}px ${FONT_FAMILY}`;
-      ctx.textAlign = 'left';
-      ctx.fillStyle = COLORS.uiText;
-      ctx.fillText(name, x + 22, cy + 2);
-
-      // Description
-      cy += lineH + 2;
-      ctx.font = `${descSize}px ${FONT_FAMILY}`;
-      ctx.fillStyle = '#999';
-      const lines = this.wrapText(ctx, desc, w - 22);
-      for (const line of lines) {
-        ctx.fillText(line, x + 22, cy);
-        cy += lineH;
-      }
-
-      cy += itemGap;
-    }
-  }
-
-  private drawWavesPage(ctx: CanvasRenderingContext2D, x: number, w: number, y: number): void {
-    const headingSize = Math.min(9, Math.floor(ctx.canvas.width / 45));
-    const bodySize = Math.min(8, Math.floor(ctx.canvas.width / 50));
-    const lineH = bodySize + 8;
-
-    let cy = y;
-
-    const sections: [string, string][] = [
-      ['ARENAS', 'Each run is a series of arenas. Clear all 3 waves in an arena to advance to the next one.'],
-      ['WAVES', 'Each wave has a food quota. Eat enough food to clear the wave. Quotas increase: 5, 7, then 9.'],
-      ['DIFFICULTY', 'Hazards appear starting from wave 2 and increase each wave. The snake also speeds up as waves progress.'],
-      ['BOSSES', 'Every 5th arena features a boss fight with unique attack patterns. Defeat them to earn bonus Scales.'],
-      ['BETWEEN ARENAS', 'After clearing an arena you choose 1 of 3 power-ups to carry into the next arena.'],
-    ];
-
-    for (const [title, text] of sections) {
-      ctx.font = `${headingSize}px ${FONT_FAMILY}`;
-      ctx.textAlign = 'left';
-      ctx.fillStyle = COLORS.uiAccent;
-      ctx.fillText(title, x, cy);
-      cy += lineH;
-
-      ctx.font = `${bodySize}px ${FONT_FAMILY}`;
-      ctx.fillStyle = COLORS.uiText;
-      const lines = this.wrapText(ctx, text, w);
-      for (const line of lines) {
-        ctx.fillText(line, x, cy);
-        cy += lineH;
-      }
-      cy += 8;
-    }
-  }
-
-  private drawPowerUpsPage(ctx: CanvasRenderingContext2D, x: number, w: number, y: number): void {
-    const headingSize = Math.min(9, Math.floor(ctx.canvas.width / 45));
-    const bodySize = Math.min(8, Math.floor(ctx.canvas.width / 50));
-    const lineH = bodySize + 8;
-
-    let cy = y;
-
-    const sections: [string, string][] = [
-      ['SELECTION', 'After each arena, pick 1 of 3 random power-ups. They stack and carry across arenas within a run.'],
-      ['RARITY', 'Power-ups come in 3 tiers: Common (white), Rare (blue), and Legendary (gold). Higher rarity = stronger effects.'],
-      ['STACKING', 'Picking the same power-up again makes it stronger. Some power-ups also combine into hidden synergies.'],
-      ['SYNERGIES', 'Certain power-up pairs unlock secret bonus effects! Experiment with different combinations to discover them all.'],
-      ['REROLL', 'Unlock the Reroll ability in the Collection to get a fresh set of 3 choices if you don\'t like your options.'],
-    ];
-
-    for (const [title, text] of sections) {
-      ctx.font = `${headingSize}px ${FONT_FAMILY}`;
-      ctx.textAlign = 'left';
-      ctx.fillStyle = COLORS.uiAccent;
-      ctx.fillText(title, x, cy);
-      cy += lineH;
-
-      ctx.font = `${bodySize}px ${FONT_FAMILY}`;
-      ctx.fillStyle = COLORS.uiText;
-      const lines = this.wrapText(ctx, text, w);
-      for (const line of lines) {
-        ctx.fillText(line, x, cy);
-        cy += lineH;
-      }
-      cy += 8;
-    }
-  }
-
-  private drawScalesPage(ctx: CanvasRenderingContext2D, x: number, w: number, y: number): void {
-    const headingSize = Math.min(9, Math.floor(ctx.canvas.width / 45));
-    const bodySize = Math.min(8, Math.floor(ctx.canvas.width / 50));
-    const lineH = bodySize + 8;
-
-    let cy = y;
-
-    const sections: [string, string][] = [
-      ['SCALES', 'Scales are the meta currency earned after each run. Your reward is based on score, arenas cleared, and food eaten.'],
-      ['UNLOCKS', 'Spend Scales in the Collection to unlock permanent upgrades that carry across all future runs.'],
-      ['UPGRADES', 'Starting Length 4, Reroll power-ups, Arena Preview, Extra Life, and Endless Mode are all available to unlock.'],
-      ['SKINS', 'Unlock cosmetic snake skins to customize your look. Pure style, no gameplay advantage.'],
-      ['DAILY CHALLENGE', 'A seeded daily run where everyone gets the same layout. Compete for the top of the daily leaderboard!'],
-    ];
-
-    for (const [title, text] of sections) {
-      ctx.font = `${headingSize}px ${FONT_FAMILY}`;
-      ctx.textAlign = 'left';
-      ctx.fillStyle = COLORS.uiAccent;
-      ctx.fillText(title, x, cy);
-      cy += lineH;
-
-      ctx.font = `${bodySize}px ${FONT_FAMILY}`;
-      ctx.fillStyle = COLORS.uiText;
-      const lines = this.wrapText(ctx, text, w);
-      for (const line of lines) {
-        ctx.fillText(line, x, cy);
-        cy += lineH;
-      }
-      cy += 8;
-    }
-  }
-
-  // --- Helpers ---
-
-  private wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-    for (const word of words) {
-      const test = currentLine ? currentLine + ' ' + word : word;
-      if (ctx.measureText(test).width > maxWidth && currentLine) {
-        lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = test;
-      }
-    }
-    if (currentLine) lines.push(currentLine);
-    return lines;
-  }
 }
+
+// ---------------------------------------------------------------------------
+// Layout helpers
+// ---------------------------------------------------------------------------
+
+function pickScale(width: number): number {
+  if (width >= 1600) return 1.4;
+  if (width >= 1024) return 1.2;
+  if (width >= 720) return 1.1;
+  return 1;
+}
+
+function drawHeading(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  scale: number,
+): number {
+  const size = Math.min(11 * scale, Math.floor(ctx.canvas.width / 32));
+  ctx.save();
+  ctx.font = displayFont(size);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = COLOR.green;
+  applyScaledGlow(ctx, 'greenS', scale);
+  ctx.fillText(text, x, y);
+  clearGlow(ctx);
+  ctx.restore();
+  return y + size + 10 * scale;
+}
+
+function drawBody(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  scale: number,
+): number {
+  const size = Math.min(18 * scale, Math.floor(ctx.canvas.width / 24));
+  const lineHeight = size + 4 * scale;
+  ctx.save();
+  ctx.font = bodyFont(size);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = COLOR.greenDim;
+  clearGlow(ctx);
+  const lines = wrapText(ctx, text, maxWidth);
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i]!, x, y + i * lineHeight);
+  }
+  ctx.restore();
+  return y + lines.length * lineHeight;
+}
+
+function drawKeyRow(
+  ctx: CanvasRenderingContext2D,
+  key: string,
+  desc: string,
+  x: number,
+  y: number,
+  scale: number,
+): number {
+  const keySize = Math.min(9 * scale, Math.floor(ctx.canvas.width / 38));
+  const descSize = Math.min(17 * scale, Math.floor(ctx.canvas.width / 26));
+  ctx.save();
+  ctx.font = displayFont(keySize);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = COLOR.gold;
+  clearGlow(ctx);
+  ctx.fillText(key, x, y);
+
+  ctx.font = bodyFont(descSize);
+  ctx.fillStyle = COLOR.greenDim;
+  ctx.fillText(desc, x + 14 * scale, y + keySize + 4 * scale);
+  ctx.restore();
+  return y + keySize + descSize + 14 * scale;
+}
+
+function drawItemRow(
+  ctx: CanvasRenderingContext2D,
+  y: number,
+  x: number,
+  maxWidth: number,
+  scale: number,
+  paintGlyph: (gx: number, gy: number, size: number) => void,
+  name: string,
+  effect: string,
+  desc: string,
+  tag?: 'deadly' | 'neutral',
+): number {
+  const glyphSize = Math.max(36, 42 * scale);
+  const gap = 14 * scale;
+  const textX = x + glyphSize + gap;
+  const textW = maxWidth - glyphSize - gap;
+
+  paintGlyph(x, y, glyphSize);
+
+  // Name
+  const nameSize = Math.min(TEXT.menuItem * scale, Math.floor(ctx.canvas.width / 30));
+  ctx.save();
+  ctx.font = displayFont(nameSize);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = COLOR.bone;
+  clearGlow(ctx);
+  ctx.fillText(name, textX, y);
+
+  let tagWidth = 0;
+  if (tag) {
+    const nameMetrics = ctx.measureText(name);
+    const tagX = textX + nameMetrics.width + 10 * scale;
+    const tagBounds = drawHazardTag(ctx, tagX, y - 2 * scale, tag, scale);
+    tagWidth = tagBounds.width + 10 * scale;
+    void tagWidth;
+  }
+
+  let cy = y + nameSize + 6 * scale;
+  if (effect) {
+    const effectSize = Math.min(15 * scale, Math.floor(ctx.canvas.width / 28));
+    ctx.font = bodyFont(effectSize);
+    ctx.fillStyle = COLOR.gold;
+    ctx.fillText(effect, textX, cy);
+    cy += effectSize + 2 * scale;
+  }
+  const descSize = Math.min(15 * scale, Math.floor(ctx.canvas.width / 28));
+  ctx.font = bodyFont(descSize);
+  ctx.fillStyle = COLOR.greenDim;
+  const lines = wrapText(ctx, desc, textW);
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i]!, textX, cy + i * (descSize + 2 * scale));
+  }
+  cy += lines.length * (descSize + 2 * scale);
+  ctx.restore();
+
+  return Math.max(cy, y + glyphSize) + 16 * scale;
+}
+
+function drawNavArrow(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+  dir: 'left' | 'right',
+  _scale: number,
+): void {
+  ctx.save();
+  ctx.fillStyle = COLOR.greenDeep;
+  ctx.beginPath();
+  if (dir === 'left') {
+    ctx.moveTo(cx - size * 0.4, cy);
+    ctx.lineTo(cx + size * 0.2, cy - size * 0.5);
+    ctx.lineTo(cx + size * 0.2, cy + size * 0.5);
+  } else {
+    ctx.moveTo(cx + size * 0.4, cy);
+    ctx.lineTo(cx - size * 0.2, cy - size * 0.5);
+    ctx.lineTo(cx - size * 0.2, cy + size * 0.5);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function wrapText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let line = '';
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+const WAVE_SECTIONS: readonly [string, string][] = [
+  ['ARENAS', 'Each run is a series of arenas. Clear all 3 waves in an arena to advance.'],
+  ['WAVES', 'Each wave has a food quota. Eat enough food to clear it. Quotas grow: 5, 7, 9.'],
+  ['DIFFICULTY', 'Hazards appear from wave 2 onward. The snake also speeds up each wave.'],
+  ['BOSSES', 'Every 5th arena features a boss with unique attack patterns. Defeat them for bonus Scales.'],
+  ['BETWEEN ARENAS', 'After clearing an arena, choose 1 of 3 power-ups to carry forward.'],
+];
+
+const POWERUP_SECTIONS: readonly [string, string][] = [
+  ['SELECTION', 'After each arena, pick 1 of 3 random power-ups. They stack across arenas within a run.'],
+  ['RARITY', 'Three tiers: Common (bone), Rare (cyan), Legendary (gold). Higher rarity = stronger effects.'],
+  ['STACKING', 'Picking the same power-up again makes it stronger. Some pairs unlock hidden synergies.'],
+  ['SYNERGIES', 'Certain combinations unlock secret bonus effects. Experiment to discover them.'],
+  ['REROLL', 'Unlock Reroll in the Collection to get a fresh set of choices when you need one.'],
+];
+
+const SCALES_SECTIONS: readonly [string, string][] = [
+  ['SCALES', 'Scales are the meta currency earned after each run, based on score, arenas, and food eaten.'],
+  ['UNLOCKS', 'Spend Scales in the Collection to unlock permanent upgrades that carry across runs.'],
+  ['UPGRADES', 'Starting Length 4, Reroll, Arena Preview, Extra Life, and Endless Mode are all unlockable.'],
+  ['SKINS', 'Unlock cosmetic snake skins to customize your look. Pure style, no gameplay change.'],
+  ['DAILY CHALLENGE', 'A seeded daily run — same layout for everyone. Compete on the daily leaderboard.'],
+];
