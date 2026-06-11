@@ -1,6 +1,5 @@
 import { Snake, Direction } from '../game/Snake';
-import { COLORS } from '../utils/constants';
-
+import { COLOR } from '../theme';
 import { lerp } from '../utils/math';
 import { Layout } from './Renderer';
 
@@ -11,9 +10,9 @@ export interface SkinColors {
 }
 
 const DEFAULT_SKIN: SkinColors = {
-  bodyColor: COLORS.snakeBody,
-  headColor: COLORS.snakeHead,
-  glowColor: COLORS.snakeGlow,
+  bodyColor: COLOR.green,
+  headColor: COLOR.green,
+  glowColor: COLOR.green,
 };
 
 export class SnakeRenderer {
@@ -34,14 +33,15 @@ export class SnakeRenderer {
     const { cellSize } = layout;
     const padding = Math.max(1, Math.floor(cellSize * 0.08));
     const radius = Math.max(2, Math.floor(cellSize * 0.2));
+    const segCount = snake.segments.length;
 
-    // Draw glow layer first
+    // Soft glow layer behind everything
     ctx.save();
     ctx.shadowColor = skin.glowColor;
     ctx.shadowBlur = cellSize * 0.4;
-    ctx.globalAlpha = 0.2;
+    ctx.globalAlpha = isGhosting ? 0.08 : 0.18;
 
-    for (let i = 0; i < snake.segments.length; i++) {
+    for (let i = 0; i < segCount; i++) {
       const seg = snake.segments[i];
       const prev = snake.previousSegments[i];
       if (!seg || !prev) continue;
@@ -63,126 +63,133 @@ export class SnakeRenderer {
 
     ctx.restore();
 
-    // Draw solid segments
+    // Body + head — drawn tail-first so head sits on top.
     ctx.save();
     ctx.shadowColor = skin.glowColor;
-    ctx.shadowBlur = cellSize * 0.3;
+    ctx.shadowBlur = cellSize * 0.25;
 
-    for (let i = snake.segments.length - 1; i >= 0; i--) {
+    for (let i = segCount - 1; i >= 0; i--) {
       const seg = snake.segments[i];
       const prev = snake.previousSegments[i];
       if (!seg || !prev) continue;
 
       const px = lerp(prev.x, seg.x, interpolation) * cellSize + layout.playArea.x;
       const py = lerp(prev.y, seg.y, interpolation) * cellSize + layout.playArea.y;
-
       const isHead = i === 0;
 
+      // Tapered body: lerp head -> body, then darken toward tail.
+      const color = isHead
+        ? skin.headColor
+        : taperBody(skin.bodyColor, i, segCount);
+
+      ctx.globalAlpha = isGhosting ? 0.4 : 1;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(
+        Math.floor(px + padding),
+        Math.floor(py + padding),
+        cellSize - padding * 2,
+        cellSize - padding * 2,
+        radius,
+      );
+      ctx.fill();
+
       if (isHead) {
-        // Head gets stronger glow + subtle pulse
-        const pulse = 1 + Math.sin(this.pulseTime * 5) * 0.06;
-        const headSize = (cellSize - padding * 2) * pulse;
-        const offset = (cellSize - padding * 2 - headSize) / 2;
-
-        ctx.globalAlpha = 1;
-        ctx.shadowBlur = cellSize * 0.6;
-        ctx.fillStyle = skin.headColor;
-        ctx.beginPath();
-        ctx.roundRect(
-          Math.floor(px + padding + offset),
-          Math.floor(py + padding + offset),
-          headSize,
-          headSize,
-          radius,
-        );
-        ctx.fill();
-
-        // Draw eyes
+        // Eyes sit on the head's surface — drawn without glow so they read crisp.
+        ctx.save();
         ctx.shadowBlur = 0;
-        this.drawEyes(ctx, px, py, cellSize, padding, snake.direction);
-      } else {
-        ctx.fillStyle = skin.bodyColor;
-        // Ghost mode: body segments are translucent
-        ctx.globalAlpha = isGhosting ? 0.4 : 1;
-        ctx.shadowBlur = cellSize * 0.3;
-
-        ctx.beginPath();
-        ctx.roundRect(
-          Math.floor(px + padding),
-          Math.floor(py + padding),
-          cellSize - padding * 2,
-          cellSize - padding * 2,
-          radius,
-        );
-        ctx.fill();
+        drawHeadEyes(ctx, px, py, cellSize, padding, snake.direction);
+        ctx.restore();
       }
     }
 
     ctx.restore();
   }
+}
 
-  private drawEyes(
-    ctx: CanvasRenderingContext2D,
-    px: number,
-    py: number,
-    cellSize: number,
-    padding: number,
-    direction: Direction,
-  ): void {
-    const segSize = cellSize - padding * 2;
-    const cx = px + padding + segSize / 2;
-    const cy = py + padding + segSize / 2;
-    const eyeRadius = Math.max(1.5, segSize * 0.1);
-    const eyeOffset = segSize * 0.22;
-    const pupilOffset = segSize * 0.06;
+/** Pixel-style eyes — two dark squares on the head's leading edge. */
+function drawHeadEyes(
+  ctx: CanvasRenderingContext2D,
+  px: number,
+  py: number,
+  cellSize: number,
+  padding: number,
+  direction: Direction,
+): void {
+  const segSize = cellSize - padding * 2;
+  const cx = px + padding + segSize / 2;
+  const cy = py + padding + segSize / 2;
+  const eyeSize = Math.max(2, Math.round(segSize * 0.18));
+  const eyeRadius = Math.max(1, Math.round(eyeSize * 0.3));
 
-    // Determine eye positions based on direction
-    let e1x: number, e1y: number, e2x: number, e2y: number;
-    let pdx = 0, pdy = 0; // pupil direction offset
+  // Leading edge offset: eyes sit ~25% in from the head's leading edge,
+  // and ~22% apart from each other on the perpendicular axis.
+  const fwd = segSize * 0.22; // distance from center toward facing edge
+  const side = segSize * 0.22; // pair spacing
 
-    switch (direction) {
-      case Direction.UP:
-        e1x = cx - eyeOffset; e1y = cy - eyeOffset * 0.5;
-        e2x = cx + eyeOffset; e2y = cy - eyeOffset * 0.5;
-        pdy = -pupilOffset;
-        break;
-      case Direction.DOWN:
-        e1x = cx - eyeOffset; e1y = cy + eyeOffset * 0.5;
-        e2x = cx + eyeOffset; e2y = cy + eyeOffset * 0.5;
-        pdy = pupilOffset;
-        break;
-      case Direction.LEFT:
-        e1x = cx - eyeOffset * 0.5; e1y = cy - eyeOffset;
-        e2x = cx - eyeOffset * 0.5; e2y = cy + eyeOffset;
-        pdx = -pupilOffset;
-        break;
-      case Direction.RIGHT:
-      default:
-        e1x = cx + eyeOffset * 0.5; e1y = cy - eyeOffset;
-        e2x = cx + eyeOffset * 0.5; e2y = cy + eyeOffset;
-        pdx = pupilOffset;
-        break;
-    }
-
-    // Eye whites
-    ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath();
-    ctx.arc(e1x, e1y, eyeRadius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(e2x, e2y, eyeRadius, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Pupils
-    ctx.fillStyle = '#000000';
-    ctx.globalAlpha = 1;
-    const pupilR = eyeRadius * 0.55;
-    ctx.beginPath();
-    ctx.arc(e1x + pdx, e1y + pdy, pupilR, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(e2x + pdx, e2y + pdy, pupilR, 0, Math.PI * 2);
-    ctx.fill();
+  let e1x = cx, e1y = cy, e2x = cx, e2y = cy;
+  switch (direction) {
+    case Direction.UP:
+      e1x = cx - side; e1y = cy - fwd;
+      e2x = cx + side; e2y = cy - fwd;
+      break;
+    case Direction.DOWN:
+      e1x = cx - side; e1y = cy + fwd;
+      e2x = cx + side; e2y = cy + fwd;
+      break;
+    case Direction.LEFT:
+      e1x = cx - fwd; e1y = cy - side;
+      e2x = cx - fwd; e2y = cy + side;
+      break;
+    case Direction.RIGHT:
+    default:
+      e1x = cx + fwd; e1y = cy - side;
+      e2x = cx + fwd; e2y = cy + side;
+      break;
   }
+
+  ctx.fillStyle = COLOR.primaryButtonText; // very dark green — sits on the head's green field
+  paintEye(ctx, e1x, e1y, eyeSize, eyeRadius);
+  paintEye(ctx, e2x, e2y, eyeSize, eyeRadius);
+}
+
+function paintEye(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  radius: number,
+): void {
+  ctx.beginPath();
+  ctx.roundRect(x - size / 2, y - size / 2, size, size, radius);
+  ctx.fill();
+}
+
+/**
+ * Darken `baseHex` proportionally to (i / total) so the snake fades head→tail.
+ * Lerps each channel from 1.0× to ~0.55× across the body.
+ */
+function taperBody(baseHex: string, index: number, total: number): string {
+  const t = Math.min(1, index / Math.max(1, total - 1));
+  const factor = 1 - t * 0.45;
+  return scaleHex(baseHex, factor);
+}
+
+function scaleHex(hex: string, factor: number): string {
+  // Accept '#rgb' or '#rrggbb'.
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1]! + hex[1]!, 16);
+    g = parseInt(hex[2]! + hex[2]!, 16);
+    b = parseInt(hex[3]! + hex[3]!, 16);
+  } else {
+    r = parseInt(hex.slice(1, 3), 16);
+    g = parseInt(hex.slice(3, 5), 16);
+    b = parseInt(hex.slice(5, 7), 16);
+  }
+  const scale = Math.max(0, Math.min(1, factor));
+  const rr = Math.round(r * scale);
+  const gg = Math.round(g * scale);
+  const bb = Math.round(b * scale);
+  return `#${rr.toString(16).padStart(2, '0')}${gg.toString(16).padStart(2, '0')}${bb.toString(16).padStart(2, '0')}`;
 }
