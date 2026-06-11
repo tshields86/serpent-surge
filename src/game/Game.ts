@@ -24,6 +24,9 @@ import { POWERUP_DEFS } from '../data/powerups';
 import { ActiveSynergy, getActiveSynergies, detectNewSynergies } from './Synergy';
 import { checkWallCollision, checkSelfCollision } from './Collision';
 import { BASE_TICK_RATE, COLORS, GRID_SIZE, MAX_DELTA } from '../utils/constants';
+import { drawFood as drawFoodGlyph, drawHazard as drawHazardGlyph } from '../rendering/ItemRenderer';
+import { COLOR as THEME_COLOR } from '../theme';
+const COLOR_GREEN = THEME_COLOR.green;
 import { loadData, saveData, PersistedData } from '../utils/storage';
 import { calculateScales, hasUnlock } from '../meta/Progression';
 import { SKIN_DEFS } from '../data/skins';
@@ -1424,115 +1427,20 @@ export class Game {
   private drawHazards(): void {
     const ctx = this.renderer.ctx;
     const { cellSize } = this.renderer.layout;
-    const padding = Math.max(1, Math.floor(cellSize * 0.1));
+    const now = performance.now();
 
     for (const hazard of this.hazards) {
       const pixel = this.renderer.gridToPixel(hazard.position.x, hazard.position.y);
-      const x = pixel.x + padding;
-      const y = pixel.y + padding;
-      const size = cellSize - padding * 2;
-
-      ctx.save();
-
-      if (hazard.type === HazardType.WALL_BLOCK) {
-        // Solid dark red/brown block
-        ctx.fillStyle = '#8b0000';
-        ctx.shadowColor = '#ff0040';
-        ctx.shadowBlur = 4;
-        ctx.fillRect(x, y, size, size);
-        // Inner border for depth
-        ctx.strokeStyle = '#ff0040';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x + 2, y + 2, size - 4, size - 4);
-      } else if (hazard.type === HazardType.SPIKE_TRAP) {
-        const cx = pixel.x + cellSize / 2;
-        const cy = pixel.y + cellSize / 2;
-        const r = size / 2;
-        if (hazard.state === 'active') {
-          // Bright red spikes — fully extended, glowing
-          ctx.fillStyle = '#ff0040';
-          ctx.shadowColor = '#ff0040';
-          ctx.shadowBlur = 12;
-          ctx.beginPath();
-          ctx.moveTo(cx, cy - r);
-          ctx.lineTo(cx + r * 0.3, cy - r * 0.3);
-          ctx.lineTo(cx + r, cy);
-          ctx.lineTo(cx + r * 0.3, cy + r * 0.3);
-          ctx.lineTo(cx, cy + r);
-          ctx.lineTo(cx - r * 0.3, cy + r * 0.3);
-          ctx.lineTo(cx - r, cy);
-          ctx.lineTo(cx - r * 0.3, cy - r * 0.3);
-          ctx.closePath();
-          ctx.fill();
-        } else {
-          // Inactive — small gray dot, no spikes, clearly safe
-          ctx.globalAlpha = 0.5;
-          ctx.fillStyle = '#444';
-          ctx.shadowBlur = 0;
-          ctx.beginPath();
-          ctx.arc(cx, cy, r * 0.3, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      } else if (hazard.type === HazardType.WARP_HOLE) {
-        // Purple swirling portal
-        const cx = pixel.x + cellSize / 2;
-        const cy = pixel.y + cellSize / 2;
-        const r = size / 2;
-        const spin = performance.now() / 500;
-        ctx.fillStyle = '#7722cc';
-        ctx.shadowColor = '#9944ff';
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fill();
-        // Inner swirl
-        ctx.strokeStyle = '#cc88ff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r * 0.5, spin, spin + Math.PI * 1.5);
-        ctx.stroke();
-      } else if (hazard.type === HazardType.MAGNET) {
-        // Red/blue magnet with field lines
-        const cx = pixel.x + cellSize / 2;
-        const cy = pixel.y + cellSize / 2;
-        const r = size / 2;
-        // Red half
-        ctx.fillStyle = '#ff3333';
-        ctx.shadowColor = '#ff3333';
-        ctx.shadowBlur = 6;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2);
-        ctx.fill();
-        // Blue half
-        ctx.fillStyle = '#3366ff';
-        ctx.shadowColor = '#3366ff';
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, Math.PI / 2, -Math.PI / 2);
-        ctx.fill();
-        // Field lines
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.lineWidth = 1;
-        for (let ring = 1; ring <= 2; ring++) {
-          ctx.beginPath();
-          ctx.arc(cx, cy, r + ring * cellSize * 0.4, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      } else if (hazard.type === HazardType.POISON_TRAIL) {
-        // Purple-green poison with fade based on remaining ticks
-        const fade = hazard.ticksRemaining !== null ? hazard.ticksRemaining / 8 : 1;
-        ctx.globalAlpha = 0.4 + fade * 0.4;
-        ctx.fillStyle = '#7b00ff';
-        ctx.shadowColor = '#7b00ff';
-        ctx.shadowBlur = 6;
-        const cx = pixel.x + cellSize / 2;
-        const cy = pixel.y + cellSize / 2;
-        const r = (size / 2) * (0.5 + fade * 0.5);
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.restore();
+      drawHazardGlyph(
+        ctx,
+        hazard.type,
+        hazard.state,
+        hazard.ticksRemaining,
+        pixel.x + cellSize / 2,
+        pixel.y + cellSize / 2,
+        cellSize,
+        now,
+      );
     }
   }
 
@@ -1692,82 +1600,18 @@ export class Game {
   private drawFood(): void {
     const ctx = this.renderer.ctx;
     const { cellSize } = this.renderer.layout;
-    const padding = Math.max(2, Math.floor(cellSize * 0.15));
+    const now = performance.now();
 
     for (const food of this.foods) {
       const pixel = this.renderer.gridToPixel(food.position.x, food.position.y);
-      const cx = pixel.x + cellSize / 2;
-      const cy = pixel.y + cellSize / 2;
-
-      ctx.save();
-
-      if (food.type === FoodType.GOLDEN_APPLE) {
-        // Pulsing gold
-        const pulse = Math.sin(performance.now() / 200) * 0.5 + 0.5;
-        const r = (cellSize - padding * 2) / 2;
-        ctx.shadowColor = COLORS.goldenApple;
-        ctx.shadowBlur = cellSize * 0.6;
-        // Interpolate between gold and pulse color
-        ctx.fillStyle = pulse > 0.5 ? COLORS.goldenApple : COLORS.goldenApplePulse;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (food.type === FoodType.SHRINK_PELLET) {
-        // Smaller blue circle
-        const r = (cellSize - padding * 2) / 2 * 0.7;
-        ctx.shadowColor = COLORS.shrinkPellet;
-        ctx.shadowBlur = cellSize * 0.4;
-        ctx.fillStyle = COLORS.shrinkPellet;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (food.type === FoodType.SPEED_FRUIT) {
-        // Green speed fruit with trailing particles
-        const r = (cellSize - padding * 2) / 2;
-        ctx.shadowColor = COLORS.speedFruit;
-        ctx.shadowBlur = cellSize * 0.5;
-        ctx.fillStyle = COLORS.speedFruit;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fill();
-        // Small trailing dots
-        ctx.globalAlpha = 0.4;
-        ctx.beginPath();
-        ctx.arc(cx - r * 0.8, cy, r * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(cx - r * 1.4, cy, r * 0.2, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (food.type === FoodType.BOMB_FRUIT) {
-        // Orange flashing bomb
-        const r = (cellSize - padding * 2) / 2;
-        const flash = Math.sin(performance.now() / 150) > 0 ? 1.0 : 0.6;
-        ctx.globalAlpha = flash;
-        ctx.shadowColor = COLORS.bombFruit;
-        ctx.shadowBlur = cellSize * 0.6;
-        ctx.fillStyle = COLORS.bombFruit;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fill();
-        // Fuse line
-        ctx.strokeStyle = '#ffcc00';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - r);
-        ctx.lineTo(cx + r * 0.4, cy - r * 1.4);
-        ctx.stroke();
-      } else {
-        // Standard apple
-        const r = (cellSize - padding * 2) / 2;
-        ctx.shadowColor = COLORS.apple;
-        ctx.shadowBlur = cellSize * 0.4;
-        ctx.fillStyle = COLORS.apple;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.restore();
+      drawFoodGlyph(
+        ctx,
+        food.type,
+        pixel.x + cellSize / 2,
+        pixel.y + cellSize / 2,
+        cellSize,
+        now,
+      );
     }
   }
 
@@ -1889,44 +1733,36 @@ export class Game {
   private drawPauseButton(): void {
     const ctx = this.renderer.ctx;
     const { hudTop } = this.renderer.layout;
-    const padding = 16;
+    const padding = Math.max(14, hudTop.width * 0.045);
     const scaleFactor = Math.max(1, Math.min(1.5, hudTop.height / 105));
 
-    // Match the vertical span of SCORE label + score number (two rows of text)
-    const labelSize = Math.min(Math.floor(12 * scaleFactor), Math.floor(hudTop.width / 35));
-    const valueSize = Math.min(Math.floor(20 * scaleFactor), Math.floor(hudTop.width / 22));
-    const topY = hudTop.y + Math.floor(padding * 0.8);
-    const btnSize = labelSize + 4 + valueSize; // same height as label + gap + value
-    const btnX = ctx.canvas.width - padding - btnSize;
-    const btnY = topY; // align with top of SCORE/ARENA labels
-    const radius = Math.floor(btnSize * 0.2);
+    const labelSize = Math.min(Math.floor(9 * scaleFactor), Math.floor(hudTop.width / 40));
+    const valueSize = Math.min(Math.floor(18 * scaleFactor), Math.floor(hudTop.width / 22));
+    const topY = hudTop.y + Math.floor(hudTop.height * 0.12);
+    const btnSize = Math.floor(valueSize + labelSize * 0.5);
+    const btnX = hudTop.x + hudTop.width - padding - btnSize;
+    const btnY = topY + Math.floor(labelSize * 0.4);
+    const radius = Math.floor(btnSize * 0.18);
 
     ctx.save();
-
-    // Green glow
-    ctx.shadowColor = COLORS.snakeGlow;
-    ctx.shadowBlur = 10;
-
-    // Rounded rectangle border
-    ctx.strokeStyle = COLORS.uiAccent;
-    ctx.lineWidth = 2;
+    ctx.shadowColor = COLOR_GREEN;
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = COLOR_GREEN;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.roundRect(btnX, btnY, btnSize, btnSize, radius);
     ctx.stroke();
 
-    // Two vertical bars inside
     ctx.shadowBlur = 0;
-    ctx.fillStyle = COLORS.uiAccent;
-    const barW = Math.floor(btnSize * 0.15);
-    const barH = Math.floor(btnSize * 0.5);
+    ctx.fillStyle = COLOR_GREEN;
+    const barW = Math.floor(btnSize * 0.13);
+    const barH = Math.floor(btnSize * 0.45);
     const barY = btnY + Math.floor((btnSize - barH) / 2);
-    const gap = Math.floor(btnSize * 0.12);
-    const barX1 = btnX + Math.floor(btnSize / 2) - gap - barW;
-    const barX2 = btnX + Math.floor(btnSize / 2) + gap;
-
+    const barGap = Math.floor(btnSize * 0.1);
+    const barX1 = btnX + Math.floor(btnSize / 2) - barGap - barW;
+    const barX2 = btnX + Math.floor(btnSize / 2) + barGap;
     ctx.fillRect(barX1, barY, barW, barH);
     ctx.fillRect(barX2, barY, barW, barH);
-
     ctx.restore();
 
     // Hit area: at least 44x44 touch target
