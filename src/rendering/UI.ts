@@ -1,13 +1,24 @@
-import { COLORS } from '../utils/constants';
-import { Layout } from './Renderer';
-import { PowerUpInstance, getPowerUpDef } from '../game/PowerUp';
+// Gameplay HUD (DESIGN_SPEC.md §5 Gameplay/HUD; mock: serpent-surge-gameplay.html).
+// Top: SCORE (gold) · ARENA (green) · pause (green outline).
+// Wave line: `WAVE n OF N · FOOD x / y` + segmented fill bar.
+// Bottom: LENGTH · HELD pixel chips with stack counts (no emoji).
 
-const FONT_FAMILY = '"Press Start 2P", monospace';
+import { Layout } from './Renderer';
+import { PowerUpInstance } from '../game/PowerUp';
+import {
+  applyGlow,
+  bodyFont,
+  clearGlow,
+  COLOR,
+  displayFont,
+  drawHeldChip,
+} from '../theme';
+import { drawPowerUpGlyph } from './PowerUpGlyphs';
 
 export interface HUDData {
   score: number;
   snakeLength: number;
-  waveProgress: string;
+  waveProgress: string;          // legacy field, unused since we now build the line ourselves
   arenaNumber: number;
   currentWave: number;
   wavesPerArena: number;
@@ -30,15 +41,12 @@ export class UI {
         this.scoreDisplay + Math.ceil((targetScore - this.scoreDisplay) * 0.2),
       );
     }
-
     if (this.scorePulseTimer > 0) {
       this.scorePulseTimer = Math.max(0, this.scorePulseTimer - dt);
     }
-
-    // Update floating texts
     for (const ft of this.floatingTexts) {
       ft.life -= dt;
-      ft.y -= 40 * dt; // float upward
+      ft.y -= 40 * dt;
     }
     this.floatingTexts = this.floatingTexts.filter(ft => ft.life > 0);
   }
@@ -63,92 +71,84 @@ export class UI {
     data: HUDData,
   ): void {
     const { hudTop } = layout;
-    const padding = 16;
+    const padding = Math.max(14, hudTop.width * 0.045);
     const scaleFactor = Math.max(1, Math.min(1.5, hudTop.height / 105));
-    const labelSize = Math.min(Math.floor(12 * scaleFactor), Math.floor(hudTop.width / 35));
-    const valueSize = Math.min(Math.floor(20 * scaleFactor), Math.floor(hudTop.width / 22));
+    const labelSize = Math.min(Math.floor(9 * scaleFactor), Math.floor(hudTop.width / 40));
+    const valueSize = Math.min(Math.floor(18 * scaleFactor), Math.floor(hudTop.width / 22));
 
     ctx.save();
     ctx.textBaseline = 'top';
 
-    const topY = hudTop.y + Math.floor(padding * 0.8);
+    const topY = hudTop.y + Math.floor(hudTop.height * 0.12);
+    const centerX = hudTop.x + hudTop.width / 2;
 
-    // === SCORE (left side) ===
+    // ===== SCORE (left) =====
     ctx.save();
     ctx.textAlign = 'left';
+    ctx.font = displayFont(labelSize);
+    ctx.fillStyle = COLOR.greenDeep;
+    clearGlow(ctx);
+    ctx.fillText('SCORE', hudTop.x + padding, topY);
 
-    // "SCORE" label in green
-    ctx.font = `${labelSize}px ${FONT_FAMILY}`;
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.fillText('SCORE', padding, topY);
+    ctx.font = displayFont(valueSize);
+    const scoreNumY = topY + labelSize + 6 * scaleFactor;
+    const scoreText = this.scoreDisplay.toLocaleString();
 
-    // Score value in yellow, with pulse
-    ctx.font = `${valueSize}px ${FONT_FAMILY}`;
-    const scoreNumY = topY + labelSize + 4;
     if (this.scorePulseTimer > 0) {
-      const scorePulseScale = 1 + this.scorePulseTimer * 2;
-      const scoreText = this.scoreDisplay.toLocaleString();
+      const pulse = 1 + this.scorePulseTimer * 2;
       const metrics = ctx.measureText(scoreText);
-      const textCenterX = padding + metrics.width / 2;
-      const textCenterY = scoreNumY + valueSize / 2;
-      ctx.translate(textCenterX, textCenterY);
-      ctx.scale(scorePulseScale, scorePulseScale);
-      ctx.translate(-textCenterX, -textCenterY);
+      const tx = hudTop.x + padding + metrics.width / 2;
+      const ty = scoreNumY + valueSize / 2;
+      ctx.translate(tx, ty);
+      ctx.scale(pulse, pulse);
+      ctx.translate(-tx, -ty);
     }
-    ctx.fillStyle = COLORS.score;
-    ctx.fillText(this.scoreDisplay.toLocaleString(), padding, scoreNumY);
+    applyGlow(ctx, 'gold');
+    ctx.fillStyle = COLOR.gold;
+    ctx.fillText(scoreText, hudTop.x + padding, scoreNumY);
+    clearGlow(ctx);
     ctx.restore();
 
-    // === ARENA + WAVE (center) ===
+    // ===== ARENA (center) =====
     ctx.save();
     ctx.textAlign = 'center';
-    const centerX = hudTop.width / 2;
-
-    // "ARENA" label in green
-    ctx.font = `${labelSize}px ${FONT_FAMILY}`;
-    ctx.fillStyle = COLORS.uiAccent;
+    ctx.font = displayFont(labelSize);
+    ctx.fillStyle = COLOR.greenDeep;
+    clearGlow(ctx);
     ctx.fillText('ARENA', centerX, topY);
 
-    // Arena number in yellow
-    ctx.font = `${valueSize}px ${FONT_FAMILY}`;
-    ctx.fillStyle = COLORS.score;
-    ctx.fillText(`${data.arenaNumber}`, centerX, topY + labelSize + 4);
-
-    // Wave text in green
-    const waveY = topY + labelSize + 4 + valueSize + 10;
-    const waveSize = Math.min(Math.floor(10 * scaleFactor), Math.floor(hudTop.width / 40));
-    ctx.font = `${waveSize}px ${FONT_FAMILY}`;
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.fillText(data.waveProgress, centerX, waveY);
-
-    // Progress bar below wave text
-    const barY = waveY + waveSize + 5;
-    const barWidth = Math.min(220 * scaleFactor, hudTop.width * 0.45);
-    const barHeight = Math.floor(8 * scaleFactor);
-    const barX = centerX - barWidth / 2;
-
-    // Calculate overall arena progress:
-    // total food across all waves up to current, plus current wave food eaten
-    const totalWaves = data.wavesPerArena;
-    const completedWaves = data.currentWave - 1;
-    // Approximate: each wave's quota contributes equally to the bar
-    const progress = data.waveFoodQuota > 0
-      ? (completedWaves + data.waveFoodEaten / data.waveFoodQuota) / totalWaves
-      : 0;
-
-    // Green border
-    ctx.strokeStyle = COLORS.uiAccent;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(barX, barY, barWidth, barHeight);
-
-    // Yellow fill
-    const fillWidth = Math.floor(barWidth * Math.min(1, progress));
-    if (fillWidth > 0) {
-      ctx.fillStyle = COLORS.score;
-      ctx.fillRect(barX + 1, barY + 1, fillWidth - 2, barHeight - 2);
-    }
-
+    ctx.font = displayFont(valueSize);
+    applyGlow(ctx, 'green');
+    ctx.fillStyle = COLOR.green;
+    ctx.fillText(`${data.arenaNumber}`, centerX, scoreNumY);
+    clearGlow(ctx);
     ctx.restore();
+
+    // ===== Wave line + segmented bar (below the stat row) =====
+    const waveLabelSize = Math.min(Math.floor(11 * scaleFactor), Math.floor(hudTop.width / 32));
+    const waveY = scoreNumY + valueSize + Math.floor(14 * scaleFactor);
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.font = bodyFont(waveLabelSize);
+    ctx.fillStyle = COLOR.greenDim;
+    clearGlow(ctx);
+    const waveLine = `WAVE ${data.currentWave} OF ${data.wavesPerArena}  ·  FOOD ${data.waveFoodEaten} / ${data.waveFoodQuota}`;
+    ctx.fillText(waveLine, centerX, waveY);
+    ctx.restore();
+
+    // Segmented bar — one cell per food in the current wave's quota.
+    const segCount = Math.max(1, data.waveFoodQuota);
+    const segGap = Math.max(2, Math.floor(3 * scaleFactor));
+    const barWidth = Math.min(hudTop.width - padding * 2, 360 * scaleFactor);
+    const segWidth = (barWidth - segGap * (segCount - 1)) / segCount;
+    const segHeight = Math.max(6, Math.floor(8 * scaleFactor));
+    const barX = centerX - barWidth / 2;
+    const barY = waveY + waveLabelSize + Math.floor(8 * scaleFactor);
+
+    drawSegmentedBar(ctx, barX, barY, segCount, data.waveFoodEaten, segWidth, segHeight, segGap);
+
     ctx.restore();
   }
 
@@ -158,54 +158,59 @@ export class UI {
     data: HUDData,
   ): void {
     const { hudBottom } = layout;
-    const padding = 16;
+    const padding = Math.max(14, hudBottom.width * 0.045);
     const scaleFactor = Math.max(1, Math.min(1.5, hudBottom.height / 50));
-    const fontSize = Math.min(Math.floor(11 * scaleFactor), Math.floor(hudBottom.width / 40));
+    const labelSize = Math.min(Math.floor(9 * scaleFactor), Math.floor(hudBottom.width / 40));
+    const valueSize = Math.min(Math.floor(13 * scaleFactor), Math.floor(hudBottom.width / 28));
 
     ctx.save();
-    ctx.font = `${fontSize}px ${FONT_FAMILY}`;
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = COLORS.uiText;
+    ctx.textBaseline = 'top';
 
-    const centerY = hudBottom.y + hudBottom.height / 2;
-
+    // ===== LENGTH (left) =====
+    ctx.save();
     ctx.textAlign = 'left';
-    ctx.fillText(`LENGTH ${data.snakeLength}`, padding, centerY);
+    ctx.font = displayFont(labelSize);
+    ctx.fillStyle = COLOR.greenDeep;
+    clearGlow(ctx);
+    const labelY = hudBottom.y + Math.floor(hudBottom.height * 0.1);
+    ctx.fillText('LENGTH', hudBottom.x + padding, labelY);
 
-    // Power-up icons (right side)
-    if (data.heldPowerUps.length > 0) {
-      const iconSize = Math.min(20, Math.floor(hudBottom.height * 0.6));
-      const iconGap = 4;
-      let iconX = hudBottom.width - padding;
+    ctx.font = displayFont(valueSize);
+    ctx.fillStyle = COLOR.bone;
+    ctx.fillText(`${data.snakeLength}`, hudBottom.x + padding, labelY + labelSize + 5 * scaleFactor);
+    ctx.restore();
 
-      ctx.textAlign = 'center';
+    // ===== HELD chips (right) =====
+    const chips = data.heldPowerUps;
+    if (chips.length > 0) {
+      const chipScale = scaleFactor;
+      const chipSize = 30 * chipScale;
+      const chipGap = 8 * chipScale;
+      const totalWidth = chips.length * chipSize + (chips.length - 1) * chipGap;
 
-      for (let i = data.heldPowerUps.length - 1; i >= 0; i--) {
-        const pu = data.heldPowerUps[i]!;
-        const def = getPowerUpDef(pu.id);
+      // "HELD" mini-label sits to the left of the chips
+      const heldLabelSize = Math.min(7 * scaleFactor, labelSize);
+      ctx.save();
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.font = displayFont(heldLabelSize);
+      ctx.fillStyle = COLOR.greenDeep;
+      clearGlow(ctx);
 
-        iconX -= iconSize;
+      const chipsY = hudBottom.y + hudBottom.height / 2 - chipSize / 2;
+      const chipsRight = hudBottom.x + hudBottom.width - padding;
+      const chipsLeft = chipsRight - totalWidth;
+      const heldLabelGap = 12 * chipScale;
 
-        // Icon background
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = '#333333';
-        ctx.fillRect(iconX, centerY - iconSize / 2, iconSize, iconSize);
-        ctx.restore();
+      ctx.fillText('HELD', chipsLeft - heldLabelGap, chipsY + chipSize / 2);
+      ctx.restore();
 
-        // Emoji icon
-        ctx.font = `${Math.floor(iconSize * 0.7)}px serif`;
-        ctx.fillText(def.icon, iconX + iconSize / 2, centerY);
-
-        // Stack count
-        if (pu.stackCount > 1) {
-          ctx.font = `${Math.floor(iconSize * 0.35)}px ${FONT_FAMILY}`;
-          ctx.fillStyle = COLORS.score;
-          ctx.fillText(`${pu.stackCount}`, iconX + iconSize - 2, centerY + iconSize / 2 - 2);
-          ctx.fillStyle = COLORS.uiText;
-        }
-
-        iconX -= iconGap;
+      // Chips themselves
+      let x = chipsLeft;
+      for (const pu of chips) {
+        const glyph = drawPowerUpGlyph(pu.id);
+        drawHeldChip(ctx, x, chipsY, glyph, pu.stackCount > 1 ? pu.stackCount : null, chipScale);
+        x += chipSize + chipGap;
       }
     }
 
@@ -213,15 +218,14 @@ export class UI {
   }
 
   private drawFloatingTexts(ctx: CanvasRenderingContext2D): void {
-    const fontSize = 12;
     ctx.save();
-    ctx.font = `${fontSize}px ${FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.font = displayFont(12);
 
     for (const ft of this.floatingTexts) {
       ctx.globalAlpha = ft.life / ft.maxLife;
-      ctx.fillStyle = COLORS.score;
+      ctx.fillStyle = COLOR.gold;
       ctx.fillText(ft.text, ft.x, ft.y);
     }
 
@@ -234,4 +238,34 @@ export class UI {
     this.scorePulseTimer = 0;
     this.floatingTexts = [];
   }
+}
+
+function drawSegmentedBar(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  count: number,
+  filledCount: number,
+  segWidth: number,
+  segHeight: number,
+  segGap: number,
+): void {
+  ctx.save();
+  for (let i = 0; i < count; i++) {
+    const sx = x + i * (segWidth + segGap);
+    const isLit = i < filledCount;
+    if (isLit) {
+      ctx.shadowColor = COLOR.green;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = COLOR.green;
+    } else {
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = COLOR.greenDeep;
+    }
+    const radius = Math.min(2, segHeight / 3);
+    ctx.beginPath();
+    ctx.roundRect(sx, y, segWidth, segHeight, radius);
+    ctx.fill();
+  }
+  ctx.restore();
 }
