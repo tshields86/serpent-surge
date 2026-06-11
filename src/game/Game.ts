@@ -23,7 +23,7 @@ import { PowerUpId, PowerUpInstance, acquirePowerUp, hasPowerUp, getStackCount, 
 import { POWERUP_DEFS } from '../data/powerups';
 import { ActiveSynergy, getActiveSynergies, detectNewSynergies } from './Synergy';
 import { checkWallCollision, checkSelfCollision } from './Collision';
-import { BASE_TICK_RATE, COLORS, GRID_SIZE, MAX_DELTA } from '../utils/constants';
+import { BASE_TICK_RATE, GRID_SIZE, MAX_DELTA } from '../utils/constants';
 import { drawFood as drawFoodGlyph, drawHazard as drawHazardGlyph } from '../rendering/ItemRenderer';
 import { COLOR as THEME_COLOR } from '../theme';
 const COLOR_GREEN = THEME_COLOR.green;
@@ -227,7 +227,7 @@ export class Game {
           count: 3,
           speed: 50,
           lifetime: 0.2,
-          color: COLORS.snakeGlow,
+          color: THEME_COLOR.green,
           size: 2,
         });
       }
@@ -797,7 +797,7 @@ export class Game {
           count: 16,
           speed: 250,
           lifetime: 0.4,
-          color: '#ff0040',
+          color: THEME_COLOR.coral,
           size: 4,
         });
       } else {
@@ -958,14 +958,14 @@ export class Game {
       );
       const cellSize = this.renderer.layout.cellSize;
       const particleColor = eatenFood.type === FoodType.GOLDEN_APPLE
-        ? COLORS.goldenApple
+        ? THEME_COLOR.goldenApple
         : eatenFood.type === FoodType.SHRINK_PELLET
-          ? COLORS.shrinkPellet
+          ? THEME_COLOR.shrinkPellet
           : eatenFood.type === FoodType.SPEED_FRUIT
-            ? COLORS.speedFruit
+            ? THEME_COLOR.speedFruit
             : eatenFood.type === FoodType.BOMB_FRUIT
-              ? COLORS.bombFruit
-              : COLORS.apple;
+              ? THEME_COLOR.bombFruit
+              : THEME_COLOR.apple;
       const particleCount = eatenFood.type === FoodType.GOLDEN_APPLE ? 18
         : eatenFood.type === FoodType.BOMB_FRUIT ? 24 : 12;
       this.particles.emit(pixel.x + cellSize / 2, pixel.y + cellSize / 2, {
@@ -995,7 +995,7 @@ export class Game {
                   count: 6,
                   speed: 200,
                   lifetime: 0.5,
-                  color: '#ff4444',
+                  color: THEME_COLOR.coral,
                   size: 4,
                 });
               }
@@ -1107,7 +1107,7 @@ export class Game {
             count: 10,
             speed: 150,
             lifetime: 0.3,
-            color: COLORS.snakeGlow,
+            color: THEME_COLOR.green,
             size: 3,
           });
           const waveCleared = this.arena.eatFood();
@@ -1422,8 +1422,8 @@ export class Game {
     ctx.font = `${Math.min(24, Math.floor(width / 18))}px "Press Start 2P", monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.shadowColor = COLORS.snakeGlow;
+    ctx.fillStyle = THEME_COLOR.green;
+    ctx.shadowColor = THEME_COLOR.green;
     ctx.shadowBlur = 15;
     ctx.fillText(this.transitionMessage, width / 2, height / 2);
     ctx.restore();
@@ -1440,8 +1440,8 @@ export class Game {
     ctx.font = `${Math.floor(40 * scale)}px "Press Start 2P", monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.shadowColor = COLORS.snakeGlow;
+    ctx.fillStyle = THEME_COLOR.green;
+    ctx.shadowColor = THEME_COLOR.green;
     ctx.shadowBlur = 20;
     ctx.globalAlpha = Math.min(1, this.countdownTimer * 3);
     ctx.fillText(text, width / 2, height / 2);
@@ -1485,7 +1485,7 @@ export class Game {
     const barY = yOffset;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(width * 0.15, barY, width * 0.7, barHeight);
-    ctx.strokeStyle = COLORS.score;
+    ctx.strokeStyle = THEME_COLOR.gold;
     ctx.lineWidth = 1;
     ctx.strokeRect(width * 0.15, barY, width * 0.7, barHeight);
 
@@ -1493,7 +1493,7 @@ export class Game {
     ctx.font = `${fontSize}px "Press Start 2P", monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = COLORS.score;
+    ctx.fillStyle = THEME_COLOR.gold;
     ctx.fillText(
       `${this.achievementToast.icon} ${this.achievementToast.name}`,
       width / 2,
@@ -1538,14 +1538,15 @@ export class Game {
     const padding = Math.max(1, Math.floor(cellSize * 0.08));
     const radius = Math.max(2, Math.floor(cellSize * 0.2));
 
-    // Glow layer
+    // Glow layer — boss is the deadliest enemy on the field, so it carries
+    // coral the way every other deadly hazard does.
     ctx.save();
-    ctx.shadowColor = '#ff4444';
+    ctx.shadowColor = THEME_COLOR.coral;
     ctx.shadowBlur = cellSize * 0.5;
     ctx.globalAlpha = 0.3;
     for (const seg of this.boss.segments) {
       const pixel = this.renderer.gridToPixel(seg.x, seg.y);
-      ctx.fillStyle = '#ff4444';
+      ctx.fillStyle = THEME_COLOR.coral;
       ctx.beginPath();
       ctx.roundRect(
         Math.floor(pixel.x + padding),
@@ -1558,16 +1559,16 @@ export class Game {
     }
     ctx.restore();
 
-    // Solid segments
+    // Solid segments — head a touch brighter, body deeper.
     ctx.save();
-    ctx.shadowColor = '#ff4444';
+    ctx.shadowColor = THEME_COLOR.coral;
     ctx.shadowBlur = cellSize * 0.3;
     for (let i = this.boss.segments.length - 1; i >= 0; i--) {
       const seg = this.boss.segments[i];
       if (!seg) continue;
       const pixel = this.renderer.gridToPixel(seg.x, seg.y);
       const isHead = i === 0;
-      ctx.fillStyle = isHead ? '#ff6666' : '#cc2222';
+      ctx.fillStyle = isHead ? THEME_COLOR.coral : '#a83444';
       ctx.beginPath();
       ctx.roundRect(
         Math.floor(pixel.x + padding),
@@ -1587,9 +1588,9 @@ export class Game {
       const barHeight = 4;
       const barX = pixel.x + cellSize / 2 - barWidth / 2;
       const barY = pixel.y - 8;
-      ctx.fillStyle = '#333';
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
       ctx.fillRect(barX, barY, barWidth, barHeight);
-      ctx.fillStyle = '#ff4444';
+      ctx.fillStyle = THEME_COLOR.coral;
       ctx.fillRect(barX, barY, barWidth * (this.boss.health / this.boss.maxHealth), barHeight);
     }
 
@@ -1605,8 +1606,8 @@ export class Game {
       const pixel = this.renderer.gridToPixel(img.x, img.y);
       ctx.save();
       ctx.globalAlpha = img.alpha * 0.5;
-      ctx.fillStyle = COLORS.snakeBody;
-      ctx.shadowColor = COLORS.snakeGlow;
+      ctx.fillStyle = THEME_COLOR.green;
+      ctx.shadowColor = THEME_COLOR.green;
       ctx.shadowBlur = 6;
       ctx.beginPath();
       ctx.roundRect(
@@ -1740,7 +1741,7 @@ export class Game {
         count: 4,
         speed: 200,
         lifetime: 0.5,
-        color: COLORS.snakeBody,
+        color: THEME_COLOR.green,
         size: 4,
       });
     }
@@ -1817,19 +1818,19 @@ export class Game {
     ctx.font = `${titleSize}px "Press Start 2P", monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.shadowColor = COLORS.snakeGlow;
+    ctx.fillStyle = THEME_COLOR.green;
+    ctx.shadowColor = THEME_COLOR.green;
     ctx.shadowBlur = 15;
     ctx.fillText('PAUSED', width / 2, height / 2 - 60);
     ctx.shadowBlur = 0;
 
     const itemSize = Math.min(12, Math.floor(width / 35));
     ctx.font = `${itemSize}px "Press Start 2P", monospace`;
-    ctx.fillStyle = COLORS.uiText;
+    ctx.fillStyle = THEME_COLOR.bone;
     ctx.fillText('TAP TO RESUME', width / 2, height / 2 - 10);
 
     // Settings button
-    ctx.fillStyle = '#888';
+    ctx.fillStyle = THEME_COLOR.greenDim;
     const settingsY = height / 2 + 35;
     const settingsText = 'SETTINGS';
     ctx.fillText(settingsText, width / 2, settingsY);
@@ -1841,8 +1842,8 @@ export class Game {
       height: Math.max(44, itemSize * 2.5),
     };
 
-    // Quit Run button
-    ctx.fillStyle = '#ff4444';
+    // Quit Run button — destructive action, so it carries the danger-only coral.
+    ctx.fillStyle = THEME_COLOR.coral;
     const quitY = height / 2 + 80;
     const quitText = 'QUIT RUN';
     ctx.fillText(quitText, width / 2, quitY);

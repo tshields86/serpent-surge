@@ -1,4 +1,4 @@
-import { COLORS, GRID_SIZE, HUD_HEIGHT_TOP, HUD_HEIGHT_BOTTOM, LAYOUT_PADDING } from '../utils/constants';
+import { GRID_SIZE, HUD_HEIGHT_TOP, HUD_HEIGHT_BOTTOM, LAYOUT_PADDING } from '../utils/constants';
 import { COLOR as THEME } from '../theme';
 
 /** Safe area inset (pixels) for screens to offset their content below notch/Dynamic Island */
@@ -105,7 +105,7 @@ export class Renderer {
   }
 
   clear(): void {
-    this.ctx.fillStyle = COLORS.background;
+    this.ctx.fillStyle = THEME.bg;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
