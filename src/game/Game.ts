@@ -1237,7 +1237,7 @@ export class Game {
         this.settingsScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
       }
       if (this.leaderboardScreen.isVisible()) {
-        this.leaderboardScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+        this.leaderboardScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height, this.persistedData?.playerName ?? '');
       }
       if (this.collectionScreen.isVisible() && this.persistedData) {
         this.collectionScreen.draw(
@@ -1392,7 +1392,7 @@ export class Game {
         this.totalFoodEaten,
       );
       if (this.leaderboardScreen.isVisible()) {
-        this.leaderboardScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+        this.leaderboardScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height, this.persistedData?.playerName ?? '');
       }
     }
   }
@@ -2243,6 +2243,20 @@ export class Game {
   private setupLeaderboardScreenshot(): void {
     this.state = GameState.TITLE;
     this.highScore = 2450;
+    // Match the player's name to a row so the screenshot demonstrates the highlight.
+    this.persistedData = {
+      ...(this.persistedData ?? {
+        highScore: 2450,
+        totalScales: 350,
+        totalRuns: 15,
+        unlockedIds: [],
+        settings: { muted: false, colorblindMode: false, reducedMotion: false, musicVolume: 70, sfxVolume: 80, crtEnabled: true },
+        selectedSkin: 'default',
+        achievementIds: [],
+        dailyBest: null,
+      }),
+      playerName: 'YOU',
+    };
     this.leaderboardScreen.show();
     this.leaderboardScreen.setEntries(
       [
@@ -2250,8 +2264,8 @@ export class Game {
         { player_name: 'VPR', score: 3800, arenas_cleared: 4, food_eaten: 71, is_daily: false, daily_seed: null },
         { player_name: 'SSS', score: 3100, arenas_cleared: 4, food_eaten: 63, is_daily: false, daily_seed: null },
         { player_name: 'ZAP', score: 2750, arenas_cleared: 3, food_eaten: 55, is_daily: false, daily_seed: null },
+        { player_name: 'YOU', score: 2450, arenas_cleared: 3, food_eaten: 60, is_daily: false, daily_seed: null },
         { player_name: 'NYX', score: 2400, arenas_cleared: 3, food_eaten: 48, is_daily: false, daily_seed: null },
-        { player_name: 'MAX', score: 2450, arenas_cleared: 3, food_eaten: 60, is_daily: false, daily_seed: null },
         { player_name: 'KAI', score: 1800, arenas_cleared: 2, food_eaten: 35, is_daily: false, daily_seed: null },
         { player_name: 'RAY', score: 1500, arenas_cleared: 2, food_eaten: 30, is_daily: false, daily_seed: null },
         { player_name: 'BUG', score: 1200, arenas_cleared: 2, food_eaten: 25, is_daily: false, daily_seed: null },
