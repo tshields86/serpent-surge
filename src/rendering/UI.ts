@@ -74,7 +74,7 @@ export class UI {
     const { hudTop } = layout;
     const padding = Math.max(14, hudTop.width * 0.045);
     const scaleFactor = Math.max(1, Math.min(1.5, hudTop.height / 105));
-    const labelSize = Math.min(Math.floor(9 * scaleFactor), Math.floor(hudTop.width / 40));
+    const labelSize = Math.min(Math.floor(11 * scaleFactor), Math.floor(hudTop.width / 32));
     const valueSize = Math.min(Math.floor(18 * scaleFactor), Math.floor(hudTop.width / 22));
 
     ctx.save();
@@ -126,7 +126,7 @@ export class UI {
     ctx.restore();
 
     // ===== Wave line + segmented bar (below the stat row) =====
-    const waveLabelSize = Math.min(Math.floor(11 * scaleFactor), Math.floor(hudTop.width / 32));
+    const waveLabelSize = Math.min(Math.floor(14 * scaleFactor), Math.floor(hudTop.width / 26));
     const waveY = scoreNumY + valueSize + Math.floor(14 * scaleFactor);
 
     ctx.save();
@@ -161,7 +161,7 @@ export class UI {
     const { hudBottom } = layout;
     const padding = Math.max(14, hudBottom.width * 0.045);
     const scaleFactor = Math.max(1, Math.min(1.5, hudBottom.height / 50));
-    const labelSize = Math.min(Math.floor(9 * scaleFactor), Math.floor(hudBottom.width / 40));
+    const labelSize = Math.min(Math.floor(11 * scaleFactor), Math.floor(hudBottom.width / 32));
     const valueSize = Math.min(Math.floor(13 * scaleFactor), Math.floor(hudBottom.width / 28));
 
     ctx.save();

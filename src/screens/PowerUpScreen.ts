@@ -79,7 +79,7 @@ export class PowerUpScreen {
     // Darkened backdrop over gameplay — keeps the snake visible as a hint of
     // context but kills enough contrast that the cards stay legible.
     ctx.save();
-    ctx.globalAlpha = 0.92 * this.fadeIn;
+    ctx.globalAlpha = 0.97 * this.fadeIn;
     ctx.fillStyle = COLOR.bg;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     ctx.restore();
@@ -148,7 +148,7 @@ export class PowerUpScreen {
       drawRarityChip(ctx, x + cardWidth / 2, cardY + cardHeight * 0.65, rarity, scale);
 
       // Description
-      const descSize = Math.min(15 * scale, cardWidth / 11);
+      const descSize = Math.min(17 * scale, cardWidth / 9.5);
       ctx.font = bodyFont(descSize);
       ctx.fillStyle = COLOR.greenDim;
       wrapTextLines(ctx, def.description, x + cardWidth / 2, cardY + cardHeight * 0.74, cardWidth - 16 * scale, descSize + 2 * scale);

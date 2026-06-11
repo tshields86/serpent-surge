@@ -169,14 +169,14 @@ export class CollectionScreen {
     ctx.fillText(name.toUpperCase(), x + padX, y + padY);
 
     // Description below
-    const descSize = Math.min(15 * scale, Math.floor(width / 28));
+    const descSize = Math.min(17 * scale, Math.floor(width / 25));
     ctx.font = bodyFont(descSize);
     ctx.fillStyle = COLOR.greenDim;
     ctx.fillText(description, x + padX, y + padY + nameSize + 6 * scale);
 
     // Right-side state label
     const stateLabel = state === 'owned' ? 'OWNED' : `${cost} ◆`;
-    const stateSize = Math.min(8 * scale, Math.floor(width / 38));
+    const stateSize = Math.min(10 * scale, Math.floor(width / 32));
     ctx.font = displayFont(stateSize);
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';

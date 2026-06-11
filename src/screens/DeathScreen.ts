@@ -46,7 +46,7 @@ export class DeathScreen {
     // Darken backdrop so stats stay legible — only a faint shape of the arena
     // should bleed through. Otherwise HUD chrome competes with the buttons.
     ctx.save();
-    ctx.globalAlpha = this.opacity * 0.94;
+    ctx.globalAlpha = this.opacity * 0.97;
     ctx.fillStyle = COLOR.bg;
     ctx.fillRect(0, 0, width, height);
     ctx.globalAlpha = this.opacity;

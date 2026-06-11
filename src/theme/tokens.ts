@@ -8,8 +8,8 @@ export const COLOR = {
 
   // Brand family (the snake, all UI nav, hierarchy by brightness)
   green: '#36f87a',       // PHOSPHOR — brand, snake, primary actions
-  greenDim: '#3f9d63',    // secondary text, inactive nav, labels
-  greenDeep: '#1f5c39',   // hints, inactive states, grid, eyebrows
+  greenDim: '#52b478',    // secondary text, inactive nav, labels
+  greenDeep: '#3f9d63',   // hints, inactive states, grid, eyebrows
 
   // Reserved meanings — never reused
   gold: '#ffc24b',        // score, Scales currency, LEGENDARY

@@ -335,13 +335,13 @@ function drawItemRow(
 
   let cy = y + nameSize + 6 * scale;
   if (effect) {
-    const effectSize = Math.min(15 * scale, Math.floor(ctx.canvas.width / 28));
+    const effectSize = Math.min(17 * scale, Math.floor(ctx.canvas.width / 25));
     ctx.font = bodyFont(effectSize);
     ctx.fillStyle = COLOR.gold;
     ctx.fillText(effect, textX, cy);
     cy += effectSize + 2 * scale;
   }
-  const descSize = Math.min(15 * scale, Math.floor(ctx.canvas.width / 28));
+  const descSize = Math.min(17 * scale, Math.floor(ctx.canvas.width / 25));
   ctx.font = bodyFont(descSize);
   ctx.fillStyle = COLOR.greenDim;
   const lines = wrapText(ctx, desc, textW);
