@@ -1240,10 +1240,16 @@ export class Game {
         this.leaderboardScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
       }
       if (this.collectionScreen.isVisible() && this.persistedData) {
-        this.collectionScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height, {
-          totalScales: this.persistedData.totalScales,
-          unlockedIds: this.persistedData.unlockedIds,
-        });
+        this.collectionScreen.draw(
+          this.renderer.ctx,
+          this.renderer.canvas.width,
+          this.renderer.canvas.height,
+          {
+            totalScales: this.persistedData.totalScales,
+            unlockedIds: this.persistedData.unlockedIds,
+          },
+          this.persistedData.selectedSkin,
+        );
       }
       if (this.howToPlayScreen.isVisible()) {
         this.howToPlayScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
