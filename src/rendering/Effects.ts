@@ -26,8 +26,9 @@ export class Effects {
     const octx = offscreen.getContext('2d')!;
 
     // Scanlines: 4px row — 1px dark line at y+2, the rest transparent.
-    // Multiplied at draw time so they read as a fine grain over phosphor green.
-    octx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    // 0.40 keeps the CRT texture visible without punching holes through small
+    // dim-green labels and VT323 body copy.
+    octx.fillStyle = 'rgba(0, 0, 0, 0.40)';
     for (let y = 2; y < height; y += 4) {
       octx.fillRect(0, y, width, 1);
     }
