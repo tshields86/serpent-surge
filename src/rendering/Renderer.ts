@@ -1,4 +1,5 @@
 import { COLORS, GRID_SIZE, HUD_HEIGHT_TOP, HUD_HEIGHT_BOTTOM, LAYOUT_PADDING } from '../utils/constants';
+import { COLOR as THEME } from '../theme';
 
 /** Safe area inset (pixels) for screens to offset their content below notch/Dynamic Island */
 export let safeAreaInsetTop = 0;
@@ -112,7 +113,8 @@ export class Renderer {
     const { playArea, cellSize } = this.layout;
     const ctx = this.ctx;
 
-    ctx.strokeStyle = COLORS.gridLines;
+    // Spec §2.1: grid is a faint phosphor wash, not a dark gray.
+    ctx.strokeStyle = THEME.gridLine;
     ctx.lineWidth = 1;
 
     // Vertical lines
