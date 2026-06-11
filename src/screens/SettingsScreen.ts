@@ -1,5 +1,26 @@
-import { COLORS } from '../utils/constants';
+// Settings screen — docs/DESIGN_SPEC.md §5 (mock: docs/mocks/serpent-surge-screens.html).
+//
+// Fixes the transparency bug — the backdrop is now fully opaque so the title
+// menu never bleeds through. Uses the shared title, toggle, slider, CLOSE
+// components from src/theme, so every Settings row matches its
+// counterpart on every other modal.
+
 import { safeAreaInsetTop } from '../rendering/Renderer';
+import {
+  applyScaledGlow,
+  clearGlow,
+  COLOR,
+  displayFont,
+  drawCloseButton,
+  drawSlider,
+  drawToggle,
+  drawScreenTitle,
+  fillBackground,
+  hitTest,
+  LETTER_SPACING,
+  TEXT,
+  type Bounds,
+} from '../theme';
 
 export interface GameSettings {
   musicVolume: number;  // 0-100
@@ -21,141 +42,134 @@ const DEFAULT_SETTINGS: GameSettings = {
   playerName: 'AAA',
 };
 
-const FONT_FAMILY = '"Press Start 2P", monospace';
-
 const NAME_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-'.split('');
 const MAX_NAME_LENGTH = 10;
 
-interface SettingsRow {
-  label: string;
-  key: keyof GameSettings;
-  type: 'toggle' | 'slider';
-}
+type ToggleKey = 'crtEnabled' | 'muted' | 'colorblindMode' | 'reducedMotion';
+type SliderKey = 'musicVolume' | 'sfxVolume';
 
-const ROWS: SettingsRow[] = [
-  { label: 'Music Volume', key: 'musicVolume', type: 'slider' },
-  { label: 'SFX Volume', key: 'sfxVolume', type: 'slider' },
-  { label: 'CRT Effect', key: 'crtEnabled', type: 'toggle' },
-  { label: 'Muted', key: 'muted', type: 'toggle' },
-  { label: 'Colorblind', key: 'colorblindMode', type: 'toggle' },
-  { label: 'Reduced Motion', key: 'reducedMotion', type: 'toggle' },
+interface SliderRow { kind: 'slider'; label: string; key: SliderKey; }
+interface ToggleRow { kind: 'toggle'; label: string; key: ToggleKey; }
+type Row = SliderRow | ToggleRow;
+
+const ROWS: Row[] = [
+  { kind: 'slider', label: 'MUSIC',           key: 'musicVolume' },
+  { kind: 'slider', label: 'SFX',             key: 'sfxVolume' },
+  { kind: 'toggle', label: 'CRT EFFECT',      key: 'crtEnabled' },
+  { kind: 'toggle', label: 'MUTED',           key: 'muted' },
+  { kind: 'toggle', label: 'COLORBLIND',      key: 'colorblindMode' },
+  { kind: 'toggle', label: 'REDUCED MOTION',  key: 'reducedMotion' },
 ];
 
 export class SettingsScreen {
   private settings: GameSettings = { ...DEFAULT_SETTINGS };
   private visible = false;
-  private closeBounds = { x: 0, y: 0, width: 0, height: 0 };
-  private nameCharBounds: { x: number; y: number; width: number; height: number }[] = [];
-  private nameAddBounds = { x: 0, y: 0, width: 0, height: 0 };
-  private nameDelBounds = { x: 0, y: 0, width: 0, height: 0 };
+  private closeBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
+  private rowBounds: Bounds[] = [];
+  private nameRowBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
+  private nameCharBounds: Bounds[] = [];
+  private nameAddBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
+  private nameDelBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
 
   show(settings: GameSettings): void {
     this.settings = { ...settings };
     this.visible = true;
   }
-
-  hide(): void {
-    this.visible = false;
-  }
-
-  isVisible(): boolean {
-    return this.visible;
-  }
-
-  getSettings(): GameSettings {
-    return { ...this.settings };
-  }
+  hide(): void { this.visible = false; }
+  isVisible(): boolean { return this.visible; }
+  getSettings(): GameSettings { return { ...this.settings }; }
 
   draw(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     if (!this.visible) return;
 
     ctx.save();
-    // Backdrop
-    ctx.fillStyle = 'rgba(10, 10, 10, 0.92)';
-    ctx.fillRect(0, 0, width, height);
 
-    // Offset all content below the safe area (notch/Dynamic Island)
+    // Opaque backdrop — fixes the transparency bug from the prior pass.
+    fillBackground(ctx, width, height);
+
+    // Offset content below the safe-area inset.
     ctx.translate(0, safeAreaInsetTop);
+    const usableHeight = height - safeAreaInsetTop;
+    const scale = pickScale(width);
 
-    // Title
-    const titleSize = Math.min(18, Math.floor(width / 24));
-    ctx.font = `${titleSize}px ${FONT_FAMILY}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = COLORS.uiAccent;
-    ctx.shadowColor = COLORS.snakeGlow;
-    ctx.shadowBlur = 10;
-    ctx.fillText('SETTINGS', width / 2, 50);
-    ctx.shadowBlur = 0;
+    // ===== Title =====
+    const titleY = Math.floor(usableHeight * 0.075);
+    drawScreenTitle(ctx, 'SETTINGS', width / 2, titleY, scale);
 
-    // Player name row
-    const rowHeight = 50;
-    const startY = 100;
-    const labelSize = Math.min(10, Math.floor(width / 40));
-    const rowWidth = Math.min(320, width - 40);
+    // ===== Rows =====
+    const padding = Math.max(24, width * 0.07);
+    const rowWidth = Math.min(360 * scale, width - padding * 2);
     const rowX = (width - rowWidth) / 2;
+    const rowHeight = Math.max(48, 50 * scale);
+    const labelSize = Math.min(TEXT.cardName * scale, Math.floor(width / 36));
 
-    this.drawNameRow(ctx, rowX, startY, rowWidth, rowHeight, labelSize);
+    let cursorY = titleY + 36 * scale;
 
-    // Setting rows (offset by 1 for name row)
-    const settingsStartY = startY + rowHeight;
+    // Name row
+    this.drawNameRow(ctx, rowX, cursorY, rowWidth, rowHeight, labelSize, scale);
+    this.nameRowBounds = { x: rowX, y: cursorY, width: rowWidth, height: rowHeight };
+    cursorY += rowHeight;
 
+    // Setting rows
+    this.rowBounds = [];
     for (let i = 0; i < ROWS.length; i++) {
       const row = ROWS[i]!;
-      const y = settingsStartY + i * rowHeight;
+      const y = cursorY + i * rowHeight;
+      this.drawRow(ctx, row, rowX, y, rowWidth, rowHeight, labelSize, scale);
+      this.rowBounds.push({ x: rowX, y, width: rowWidth, height: rowHeight });
 
-      // Label
-      ctx.font = `${labelSize}px ${FONT_FAMILY}`;
-      ctx.textAlign = 'left';
-      ctx.fillStyle = COLORS.uiText;
-      ctx.fillText(row.label, rowX, y + rowHeight / 2);
-
-      // Value
-      ctx.textAlign = 'right';
-      if (row.type === 'toggle') {
-        const val = this.settings[row.key] as boolean;
-        ctx.fillStyle = val ? COLORS.uiAccent : '#666';
-        ctx.fillText(val ? 'ON' : 'OFF', rowX + rowWidth, y + rowHeight / 2);
-      } else {
-        const val = this.settings[row.key] as number;
-        // Slider bar
-        const barX = rowX + rowWidth - 120;
-        const barY = y + rowHeight / 2 - 3;
-        const barW = 100;
-        const barH = 6;
-        ctx.fillStyle = '#333';
-        ctx.fillRect(barX, barY, barW, barH);
-        ctx.fillStyle = COLORS.uiAccent;
-        ctx.fillRect(barX, barY, barW * (val / 100), barH);
-        // Value text
-        ctx.fillStyle = COLORS.uiText;
-        ctx.fillText(`${val}`, rowX + rowWidth, y + rowHeight / 2);
+      // Faint divider beneath every row except the last.
+      if (i < ROWS.length - 1) {
+        ctx.strokeStyle = COLOR.lineSoft;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(rowX, y + rowHeight - 0.5);
+        ctx.lineTo(rowX + rowWidth, y + rowHeight - 0.5);
+        ctx.stroke();
       }
     }
 
-    // Hint — directly below the last settings row
-    const hintY = settingsStartY + ROWS.length * rowHeight + 20;
-    ctx.fillStyle = '#666';
-    ctx.font = `${Math.min(8, Math.floor(width / 50))}px ${FONT_FAMILY}`;
-    ctx.textAlign = 'center';
-    ctx.fillText('TAP TO TOGGLE', width / 2, hintY);
-
-    // Close button
-    const closeSize = Math.min(10, Math.floor(width / 40));
-    ctx.font = `${closeSize}px ${FONT_FAMILY}`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ff4444';
-    const closeY = height - safeAreaInsetTop - 30;
-    ctx.fillText('CLOSE', width / 2, closeY);
-    const closeMetrics = ctx.measureText('CLOSE');
-    this.closeBounds = {
-      x: width / 2 - closeMetrics.width / 2 - 10,
-      y: closeY - closeSize,
-      width: closeMetrics.width + 20,
-      height: closeSize * 2.5,
-    };
+    // ===== CLOSE =====
+    const closeY = usableHeight - Math.max(36, 36 * scale);
+    this.closeBounds = drawCloseButton(ctx, width / 2, closeY, scale);
 
     ctx.restore();
+  }
+
+  // ---- internal draw helpers ----
+
+  private drawRow(
+    ctx: CanvasRenderingContext2D,
+    row: Row,
+    rowX: number,
+    y: number,
+    rowWidth: number,
+    rowHeight: number,
+    labelSize: number,
+    scale: number,
+  ): void {
+    const midY = y + rowHeight / 2;
+
+    // Label
+    ctx.save();
+    ctx.font = displayFont(labelSize);
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = COLOR.bone;
+    clearGlow(ctx);
+    ctx.fillText(row.label, rowX, midY);
+    ctx.restore();
+
+    // Control on the right
+    if (row.kind === 'toggle') {
+      const on = this.settings[row.key];
+      const toggleW = 46 * scale;
+      const toggleH = 22 * scale;
+      drawToggle(ctx, rowX + rowWidth - toggleW, midY - toggleH / 2, on, scale);
+    } else {
+      const sliderWidth = 130 * scale;
+      drawSlider(ctx, rowX + rowWidth - sliderWidth, midY, sliderWidth, this.settings[row.key], scale);
+    }
   }
 
   private drawNameRow(
@@ -165,136 +179,142 @@ export class SettingsScreen {
     rowWidth: number,
     rowHeight: number,
     labelSize: number,
+    scale: number,
   ): void {
+    const midY = y + rowHeight / 2;
+
     // Label
-    ctx.font = `${labelSize}px ${FONT_FAMILY}`;
+    ctx.save();
+    ctx.font = displayFont(labelSize);
+    ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
-    ctx.fillStyle = COLORS.uiText;
-    ctx.fillText('Name', rowX, y + rowHeight / 2);
+    ctx.fillStyle = COLOR.bone;
+    clearGlow(ctx);
+    ctx.fillText('NAME', rowX, midY);
+    ctx.restore();
 
-    // Character display — each letter is tappable to cycle
+    // Letters in gold + (+/-) controls on the right.
     const name = this.settings.playerName;
-    const charSize = Math.min(12, Math.floor(labelSize * 1.2));
-    ctx.font = `${charSize}px ${FONT_FAMILY}`;
-    const charW = charSize * 1.8;
-    const totalCharsWidth = name.length * charW;
-    const controlsWidth = charW * 2.4; // space for +/- buttons
-    const nameStartX = rowX + rowWidth - totalCharsWidth - controlsWidth;
-    const charY = y + rowHeight / 2;
+    const letterSize = Math.min(12 * scale, Math.floor(rowWidth / 22));
+    const letterAdvance = letterSize * 1.4;
+    const controlSize = Math.min(11 * scale, Math.floor(rowWidth / 24));
+    const controlAdvance = controlSize * 1.5;
 
+    const lettersWidth = name.length * letterAdvance;
+    const controlsWidth = controlAdvance * 2;
+    const lettersStartX = rowX + rowWidth - controlsWidth - lettersWidth + letterAdvance / 2;
+
+    ctx.save();
+    ctx.font = displayFont(letterSize);
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    applyScaledGlow(ctx, 'gold', scale);
+    ctx.fillStyle = COLOR.gold;
     this.nameCharBounds = [];
     for (let i = 0; i < name.length; i++) {
-      const cx = nameStartX + i * charW;
-      ctx.textAlign = 'center';
-      ctx.fillStyle = COLORS.score;
-      ctx.fillText(name[i]!, cx + charW / 2, charY);
-
-      // Up/down arrows
-      const arrowSize = Math.max(6, charSize * 0.5);
-      ctx.font = `${arrowSize}px ${FONT_FAMILY}`;
-      ctx.fillStyle = '#666';
-      ctx.fillText('\u25B2', cx + charW / 2, charY - charSize * 0.9);
-      ctx.fillText('\u25BC', cx + charW / 2, charY + charSize * 0.9);
-      ctx.font = `${charSize}px ${FONT_FAMILY}`;
-
+      const cx = lettersStartX + i * letterAdvance;
+      ctx.fillText(name[i]!, cx, midY);
       this.nameCharBounds.push({
-        x: cx,
-        y: y,
-        width: charW,
+        x: cx - letterAdvance / 2,
+        y,
+        width: letterAdvance,
         height: rowHeight,
       });
     }
+    clearGlow(ctx);
 
-    // Add (+) and delete (-) buttons
-    const btnX = nameStartX + name.length * charW + 4;
+    // + / - controls (drawn as path triangles so they line up vertically with letters)
+    const addX = lettersStartX + name.length * letterAdvance - letterAdvance / 2 + controlAdvance * 0.4;
+    const subX = addX + controlAdvance;
+    const ctrlSize = controlSize * 0.6;
+
+    ctx.font = displayFont(controlSize);
     ctx.textAlign = 'center';
-
     if (name.length < MAX_NAME_LENGTH) {
-      ctx.fillStyle = COLORS.uiAccent;
-      ctx.fillText('+', btnX + charW * 0.4, charY);
-      this.nameAddBounds = { x: btnX, y, width: charW, height: rowHeight };
+      ctx.fillStyle = COLOR.green;
+      ctx.fillText('+', addX, midY);
+      this.nameAddBounds = { x: addX - controlAdvance / 2, y, width: controlAdvance, height: rowHeight };
     } else {
       this.nameAddBounds = { x: 0, y: 0, width: 0, height: 0 };
     }
-
     if (name.length > 1) {
-      ctx.fillStyle = '#ff4444';
-      ctx.fillText('-', btnX + charW * 1.4, charY);
-      this.nameDelBounds = { x: btnX + charW, y, width: charW, height: rowHeight };
+      // Minus rendered as a horizontal bar (avoids the hyphen ambiguity).
+      ctx.fillStyle = COLOR.coral;
+      const barW = ctrlSize * 1.4;
+      const barH = Math.max(2, ctrlSize * 0.22);
+      ctx.fillRect(subX - barW / 2, midY - barH / 2, barW, barH);
+      this.nameDelBounds = { x: subX - controlAdvance / 2, y, width: controlAdvance, height: rowHeight };
     } else {
       this.nameDelBounds = { x: 0, y: 0, width: 0, height: 0 };
     }
+    ctx.restore();
+
+    // Letter-stepper hint — tiny ▲/▼ marks above and below each letter would
+    // clutter the row at smaller sizes. Tap-top / tap-bottom semantics still apply
+    // for incrementing / decrementing each letter.
+    void LETTER_SPACING; // retain import for theme consistency
   }
 
-  /** Handle click — returns 'changed' if settings changed, 'close' if close clicked, false otherwise */
-  handleClick(x: number, rawY: number, width: number): 'changed' | 'close' | false {
+  /** Returns 'changed' if settings updated, 'close' if close tapped, false otherwise. */
+  handleClick(x: number, rawY: number, _width: number): 'changed' | 'close' | false {
     if (!this.visible) return false;
-    // Adjust for safe area offset applied during draw
     const y = rawY - safeAreaInsetTop;
 
-    // Check close button
-    const cb = this.closeBounds;
-    if (x >= cb.x && x <= cb.x + cb.width && y >= cb.y && y <= cb.y + cb.height) {
-      return 'close';
-    }
+    if (hitTest(this.closeBounds, x, y)) return 'close';
 
-    // Check name character cycling
-    const name = this.settings.playerName;
-    for (let i = 0; i < this.nameCharBounds.length; i++) {
-      const b = this.nameCharBounds[i]!;
-      if (x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height) {
-        const ch = name[i]!;
-        const idx = NAME_CHARS.indexOf(ch.toUpperCase());
-        // Top half = next char, bottom half = prev char
-        const midY = b.y + b.height / 2;
-        const nextIdx = y < midY
-          ? (idx + 1) % NAME_CHARS.length
-          : (idx - 1 + NAME_CHARS.length) % NAME_CHARS.length;
-        this.settings.playerName =
-          name.substring(0, i) + NAME_CHARS[nextIdx]! + name.substring(i + 1);
+    // Name cycle by tapping a letter (top half = next, bottom half = prev)
+    if (hitTest(this.nameRowBounds, x, y)) {
+      const name = this.settings.playerName;
+      for (let i = 0; i < this.nameCharBounds.length; i++) {
+        const b = this.nameCharBounds[i]!;
+        if (hitTest(b, x, y)) {
+          const ch = name[i]!;
+          const idx = NAME_CHARS.indexOf(ch.toUpperCase());
+          const midY = b.y + b.height / 2;
+          const nextIdx = y < midY
+            ? (idx + 1) % NAME_CHARS.length
+            : (idx - 1 + NAME_CHARS.length) % NAME_CHARS.length;
+          this.settings.playerName =
+            name.substring(0, i) + NAME_CHARS[nextIdx]! + name.substring(i + 1);
+          return 'changed';
+        }
+      }
+      if (this.nameAddBounds.width > 0 && hitTest(this.nameAddBounds, x, y)) {
+        this.settings.playerName += 'A';
+        return 'changed';
+      }
+      if (this.nameDelBounds.width > 0 && hitTest(this.nameDelBounds, x, y)) {
+        this.settings.playerName = this.settings.playerName.slice(0, -1);
         return 'changed';
       }
     }
 
-    // Check add button
-    const ab = this.nameAddBounds;
-    if (ab.width > 0 && x >= ab.x && x <= ab.x + ab.width && y >= ab.y && y <= ab.y + ab.height) {
-      this.settings.playerName += 'A';
-      return 'changed';
-    }
-
-    // Check delete button
-    const db = this.nameDelBounds;
-    if (db.width > 0 && x >= db.x && x <= db.x + db.width && y >= db.y && y <= db.y + db.height) {
-      this.settings.playerName = this.settings.playerName.slice(0, -1);
-      return 'changed';
-    }
-
-    // Settings rows (offset by 1 for name row)
-    const rowHeight = 50;
-    const startY = 100 + rowHeight; // after name row
-    const rowWidth = Math.min(320, width - 40);
-    const rowX = (width - rowWidth) / 2;
-
+    // Setting rows
     for (let i = 0; i < ROWS.length; i++) {
       const row = ROWS[i]!;
-      const ry = startY + i * rowHeight;
-
-      if (x >= rowX && x <= rowX + rowWidth && y >= ry && y <= ry + rowHeight) {
-        if (row.type === 'toggle') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (this.settings as any)[row.key] = !(this.settings[row.key] as boolean);
-        } else {
-          // Slider: map x to 0-100
-          const barX = rowX + rowWidth - 120;
-          const barW = 100;
-          const pct = Math.max(0, Math.min(100, Math.round(((x - barX) / barW) * 100)));
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (this.settings as any)[row.key] = pct;
-        }
-        return 'changed';
+      const b = this.rowBounds[i]!;
+      if (!hitTest(b, x, y)) continue;
+      if (row.kind === 'toggle') {
+        this.settings[row.key] = !this.settings[row.key];
+      } else {
+        // Slider: anywhere from the slider's left edge to its right edge maps 0..100.
+        const sliderWidth = b.width * 0.36;
+        const sliderRight = b.x + b.width;
+        const sliderLeft = sliderRight - sliderWidth;
+        const pct = Math.max(0, Math.min(100,
+          Math.round(((x - sliderLeft) / sliderWidth) * 100)));
+        this.settings[row.key] = pct;
       }
+      return 'changed';
     }
+
     return false;
   }
+}
+
+function pickScale(width: number): number {
+  if (width >= 1600) return 1.4;
+  if (width >= 1024) return 1.2;
+  if (width >= 720) return 1.1;
+  return 1;
 }

@@ -1965,6 +1965,9 @@ export class Game {
         case 'leaderboard':
           this.setupLeaderboardScreenshot();
           break;
+        case 'settings':
+          this.openSettings();
+          break;
         case 'title':
           // Advance pulse timer to peak brightness for "TAP TO START"
           // sin(timer * 3) = 1 at timer = π/6 ≈ 0.524s
