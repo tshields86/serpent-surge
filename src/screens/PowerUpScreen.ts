@@ -1,23 +1,34 @@
-import { PowerUpDefinition, RARITY_COLORS } from '../data/powerups';
-import { PowerUpInstance, getPowerUpDef } from '../game/PowerUp';
-import { COLORS } from '../utils/constants';
+// Power-up selection — docs/DESIGN_SPEC.md §5 (mock: docs/mocks/serpent-surge-design-system.html cards).
+//
+// Rarity-bordered cards (bone / cyan / gold) with matching glow, pixel
+// glyphs in place of the legacy emoji icons. The UNCOMMON tier folds
+// into RARE on display per spec ("drops the stray UNCOMMON label").
 
-const FONT_FAMILY = '"Press Start 2P", monospace';
-
-interface CardLayout {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import { PowerUpDefinition, PowerUpRarity } from '../data/powerups';
+import { PowerUpInstance } from '../game/PowerUp';
+import {
+  applyScaledGlow,
+  bodyFont,
+  clearGlow,
+  COLOR,
+  displayFont,
+  drawCard,
+  drawHeldChip,
+  drawRarityChip,
+  drawScreenTitle,
+  TEXT,
+  type Bounds,
+  type Rarity,
+} from '../theme';
+import { drawPowerUpGlyph } from '../rendering/PowerUpGlyphs';
 
 export class PowerUpScreen {
   private offerings: PowerUpDefinition[] = [];
-  private cardLayouts: CardLayout[] = [];
+  private cardLayouts: Bounds[] = [];
   private selectedIndex = -1;
   private selectTimer = 0;
   private fadeIn = 0;
-  private rerollBounds: CardLayout = { x: 0, y: 0, width: 0, height: 0 };
+  private rerollBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
   private rerollAvailable = false;
 
   setOfferings(offerings: PowerUpDefinition[], rerollAvailable = false): void {
@@ -29,40 +40,28 @@ export class PowerUpScreen {
   }
 
   update(dt: number): void {
-    if (this.fadeIn < 1) {
-      this.fadeIn = Math.min(1, this.fadeIn + dt * 3);
-    }
-    if (this.selectedIndex >= 0) {
-      this.selectTimer += dt;
-    }
+    if (this.fadeIn < 1) this.fadeIn = Math.min(1, this.fadeIn + dt * 3);
+    if (this.selectedIndex >= 0) this.selectTimer += dt;
   }
 
-  /** Returns true when selection animation is done */
   isSelectionComplete(): boolean {
     return this.selectedIndex >= 0 && this.selectTimer >= 0.5;
   }
 
   getSelectedPowerUp(): PowerUpDefinition | null {
-    if (this.selectedIndex >= 0 && this.selectedIndex < this.offerings.length) {
-      return this.offerings[this.selectedIndex]!;
-    }
-    return null;
+    return this.selectedIndex >= 0 ? this.offerings[this.selectedIndex] ?? null : null;
   }
 
-  /** Check if click hits a card, return index, -2 for reroll, or -1 for miss */
+  /** Returns selected card index, -2 for reroll, or -1 for miss. */
   handleClick(x: number, y: number): number {
-    if (this.selectedIndex >= 0) return -1; // already selected
-    // Check reroll button
+    if (this.selectedIndex >= 0) return -1;
     if (this.rerollAvailable) {
       const rb = this.rerollBounds;
-      if (x >= rb.x && x <= rb.x + rb.width && y >= rb.y && y <= rb.y + rb.height) {
-        return -2;
-      }
+      if (x >= rb.x && x <= rb.x + rb.width && y >= rb.y && y <= rb.y + rb.height) return -2;
     }
     for (let i = 0; i < this.cardLayouts.length; i++) {
-      const card = this.cardLayouts[i]!;
-      if (x >= card.x && x <= card.x + card.width &&
-          y >= card.y && y <= card.y + card.height) {
+      const c = this.cardLayouts[i]!;
+      if (x >= c.x && x <= c.x + c.width && y >= c.y && y <= c.y + c.height) {
         this.selectedIndex = i;
         this.selectTimer = 0;
         return i;
@@ -77,187 +76,133 @@ export class PowerUpScreen {
     canvasHeight: number,
     heldPowerUps: readonly PowerUpInstance[],
   ): void {
-    // Dim overlay
+    // Darkened backdrop over gameplay — keeps the snake visible as a hint of
+    // context but kills enough contrast that the cards stay legible.
     ctx.save();
-    ctx.globalAlpha = 0.7 * this.fadeIn;
-    ctx.fillStyle = '#000000';
+    ctx.globalAlpha = 0.92 * this.fadeIn;
+    ctx.fillStyle = COLOR.bg;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     ctx.restore();
 
     if (this.offerings.length === 0) return;
 
+    const scale = pickScale(canvasWidth);
     ctx.save();
     ctx.globalAlpha = this.fadeIn;
 
-    // Title
-    const titleSize = Math.min(18, Math.floor(canvasWidth / 30));
-    ctx.font = `${titleSize}px ${FONT_FAMILY}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = COLORS.score;
-    ctx.shadowColor = COLORS.score;
-    ctx.shadowBlur = 10;
-    ctx.fillText('CHOOSE POWER-UP', canvasWidth / 2, canvasHeight * 0.12);
-    ctx.shadowBlur = 0;
+    // ===== Title =====
+    drawScreenTitle(ctx, 'CHOOSE POWER-UP', canvasWidth / 2, canvasHeight * 0.12, scale);
 
-    // Cards
+    // ===== Cards =====
     const cardCount = this.offerings.length;
-    const cardWidth = Math.min(180, Math.floor((canvasWidth - 80) / cardCount - 20));
-    const cardHeight = Math.floor(cardWidth * 1.4);
-    const gap = 20;
+    const padding = Math.max(20, canvasWidth * 0.05);
+    const gap = 16 * scale;
+    const maxCardWidth = 200 * scale;
+    const availWidth = canvasWidth - padding * 2;
+    const cardWidth = Math.min(maxCardWidth, (availWidth - gap * (cardCount - 1)) / cardCount);
+    const cardHeight = cardWidth * 1.4;
     const totalWidth = cardCount * cardWidth + (cardCount - 1) * gap;
     const startX = (canvasWidth - totalWidth) / 2;
-    const cardY = canvasHeight * 0.2;
+    const cardY = canvasHeight * 0.22;
 
     this.cardLayouts = [];
 
     for (let i = 0; i < cardCount; i++) {
       const def = this.offerings[i]!;
       const x = startX + i * (cardWidth + gap);
-      this.cardLayouts.push({ x, y: cardY, width: cardWidth, height: cardHeight });
+      const rect: Bounds = { x, y: cardY, width: cardWidth, height: cardHeight };
+      this.cardLayouts.push(rect);
 
       const isSelected = this.selectedIndex === i;
-      const scale = isSelected ? 1 + this.selectTimer * 0.3 : 1;
-      const rarityColor = RARITY_COLORS[def.rarity];
-
       ctx.save();
-
       if (isSelected) {
+        // Zoom + fade out the selected card.
         const cx = x + cardWidth / 2;
         const cy = cardY + cardHeight / 2;
+        const zoom = 1 + this.selectTimer * 0.3;
         ctx.translate(cx, cy);
-        ctx.scale(scale, scale);
+        ctx.scale(zoom, zoom);
         ctx.translate(-cx, -cy);
         ctx.globalAlpha = Math.max(0, 1 - this.selectTimer * 1.5);
       }
 
-      // Card background
-      ctx.fillStyle = '#1a1a2e';
-      ctx.strokeStyle = rarityColor;
-      ctx.lineWidth = 3;
-      this.roundRect(ctx, x, cardY, cardWidth, cardHeight, 8);
-      ctx.fill();
-      ctx.stroke();
+      const rarity = displayRarity(def.rarity);
+      drawCard(ctx, rect, rarity, scale);
 
-      // Rarity glow
-      ctx.shadowColor = rarityColor;
-      ctx.shadowBlur = 12;
-      ctx.strokeStyle = rarityColor;
-      ctx.lineWidth = 1;
-      this.roundRect(ctx, x + 4, cardY + 4, cardWidth - 8, cardHeight - 8, 6);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Icon
-      const iconSize = Math.min(36, Math.floor(cardWidth * 0.3));
-      ctx.font = `${iconSize}px serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(def.icon, x + cardWidth / 2, cardY + cardHeight * 0.25);
+      // Glyph
+      const glyphSize = cardWidth * 0.42;
+      const glyphCy = cardY + cardHeight * 0.24;
+      drawPowerUpGlyph(def.id)(ctx, x + cardWidth / 2, glyphCy, glyphSize);
 
       // Name
-      const nameSize = Math.min(9, Math.floor(cardWidth / 16));
-      ctx.font = `${nameSize}px ${FONT_FAMILY}`;
-      ctx.fillStyle = '#ffffff';
+      const nameSize = Math.min(TEXT.cardName * scale, cardWidth / 13);
+      ctx.font = displayFont(nameSize);
       ctx.textAlign = 'center';
-      ctx.fillText(def.name, x + cardWidth / 2, cardY + cardHeight * 0.48);
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = COLOR.bone;
+      clearGlow(ctx);
+      const nameY = cardY + cardHeight * 0.5;
+      wrapTextLines(ctx, def.name.toUpperCase(), x + cardWidth / 2, nameY, cardWidth - 16 * scale, nameSize + 4 * scale);
 
-      // Rarity label
-      const raritySize = Math.min(7, Math.floor(cardWidth / 22));
-      ctx.font = `${raritySize}px ${FONT_FAMILY}`;
-      ctx.fillStyle = rarityColor;
-      ctx.fillText(def.rarity, x + cardWidth / 2, cardY + cardHeight * 0.58);
+      // Rarity chip
+      drawRarityChip(ctx, x + cardWidth / 2, cardY + cardHeight * 0.65, rarity, scale);
 
-      // Description (wrapped)
-      const descSize = Math.min(7, Math.floor(cardWidth / 22));
-      ctx.font = `${descSize}px ${FONT_FAMILY}`;
-      ctx.fillStyle = '#aaaaaa';
-      this.wrapText(ctx, def.description, x + cardWidth / 2, cardY + cardHeight * 0.72, cardWidth - 16, descSize + 4);
+      // Description
+      const descSize = Math.min(15 * scale, cardWidth / 11);
+      ctx.font = bodyFont(descSize);
+      ctx.fillStyle = COLOR.greenDim;
+      wrapTextLines(ctx, def.description, x + cardWidth / 2, cardY + cardHeight * 0.74, cardWidth - 16 * scale, descSize + 2 * scale);
 
       ctx.restore();
     }
 
-    // Reroll button
+    // ===== Reroll =====
     if (this.rerollAvailable && this.selectedIndex < 0) {
-      const rerollSize = Math.min(10, Math.floor(canvasWidth / 40));
-      ctx.font = `${rerollSize}px ${FONT_FAMILY}`;
+      const rerollSize = Math.min(10 * scale, canvasWidth / 38);
+      ctx.font = displayFont(rerollSize);
       ctx.textAlign = 'center';
-      ctx.fillStyle = COLORS.score;
-      const rerollY = canvasHeight * 0.78;
-      const rerollText = '\u21BB REROLL';
-      ctx.fillText(rerollText, canvasWidth / 2, rerollY);
-      const metrics = ctx.measureText(rerollText);
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = COLOR.gold;
+      applyScaledGlow(ctx, 'gold', scale);
+      const rerollY = canvasHeight * 0.82;
+      const label = '↻ REROLL';
+      ctx.fillText(label, canvasWidth / 2, rerollY);
+      clearGlow(ctx);
+      const w = ctx.measureText(label).width;
+      const tapPad = Math.max(20, rerollSize);
       this.rerollBounds = {
-        x: canvasWidth / 2 - metrics.width / 2 - 10,
-        y: rerollY - rerollSize,
-        width: metrics.width + 20,
-        height: rerollSize * 2.5,
+        x: canvasWidth / 2 - w / 2 - tapPad,
+        y: rerollY - rerollSize - tapPad / 2,
+        width: w + tapPad * 2,
+        height: rerollSize + tapPad,
       };
     } else {
       this.rerollBounds = { x: 0, y: 0, width: 0, height: 0 };
     }
 
-    // Held power-ups at bottom
+    // ===== Held chips =====
     if (heldPowerUps.length > 0) {
-      const heldY = canvasHeight * 0.85;
-      const iconSmall = Math.min(10, Math.floor(canvasWidth / 50));
-      ctx.font = `${iconSmall}px ${FONT_FAMILY}`;
+      const heldLabelSize = Math.min(7 * scale, canvasWidth / 55);
+      const heldLabelY = canvasHeight * 0.9;
+      ctx.font = displayFont(heldLabelSize);
       ctx.textAlign = 'center';
-      ctx.fillStyle = COLORS.uiText;
-      ctx.fillText('HELD:', canvasWidth / 2, heldY - 15);
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = COLOR.greenDeep;
+      clearGlow(ctx);
+      ctx.fillText('HELD', canvasWidth / 2, heldLabelY);
 
-      const heldIconSize = 20;
-      const heldTotalWidth = heldPowerUps.length * (heldIconSize + 8);
-      const heldStartX = (canvasWidth - heldTotalWidth) / 2;
-
-      ctx.font = `${heldIconSize}px serif`;
-      for (let i = 0; i < heldPowerUps.length; i++) {
-        const pu = heldPowerUps[i]!;
-        const def = getPowerUpDef(pu.id);
-        ctx.fillText(def.icon, heldStartX + i * (heldIconSize + 8) + heldIconSize / 2, heldY + 10);
+      const chipSize = 30 * scale;
+      const chipGap = 8 * scale;
+      const totalChipWidth = heldPowerUps.length * chipSize + (heldPowerUps.length - 1) * chipGap;
+      let cx = (canvasWidth - totalChipWidth) / 2;
+      const chipY = heldLabelY + 14 * scale;
+      for (const pu of heldPowerUps) {
+        drawHeldChip(ctx, cx, chipY, drawPowerUpGlyph(pu.id), pu.stackCount > 1 ? pu.stackCount : null, scale);
+        cx += chipSize + chipGap;
       }
     }
 
     ctx.restore();
-  }
-
-  private roundRect(
-    ctx: CanvasRenderingContext2D,
-    x: number, y: number, w: number, h: number, r: number,
-  ): void {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-  }
-
-  private wrapText(
-    ctx: CanvasRenderingContext2D,
-    text: string, x: number, y: number, maxWidth: number, lineHeight: number,
-  ): void {
-    const words = text.split(' ');
-    let line = '';
-    let lineY = y;
-
-    for (const word of words) {
-      const testLine = line ? `${line} ${word}` : word;
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && line) {
-        ctx.fillText(line, x, lineY);
-        line = word;
-        lineY += lineHeight;
-      } else {
-        line = testLine;
-      }
-    }
-    if (line) ctx.fillText(line, x, lineY);
   }
 
   reset(): void {
@@ -267,4 +212,46 @@ export class PowerUpScreen {
     this.selectTimer = 0;
     this.fadeIn = 0;
   }
+}
+
+// UNCOMMON internal tier displays as RARE per spec.
+function displayRarity(rarity: PowerUpRarity): Rarity {
+  switch (rarity) {
+    case PowerUpRarity.COMMON:    return 'common';
+    case PowerUpRarity.LEGENDARY: return 'legendary';
+    case PowerUpRarity.UNCOMMON:
+    case PowerUpRarity.RARE:
+    default:                       return 'rare';
+  }
+}
+
+function pickScale(width: number): number {
+  if (width >= 1600) return 1.4;
+  if (width >= 1024) return 1.2;
+  if (width >= 720) return 1.1;
+  return 1;
+}
+
+function wrapTextLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  cx: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+): void {
+  const words = text.split(' ');
+  let line = '';
+  let cy = y;
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, cx, cy);
+      line = w;
+      cy += lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, cx, cy);
 }
