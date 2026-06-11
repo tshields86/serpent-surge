@@ -5,9 +5,11 @@ const game = new Game(canvas);
 
 // Screenshot mode: append ?screenshot=<scene> to URL
 // Scenes: title, gameplay, powerup, death, collection, leaderboard
-const screenshotScene = new URL(window.location.href).searchParams.get('screenshot');
+const url = new URL(window.location.href);
+const screenshotScene = url.searchParams.get('screenshot');
+const forceReducedMotion = url.searchParams.get('rm') === '1';
 if (screenshotScene) {
-  game.setupScreenshot(screenshotScene);
+  game.setupScreenshot(screenshotScene, { reducedMotion: forceReducedMotion });
 }
 
 game.start();

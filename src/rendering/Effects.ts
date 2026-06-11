@@ -10,6 +10,7 @@ export class Effects {
   // Screen shake state
   private shakeTimer = 0;
   private shakeIntensity = 0;
+  private shakeEnabled = true;
   shakeOffsetX = 0;
   shakeOffsetY = 0;
 
@@ -60,10 +61,21 @@ export class Effects {
     this.crtEnabled = enabled;
   }
 
-  /** Trigger screen shake */
+  /** Trigger screen shake — silently no-ops when shake is disabled (Reduced Motion). */
   triggerShake(duration: number, intensity: number): void {
+    if (!this.shakeEnabled) return;
     this.shakeTimer = duration;
     this.shakeIntensity = intensity;
+  }
+
+  /** Disable shake — used by the Reduced Motion accessibility setting. */
+  setShakeEnabled(enabled: boolean): void {
+    this.shakeEnabled = enabled;
+    if (!enabled) {
+      this.shakeTimer = 0;
+      this.shakeOffsetX = 0;
+      this.shakeOffsetY = 0;
+    }
   }
 
   /** Update shake each frame */

@@ -27,6 +27,7 @@ export interface HUDData {
   heldPowerUps: readonly PowerUpInstance[];
   ghostTimer?: number;
   timeDilationTimer?: number;
+  reducedMotion?: boolean;
 }
 
 export class UI {
@@ -94,7 +95,7 @@ export class UI {
     const scoreNumY = topY + labelSize + 6 * scaleFactor;
     const scoreText = this.scoreDisplay.toLocaleString();
 
-    if (this.scorePulseTimer > 0) {
+    if (this.scorePulseTimer > 0 && !data.reducedMotion) {
       const pulse = 1 + this.scorePulseTimer * 2;
       const metrics = ctx.measureText(scoreText);
       const tx = hudTop.x + padding + metrics.width / 2;

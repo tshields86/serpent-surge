@@ -39,6 +39,7 @@ const TOTAL_PAGES = PAGES.length;
 export class HowToPlayScreen {
   private visible = false;
   private currentPage = 0;
+  private reducedMotion = false;
   private closeBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
   private prevBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
   private nextBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
@@ -54,8 +55,14 @@ export class HowToPlayScreen {
     this.currentPage = Math.max(0, Math.min(TOTAL_PAGES - 1, index));
   }
 
-  draw(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+  draw(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    reducedMotion: boolean = false,
+  ): void {
     if (!this.visible) return;
+    this.reducedMotion = reducedMotion;
 
     ctx.save();
     fillBackground(ctx, width, height);
@@ -150,7 +157,7 @@ export class HowToPlayScreen {
     ];
 
     let cy = y;
-    const now = performance.now();
+    const now = this.reducedMotion ? 0 : performance.now();
     for (const item of items) {
       cy = drawItemRow(ctx, cy, x, w, scale, (gx, gy, size) => {
         drawFood(ctx, item.type, gx + size / 2, gy + size / 2, size, now);
@@ -171,7 +178,7 @@ export class HowToPlayScreen {
     ];
 
     let cy = y;
-    const now = performance.now();
+    const now = this.reducedMotion ? 0 : performance.now();
     for (const item of items) {
       cy = drawItemRow(ctx, cy, x, w, scale, (gx, gy, size) => {
         drawHazard(ctx, item.type, 'active', null, gx + size / 2, gy + size / 2, size, now);

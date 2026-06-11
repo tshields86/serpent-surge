@@ -103,6 +103,9 @@ export class Game {
   private achievementToast: { icon: string; name: string; timer: number } | null = null;
   private boss: BossSnake | null = null;
   private screenshotMode = false;
+  /** Screenshot-only override: when true, every code path that reads
+   *  `persistedData.settings.reducedMotion` should behave as if it were on. */
+  private forcedReducedMotion = false;
   private leaderboard = new Leaderboard();
   private analytics = new Analytics();
 
@@ -518,6 +521,9 @@ export class Game {
       }
       if (s.crtEnabled !== undefined) {
         this.effects.setCrtEnabled(s.crtEnabled);
+      }
+      if (s.reducedMotion !== undefined) {
+        this.effects.setShakeEnabled(!s.reducedMotion);
       }
       // Load achievements
       if (data.achievementIds) {
@@ -1230,7 +1236,7 @@ export class Game {
         this.highScore,
         this.persistedData?.totalScales,
         dailyBest,
-        this.persistedData?.settings?.reducedMotion ?? false,
+        this.forcedReducedMotion || (this.persistedData?.settings?.reducedMotion ?? false),
       );
       this.effects.drawCRT(this.renderer.ctx);
       if (this.settingsScreen.isVisible()) {
@@ -1252,7 +1258,12 @@ export class Game {
         );
       }
       if (this.howToPlayScreen.isVisible()) {
-        this.howToPlayScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+        this.howToPlayScreen.draw(
+          this.renderer.ctx,
+          this.renderer.canvas.width,
+          this.renderer.canvas.height,
+          this.forcedReducedMotion || (this.persistedData?.settings?.reducedMotion ?? false),
+        );
       }
       return;
     }
@@ -1314,6 +1325,7 @@ export class Game {
       heldPowerUps: this.heldPowerUps,
       ghostTimer: this.ghostTimer,
       timeDilationTimer: this.timeDilationTimer,
+      reducedMotion: this.forcedReducedMotion || (this.persistedData?.settings?.reducedMotion ?? false),
     });
 
     // Pause button (top-right, 44x44 touch target)
@@ -1439,7 +1451,7 @@ export class Game {
   private drawHazards(): void {
     const ctx = this.renderer.ctx;
     const { cellSize } = this.renderer.layout;
-    const now = performance.now();
+    const now = this.animTime();
 
     for (const hazard of this.hazards) {
       const pixel = this.renderer.gridToPixel(hazard.position.x, hazard.position.y);
@@ -1609,10 +1621,16 @@ export class Game {
     }
   }
 
+  /** Wall-clock time, or a frozen value when reducedMotion is on. */
+  private animTime(): number {
+    const rm = this.forcedReducedMotion || (this.persistedData?.settings?.reducedMotion ?? false);
+    return rm ? 0 : performance.now();
+  }
+
   private drawFood(): void {
     const ctx = this.renderer.ctx;
     const { cellSize } = this.renderer.layout;
-    const now = performance.now();
+    const now = this.animTime();
 
     for (const food of this.foods) {
       const pixel = this.renderer.gridToPixel(food.position.x, food.position.y);
@@ -1901,7 +1919,7 @@ export class Game {
       crtEnabled: this.persistedData?.settings?.crtEnabled ?? true,
       muted: this.persistedData?.settings?.muted ?? false,
       colorblindMode: this.persistedData?.settings?.colorblindMode ?? false,
-      reducedMotion: this.persistedData?.settings?.reducedMotion ?? false,
+      reducedMotion: this.forcedReducedMotion || (this.persistedData?.settings?.reducedMotion ?? false),
       playerName: this.persistedData?.playerName ?? 'AAA',
     };
     this.settingsScreen.show(settings);
@@ -1948,8 +1966,10 @@ export class Game {
   }
 
   /** Set up a pre-built game state for app store screenshots */
-  setupScreenshot(scene: string): void {
+  setupScreenshot(scene: string, opts: { reducedMotion?: boolean } = {}): void {
     this.screenshotMode = true;
+    this.forcedReducedMotion = opts.reducedMotion ?? false;
+    if (opts.reducedMotion) this.effects.setShakeEnabled(false);
     // Give the renderer a frame to initialize layout
     requestAnimationFrame(() => {
       switch (scene) {
@@ -2305,6 +2325,7 @@ export class Game {
 
     // Apply to effects
     this.effects.setCrtEnabled(settings.crtEnabled);
+    this.effects.setShakeEnabled(!settings.reducedMotion);
 
     // Persist
     if (this.persistedData) {
