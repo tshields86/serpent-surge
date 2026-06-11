@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Serpent Surge — Visual System v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070b08;
+    --surface:#0c120d;
+    --line:rgba(54,248,122,.16);
+    --line-soft:rgba(54,248,122,.06);
+    --green:#36f87a;       /* brand / UI / navigation / snake */
+    --green-dim:#3f9d63;   /* secondary nav + labels */
+    --green-deep:#1f5c39;  /* inactive / hints */
+    --gold:#ffc24b;        /* score, scales, legendary */
+    --cyan:#49d8ff;        /* rare */
+    --white:#e9f3ea;       /* common + body text */
+    --coral:#ff5566;       /* danger ONLY */
+    --display:'Press Start 2P','Courier New',monospace;
+    --body:'VT323','Courier New',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--white);font-family:var(--body)}
+  body{
+    padding:48px 20px 80px;
+    background-image:
+      radial-gradient(120% 90% at 50% 0%, rgba(54,248,122,.05), transparent 60%),
+      radial-gradient(140% 120% at 50% 100%, rgba(0,0,0,.9), transparent 70%);
+    -webkit-font-smoothing:none;
+  }
+  /* CRT scanlines */
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+    background:repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,.22) 3px, rgba(0,0,0,0) 4px);
+    mix-blend-mode:multiply;opacity:.6;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+
+  /* glow helpers */
+  .g{text-shadow:0 0 4px var(--green),0 0 12px rgba(54,248,122,.65),0 0 26px rgba(54,248,122,.35)}
+  .gold-g{color:var(--gold);text-shadow:0 0 4px var(--gold),0 0 14px rgba(255,194,75,.5)}
+  .cyan-g{color:var(--cyan);text-shadow:0 0 4px var(--cyan),0 0 14px rgba(73,216,255,.5)}
+  .coral-g{color:var(--coral);text-shadow:0 0 4px var(--coral),0 0 14px rgba(255,85,102,.5)}
+
+  /* document masthead */
+  .mast{text-align:center;margin-bottom:42px}
+  .mast h1{font-family:var(--display);font-size:18px;letter-spacing:1px;color:var(--green);margin:0 0 14px}
+  .mast p{font-size:21px;color:var(--green-dim);margin:0;letter-spacing:.5px}
+
+  /* panels */
+  .panel{border:1px solid var(--line);border-radius:10px;background:var(--surface);
+    padding:22px 22px 26px;margin-bottom:26px;position:relative}
+  .eyebrow{font-family:var(--display);font-size:9px;letter-spacing:2px;color:var(--green-deep);
+    text-transform:uppercase;margin:0 0 18px}
+  .eyebrow b{color:var(--green)}
+
+  /* PALETTE */
+  .pal{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+  .sw{border:1px solid var(--line-soft);border-radius:8px;overflow:hidden;background:#0a0f0b}
+  .chip{height:54px}
+  .sw .meta{padding:9px 11px 12px}
+  .sw .name{font-family:var(--display);font-size:8px;letter-spacing:1px;color:var(--white);margin:0 0 6px}
+  .sw .role{font-size:17px;line-height:1.15;color:var(--green-dim)}
+  .sw .hex{font-size:15px;color:var(--green-deep);margin-top:3px}
+
+  /* TYPE */
+  .type-row{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end}
+  .type-block{flex:1;min-width:220px}
+  .type-tag{font-size:16px;color:var(--green-deep);letter-spacing:1px;margin-bottom:10px}
+  .disp-sample{font-family:var(--display);font-size:22px;color:var(--green);line-height:1.5}
+  .body-sample{font-size:23px;color:var(--white);line-height:1.25}
+  .body-sample .dim{color:var(--green-dim)}
+
+  /* phone frame */
+  .phones{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+  .phone{width:300px;border:2px solid var(--line);border-radius:22px;background:#050806;
+    padding:30px 22px 26px;position:relative;overflow:hidden}
+  .phone::before{content:"";position:absolute;inset:0;pointer-events:none;
+    box-shadow:inset 0 0 70px rgba(0,0,0,.85)}
+
+  /* TITLE screen mock */
+  .title-logo{font-family:var(--display);font-size:30px;line-height:1.45;text-align:center;
+    color:var(--green);margin:18px 0 0}
+  .title-cta{font-family:var(--display);font-size:12px;letter-spacing:2px;text-align:center;
+    color:var(--green);margin:54px 0 0;animation:pulse 2.2s ease-in-out infinite}
+  .title-cta .car{color:var(--green)}
+  .menu{margin-top:60px;display:flex;flex-direction:column;gap:20px;align-items:center}
+  .mi{font-family:var(--display);font-size:11px;letter-spacing:1.5px;color:var(--green-dim);
+    display:flex;align-items:center;gap:9px}
+  .mi .ar{color:var(--green-deep);font-size:10px}
+  .mi.lead{color:var(--green)}
+  .mi .pip{font-size:7px;color:var(--gold);border:1px solid var(--gold);border-radius:3px;
+    padding:2px 4px;letter-spacing:1px;text-shadow:none}
+
+  /* generic mock title bar reused on every modal */
+  .modal-title{font-family:var(--display);font-size:15px;letter-spacing:2px;text-align:center;
+    color:var(--green);margin:6px 0 4px}
+  .modal-sub{text-align:center;font-size:19px;letter-spacing:2px;margin:0 0 20px}
+
+  /* leaderboard rows */
+  .tabs{display:flex;gap:18px;justify-content:center;font-size:17px;letter-spacing:1px;margin-bottom:16px}
+  .tabs .on{color:var(--green)}
+  .tabs .off{color:var(--green-deep)}
+  .row{display:flex;align-items:center;font-size:20px;padding:5px 4px;border-bottom:1px solid var(--line-soft)}
+  .row .rk{width:26px;color:var(--green-deep)}
+  .row .nm{flex:1;color:var(--white);letter-spacing:1px}
+  .row .sc{color:var(--gold)}
+  .row.top .rk{color:var(--gold)}
+  .row.me{background:rgba(54,248,122,.08);border-left:2px solid var(--green);padding-left:8px}
+  .row.me .nm{color:var(--green)}
+
+  /* BUTTONS */
+  .btns{display:flex;flex-direction:column;gap:14px;max-width:300px}
+  .btn{font-family:var(--display);font-size:12px;letter-spacing:1px;text-align:center;
+    padding:15px;border-radius:9px;cursor:default}
+  .btn-primary{background:var(--green);color:#04210f;
+    box-shadow:0 0 18px rgba(54,248,122,.5);text-shadow:none}
+  .btn-secondary{background:transparent;color:var(--white);border:1px solid var(--line)}
+  .btn-close{background:none;color:var(--green-dim);font-size:11px;border:none;letter-spacing:2px}
+  .note{font-size:16px;color:var(--green-deep);margin-top:10px;line-height:1.3}
+
+  /* CARDS + rarity */
+  .cards{display:flex;gap:14px;flex-wrap:wrap}
+  .card{width:150px;border-radius:11px;background:#0a0f0b;padding:16px 13px;text-align:center;
+    border:2px solid}
+  .card.common{border-color:var(--white);box-shadow:0 0 16px rgba(233,243,234,.18)}
+  .card.rare{border-color:var(--cyan);box-shadow:0 0 16px rgba(73,216,255,.28)}
+  .card.legend{border-color:var(--gold);box-shadow:0 0 18px rgba(255,194,75,.32)}
+  .card .ic{height:46px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+  .card .cn{font-family:var(--display);font-size:9px;color:var(--white);line-height:1.5;margin-bottom:8px}
+  .card .rr{font-family:var(--display);font-size:7px;letter-spacing:1px}
+  .card.common .rr{color:var(--white)}
+  .card.rare .rr{color:var(--cyan)}
+  .card.legend .rr{color:var(--gold)}
+  .card .desc{font-size:15px;color:var(--green-dim);margin-top:8px;line-height:1.2}
+
+  /* HUD */
+  .hud{display:flex;flex-direction:column;gap:18px}
+  .hud-bar{display:flex;justify-content:space-between;align-items:flex-start}
+  .stat .lbl{font-family:var(--display);font-size:8px;letter-spacing:1px;color:var(--green-deep)}
+  .stat .val{font-family:var(--display);font-size:16px;color:var(--gold);text-shadow:0 0 10px rgba(255,194,75,.4)}
+  .stat.s2 .val{color:var(--green)}
+  .wave{margin-top:6px}
+  .wave .wlbl{font-size:16px;color:var(--green-dim);letter-spacing:1px;margin-bottom:5px}
+  .seg{display:flex;gap:3px}
+  .seg i{height:9px;flex:1;border-radius:2px;background:var(--green-deep)}
+  .seg i.on{background:var(--green);box-shadow:0 0 8px rgba(54,248,122,.7)}
+  .glyphs{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .gl{display:flex;flex-direction:column;align-items:center;gap:6px;width:74px;text-align:center}
+  .gl span{font-size:14px;color:var(--green-dim);line-height:1.1}
+  .pause{width:30px;height:30px;border:1px solid var(--green);border-radius:6px;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(54,248,122,.4)}
+  .pause i{width:4px;height:13px;background:var(--green);margin:0 2px;border-radius:1px}
+
+  .cap{font-size:16px;color:var(--green-deep);text-align:center;margin-top:8px;letter-spacing:1px}
+
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  @media (prefers-reduced-motion:reduce){.title-cta{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="mast">
+    <h1 class="g">SERPENT&nbsp;SURGE</h1>
+    <p>VISUAL SYSTEM&nbsp;&nbsp;//&nbsp;&nbsp;V1 PROPOSAL</p>
+  </div>
+
+  <!-- PALETTE -->
+  <section class="panel">
+    <p class="eyebrow">// <b>PALETTE</b> — EVERY COLOR MEANS ONE THING</p>
+    <div class="pal">
+      <div class="sw"><div class="chip" style="background:#36f87a"></div><div class="meta">
+        <p class="name">PHOSPHOR</p><div class="role">Brand · UI · nav · the snake</div><div class="hex">#36F87A</div></div></div>
+      <div class="sw"><div class="chip" style="background:#ffc24b"></div><div class="meta">
+        <p class="name">GOLD</p><div class="role">Score · Scales · Legendary</div><div class="hex">#FFC24B</div></div></div>
+      <div class="sw"><div class="chip" style="background:#49d8ff"></div><div class="meta">
+        <p class="name">CYAN</p><div class="role">Rare rarity</div><div class="hex">#49D8FF</div></div></div>
+      <div class="sw"><div class="chip" style="background:#e9f3ea"></div><div class="meta">
+        <p class="name">BONE</p><div class="role">Common · body text</div><div class="hex">#E9F3EA</div></div></div>
+      <div class="sw"><div class="chip" style="background:#ff5566"></div><div class="meta">
+        <p class="name">CORAL</p><div class="role">Danger ONLY — death · hazards</div><div class="hex">#FF5566</div></div></div>
+      <div class="sw"><div class="chip" style="background:#1f5c39"></div><div class="meta">
+        <p class="name">DEEP GRN</p><div class="role">Inactive · hints · grid</div><div class="hex">#1F5C39</div></div></div>
+    </div>
+  </section>
+
+  <!-- TYPE -->
+  <section class="panel">
+    <p class="eyebrow">// <b>TYPE</b> — TWO FACES, FIXED ROLES</p>
+    <div class="type-row">
+      <div class="type-block">
+        <div class="type-tag">DISPLAY — Press Start 2P · titles only</div>
+        <div class="disp-sample g">SERPENT<br>SURGE</div>
+      </div>
+      <div class="type-block">
+        <div class="type-tag">BODY — VT323 · everything else</div>
+        <div class="body-sample">Eat food to grow and clear waves.<br>
+        <span class="dim">Avoid walls, hazards, and your own tail.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TITLE SCREEN + LEADERBOARD -->
+  <section class="panel">
+    <p class="eyebrow">// <b>TITLE SCREEN</b> — UNIFIED MENU, EVEN RHYTHM</p>
+    <div class="phones">
+      <div class="phone">
+        <div class="title-logo g">SERPENT<br>SURGE</div>
+        <div class="title-cta g"><span class="car">&#9658;</span> TAP TO START</div>
+        <div class="menu">
+          <div class="mi lead"><span class="ar">&#9656;</span>DAILY CHALLENGE <span class="pip">NEW</span></div>
+          <div class="mi"><span class="ar">&#9656;</span>HOW TO PLAY</div>
+          <div class="mi"><span class="ar">&#9656;</span>COLLECTION</div>
+          <div class="mi"><span class="ar">&#9656;</span>LEADERBOARD</div>
+          <div class="mi"><span class="ar">&#9656;</span>SETTINGS</div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="modal-title g">LEADERBOARD</div>
+        <div class="modal-sub"><span class="cyan-g">ALL TIME</span> &nbsp; <span style="color:var(--green-deep)">DAILY</span></div>
+        <div class="row top"><span class="rk">1</span><span class="nm">ACE</span><span class="sc">4250</span></div>
+        <div class="row top"><span class="rk">2</span><span class="nm">VPR</span><span class="sc">3800</span></div>
+        <div class="row top"><span class="rk">3</span><span class="nm">SSS</span><span class="sc">3100</span></div>
+        <div class="row"><span class="rk">4</span><span class="nm">ZAP</span><span class="sc">2750</span></div>
+        <div class="row me"><span class="rk">5</span><span class="nm">YOU</span><span class="sc">2450</span></div>
+        <div class="row"><span class="rk">6</span><span class="nm">NYX</span><span class="sc">2400</span></div>
+        <div class="row"><span class="rk">7</span><span class="nm">KAI</span><span class="sc">1800</span></div>
+        <div style="text-align:center;margin-top:24px"><button class="btn-close">&#9664; CLOSE</button></div>
+      </div>
+    </div>
+    <p class="cap">Nav is one green family with brightness as hierarchy · gold/cyan stay reserved for value &amp; rarity · top 3 + your rank get emphasis</p>
+  </section>
+
+  <!-- BUTTONS -->
+  <section class="panel">
+    <p class="eyebrow">// <b>BUTTONS &amp; CLOSE</b> — SHARED ACROSS ALL SCREENS</p>
+    <div class="btns">
+      <div class="btn btn-primary">TRY AGAIN</div>
+      <div class="btn btn-secondary">SHARE</div>
+      <div class="btn btn-secondary">LEADERBOARD</div>
+      <button class="btn-close" style="margin-top:6px">&#9664; CLOSE</button>
+    </div>
+    <p class="note">CLOSE moves to calm green — it isn't destructive.<br>Coral is now reserved strictly for death &amp; hazards.</p>
+  </section>
+
+  <!-- CARDS + RARITY -->
+  <section class="panel">
+    <p class="eyebrow">// <b>POWER-UP CARDS</b> — BORDER = RARITY, CUSTOM GLYPHS</p>
+    <div class="cards">
+      <div class="card common">
+        <div class="ic">
+          <svg width="40" height="40" viewBox="0 0 40 40" style="filter:drop-shadow(0 0 6px rgba(233,243,234,.6))">
+            <path d="M8 20 H24 M24 20 l-6 -6 M24 20 l-6 6" stroke="#e9f3ea" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M32 20 H16 M16 20 l6 -6 M16 20 l6 6" stroke="#e9f3ea" stroke-width="3" fill="none" stroke-linecap="round" transform="translate(0,0)"/>
+          </svg>
+        </div>
+        <div class="cn">WALL WRAP</div>
+        <div class="rr">COMMON</div>
+        <div class="desc">Exit one side, enter the opposite.</div>
+      </div>
+      <div class="card rare">
+        <div class="ic">
+          <svg width="36" height="40" viewBox="0 0 36 40" style="filter:drop-shadow(0 0 7px rgba(73,216,255,.7))">
+            <path d="M8 6 H28 M8 34 H28 M10 6 C10 16 26 16 26 6 M10 34 C10 24 26 24 26 34" stroke="#49d8ff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path d="M14 30 H22 L18 24 Z" fill="#49d8ff"/>
+          </svg>
+        </div>
+        <div class="cn">TIME DILATION</div>
+        <div class="rr">RARE</div>
+        <div class="desc">Slow time on a near-miss.</div>
+      </div>
+      <div class="card legend">
+        <div class="ic">
+          <svg width="40" height="40" viewBox="0 0 40 40" style="filter:drop-shadow(0 0 8px rgba(255,194,75,.7))">
+            <path d="M20 6 A14 14 0 1 1 8 26" stroke="#ffc24b" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <circle cx="20" cy="6" r="3.5" fill="#ffc24b"/>
+            <path d="M6 24 l4 4 l4 -4" stroke="#ffc24b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="cn">OUROBOROS</div>
+        <div class="rr">LEGENDARY</div>
+        <div class="desc">Eating your tail heals you.</div>
+      </div>
+    </div>
+    <p class="note">One rarity vocabulary everywhere: COMMON / RARE / LEGENDARY (drops the stray “UNCOMMON” label).</p>
+  </section>
+
+  <!-- HUD + GLYPHS -->
+  <section class="panel">
+    <p class="eyebrow">// <b>HUD &amp; GLYPHS</b> — CLEARER LABELS, NO EMOJI</p>
+    <div class="hud">
+      <div class="hud-bar">
+        <div class="stat"><div class="lbl">SCORE</div><div class="val">1,250</div></div>
+        <div class="stat s2"><div class="lbl">ARENA</div><div class="val">2</div></div>
+        <div class="pause"><i></i><i></i></div>
+      </div>
+      <div class="wave">
+        <div class="wlbl">WAVE 2 OF 3 &nbsp;·&nbsp; FOOD 4 / 9</div>
+        <div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+
+      <div class="glyphs" style="margin-top:6px">
+        <div class="gl">
+          <svg width="34" height="34" viewBox="0 0 34 34" style="filter:drop-shadow(0 0 6px rgba(54,248,122,.8))">
+            <rect x="6" y="6" width="22" height="22" rx="5" fill="#36f87a"/>
+            <rect x="11" y="13" width="4" height="4" fill="#04210f"/>
+            <rect x="19" y="13" width="4" height="4" fill="#04210f"/>
+          </svg>
+          <span>SNAKE HEAD<br>(faces dir.)</span>
+        </div>
+        <div class="gl">
+          <svg width="34" height="34" viewBox="0 0 34 34" style="filter:drop-shadow(0 0 6px rgba(255,85,102,.7))">
+            <circle cx="17" cy="18" r="9" fill="#ff5566"/><rect x="15" y="5" width="3" height="6" rx="1.5" fill="#3f9d63"/></svg>
+          <span>APPLE<br>+10</span>
+        </div>
+        <div class="gl">
+          <svg width="34" height="34" viewBox="0 0 34 34" style="filter:drop-shadow(0 0 7px rgba(255,194,75,.8))">
+            <circle cx="17" cy="18" r="9" fill="#ffc24b"/><circle cx="17" cy="18" r="12.5" fill="none" stroke="#ffc24b" stroke-width="1.5" opacity=".55"/></svg>
+          <span>GOLDEN<br>+50</span>
+        </div>
+        <div class="gl">
+          <svg width="34" height="34" viewBox="0 0 34 34" style="filter:drop-shadow(0 0 6px rgba(73,216,255,.7))">
+            <circle cx="17" cy="17" r="8" fill="#49d8ff"/><path d="M12 17 H22" stroke="#04212b" stroke-width="3" stroke-linecap="round"/></svg>
+          <span>SHRINK<br>-2</span>
+        </div>
+        <div class="gl">
+          <svg width="34" height="34" viewBox="0 0 34 34" style="filter:drop-shadow(0 0 6px rgba(255,140,40,.8))">
+            <circle cx="18" cy="20" r="8" fill="#ff8c28"/><path d="M22 12 q5 -4 7 1" stroke="#ffc24b" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="29" cy="13" r="2" fill="#ffe08a"/></svg>
+          <span>BOMB<br>clears 3×3</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

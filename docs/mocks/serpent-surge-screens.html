@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Serpent Surge — Title, Collection, Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070b08; --surface:#0c120d; --line:rgba(54,248,122,.16); --line-soft:rgba(54,248,122,.06);
+    --green:#36f87a; --green-dim:#3f9d63; --green-deep:#1f5c39;
+    --gold:#ffc24b; --cyan:#49d8ff; --white:#e9f3ea; --coral:#ff5566;
+    --display:'Press Start 2P','Courier New',monospace; --body:'VT323','Courier New',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--white);font-family:var(--body)}
+  body{padding:48px 20px 80px;background-image:
+      radial-gradient(120% 90% at 50% 0%, rgba(54,248,122,.05), transparent 60%),
+      radial-gradient(140% 120% at 50% 100%, rgba(0,0,0,.9), transparent 70%);}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+    background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.2) 3px,rgba(0,0,0,0) 4px);
+    mix-blend-mode:multiply;opacity:.55;}
+  .wrap{max-width:1120px;margin:0 auto}
+  .g{text-shadow:0 0 4px var(--green),0 0 12px rgba(54,248,122,.6),0 0 26px rgba(54,248,122,.35)}
+  .gold-g{color:var(--gold);text-shadow:0 0 4px var(--gold),0 0 14px rgba(255,194,75,.5)}
+
+  .mast{text-align:center;margin-bottom:42px}
+  .mast h1{font-family:var(--display);font-size:17px;color:var(--green);margin:0 0 12px}
+  .mast p{font-size:21px;color:var(--green-dim);margin:0}
+
+  .phones{display:flex;gap:30px;flex-wrap:wrap;justify-content:center}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .col .tag{font-family:var(--display);font-size:8px;letter-spacing:2px;color:var(--green-deep)}
+  .phone{width:330px;height:680px;border:2px solid var(--line);border-radius:26px;background:#050806;
+    position:relative;overflow:hidden;display:flex;flex-direction:column}
+  .phone::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:9;box-shadow:inset 0 0 90px rgba(0,0,0,.9)}
+
+  /* ---- TITLE ---- */
+  .title-screen{flex:1;display:flex;flex-direction:column;align-items:center;padding:60px 24px 34px}
+  .logo{font-family:var(--display);font-size:30px;line-height:1.5;text-align:center;color:var(--green);margin-top:18px}
+  .cta{font-family:var(--display);font-size:12px;letter-spacing:2px;color:var(--green);margin-top:52px;
+    animation:pulse 2.2s ease-in-out infinite}
+  .menu{margin-top:auto;display:flex;flex-direction:column;gap:0;width:100%;align-items:center}
+  .mi{font-family:var(--display);font-size:11px;letter-spacing:1.2px;color:var(--green-dim);
+    display:flex;align-items:center;gap:9px;padding:11px 0}
+  .mi .ar{color:var(--green-deep);font-size:9px}
+  .mi.lead{color:var(--green)}
+  .mi .pip{font-size:6px;color:var(--gold);border:1px solid var(--gold);border-radius:3px;padding:2px 4px;margin-left:8px}
+  .mdiv{width:120px;height:1px;background:var(--line-soft);margin:10px 0}
+
+  /* ---- shared modal chrome ---- */
+  .m-head{padding:30px 24px 8px;text-align:center}
+  .m-title{font-family:var(--display);font-size:15px;letter-spacing:2px;color:var(--green);margin:0}
+  .m-sub{font-size:20px;letter-spacing:1px;margin-top:10px}
+  .m-body{flex:1;overflow:hidden;padding:6px 18px}
+  .m-foot{padding:14px 0 26px;text-align:center}
+  .m-foot button,.helper{background:none;border:none;font-family:var(--display);font-size:10px;letter-spacing:2px;color:var(--green-dim)}
+  .helper{display:block;font-family:var(--body);font-size:16px;color:var(--green-deep);letter-spacing:1px;text-align:center;margin:4px 0 14px}
+
+  /* ---- COLLECTION ---- */
+  .balance{display:inline-flex;align-items:center;gap:7px;font-family:var(--display);font-size:13px;color:var(--gold);
+    text-shadow:0 0 12px rgba(255,194,75,.4)}
+  .uc{display:flex;align-items:center;gap:12px;border:1.5px solid;border-radius:9px;padding:11px 13px;margin-bottom:10px;background:#0a0f0b}
+  .uc.owned{border-color:var(--green)}
+  .uc.buy{border-color:var(--gold)}
+  .uc.lock{border-color:var(--line);opacity:.72}
+  .uc .ui{flex:1}
+  .uc .un{font-family:var(--display);font-size:9px;color:var(--white);letter-spacing:.5px}
+  .uc .ud{font-size:15px;color:var(--green-dim);margin-top:5px;line-height:1.1}
+  .uc .ur{font-family:var(--display);font-size:8px;letter-spacing:1px;white-space:nowrap}
+  .uc.owned .ur{color:var(--green)}
+  .uc.buy .ur{color:var(--gold)}
+  .uc.lock .ur{color:var(--green-deep)}
+  .skins{display:flex;gap:8px;margin-top:6px}
+  .skin{width:30px;height:30px;border-radius:6px;border:1px solid var(--line)}
+
+  /* ---- SETTINGS ---- */
+  .srow{display:flex;align-items:center;justify-content:space-between;padding:14px 2px;border-bottom:1px solid var(--line-soft)}
+  .srow .sl{font-family:var(--display);font-size:9px;color:var(--white);letter-spacing:.5px}
+  .toggle{width:46px;height:22px;border-radius:11px;position:relative;border:1px solid}
+  .toggle.on{background:rgba(54,248,122,.25);border-color:var(--green)}
+  .toggle.off{background:rgba(255,255,255,.05);border-color:var(--green-deep)}
+  .toggle .kn{position:absolute;top:1.5px;width:17px;height:17px;border-radius:50%}
+  .toggle.on .kn{right:2px;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .toggle.off .kn{left:2px;background:var(--green-deep)}
+  .slider{display:flex;align-items:center;gap:8px;width:130px}
+  .track{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.08);position:relative;overflow:hidden}
+  .track .fill{position:absolute;left:0;top:0;bottom:0;background:var(--green);box-shadow:0 0 8px rgba(54,248,122,.6)}
+  .slider .sv{font-family:var(--display);font-size:9px;color:var(--green);width:22px;text-align:right}
+  .name-ctl{display:flex;align-items:center;gap:5px}
+  .name-ctl .ltr{font-family:var(--display);font-size:12px;color:var(--gold);text-shadow:0 0 8px rgba(255,194,75,.4)}
+  .name-ctl .pm{font-family:var(--display);font-size:11px;color:var(--green)}
+  .name-ctl .pm.mn{color:var(--coral)}
+
+  .note{font-size:17px;color:var(--green-dim);max-width:760px;margin:30px auto 0;line-height:1.5;text-align:center}
+  .note b{color:var(--green)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  @media (prefers-reduced-motion:reduce){.cta{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mast"><h1 class="g">SERPENT&nbsp;SURGE</h1><p>TITLE · COLLECTION · SETTINGS</p></div>
+
+  <div class="phones">
+
+    <!-- TITLE -->
+    <div class="col"><span class="tag">TITLE</span>
+      <div class="phone"><div class="title-screen">
+        <div class="logo g">SERPENT<br>SURGE</div>
+        <div class="cta g">&#9658; TAP TO START</div>
+        <div class="menu">
+          <div class="mi lead"><span class="ar">&#9656;</span>DAILY CHALLENGE<span class="pip">NEW</span></div>
+          <div class="mi"><span class="ar">&#9656;</span>COLLECTION</div>
+          <div class="mi"><span class="ar">&#9656;</span>LEADERBOARD</div>
+          <div class="mdiv"></div>
+          <div class="mi"><span class="ar">&#9656;</span>HOW TO PLAY</div>
+          <div class="mi"><span class="ar">&#9656;</span>SETTINGS</div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- COLLECTION -->
+    <div class="col"><span class="tag">COLLECTION</span>
+      <div class="phone">
+        <div class="m-head">
+          <p class="m-title g">COLLECTION</p>
+          <div class="m-sub"><span class="balance">&#9670; 350 SCALES</span></div>
+        </div>
+        <div class="m-body">
+          <div class="uc owned"><div class="ui"><div class="un">STARTING LENGTH 4</div><div class="ud">Begin every run at length 4.</div></div><div class="ur">OWNED</div></div>
+          <div class="uc buy"><div class="ui"><div class="un">REROLL</div><div class="ud">Reroll power-up offers once per arena.</div></div><div class="ur">200 &#9670;</div></div>
+          <div class="uc buy"><div class="ui"><div class="un">ARENA PREVIEW</div><div class="ud">See the next arena before you enter.</div></div><div class="ur">300 &#9670;</div></div>
+          <div class="uc lock"><div class="ui"><div class="un">EXTRA LIFE</div><div class="ud">Survive one fatal hit per run.</div></div><div class="ur">500 &#9670;</div></div>
+          <div class="uc lock"><div class="ui"><div class="un">ENDLESS MODE</div><div class="ud">Unlock the no-limit survival mode.</div></div><div class="ur">750 &#9670;</div></div>
+          <div style="font-family:var(--display);font-size:8px;color:var(--green-deep);letter-spacing:1px;margin:14px 0 8px">SNAKE SKINS</div>
+          <div class="skins">
+            <div class="skin" style="background:#36f87a;box-shadow:0 0 8px rgba(54,248,122,.5)"></div>
+            <div class="skin" style="background:#49d8ff"></div>
+            <div class="skin" style="background:#ffc24b"></div>
+            <div class="skin" style="background:#a64dff"></div>
+            <div class="skin" style="border-style:dashed;color:var(--green-deep);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--green-deep)">+</div>
+          </div>
+        </div>
+        <div class="helper">TAP AN ITEM TO SPEND SCALES</div>
+        <div class="m-foot"><button>&#9664; CLOSE</button></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="col"><span class="tag">SETTINGS &nbsp;(OPAQUE BACKDROP)</span>
+      <div class="phone">
+        <div class="m-head"><p class="m-title g">SETTINGS</p></div>
+        <div class="m-body" style="padding-top:14px">
+          <div class="srow"><span class="sl">NAME</span>
+            <div class="name-ctl"><span class="ltr">A</span><span class="ltr">C</span><span class="ltr">E</span>
+              <span class="pm">&#43;</span><span class="pm mn">&minus;</span></div></div>
+          <div class="srow"><span class="sl">MUSIC</span>
+            <div class="slider"><div class="track"><div class="fill" style="width:70%"></div></div><span class="sv">70</span></div></div>
+          <div class="srow"><span class="sl">SFX</span>
+            <div class="slider"><div class="track"><div class="fill" style="width:80%"></div></div><span class="sv">80</span></div></div>
+          <div class="srow"><span class="sl">CRT EFFECT</span><div class="toggle on"><div class="kn"></div></div></div>
+          <div class="srow"><span class="sl">MUTED</span><div class="toggle off"><div class="kn"></div></div></div>
+          <div class="srow"><span class="sl">COLORBLIND</span><div class="toggle off"><div class="kn"></div></div></div>
+          <div class="srow" style="border-bottom:none"><span class="sl">REDUCED MOTION</span><div class="toggle off"><div class="kn"></div></div></div>
+        </div>
+        <div class="m-foot"><button>&#9664; CLOSE</button></div>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="note"><b>Title:</b> logo up top, primary action breathing on its own, menu in the new order with a hairline splitting the loop from the meta. <b>Collection:</b> the full unlock set (owned / affordable in gold / locked) plus a Skins shelf, so the screen earns its space instead of sitting half-empty. <b>Settings:</b> solid backdrop — the title menu no longer bleeds through — with one consistent toggle and one consistent slider component reused down the list, and CLOSE now green like everywhere else.</p>
+</div>
+</body>
+</html>

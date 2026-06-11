@@ -1,4 +1,4 @@
-// Gameplay HUD (DESIGN_SPEC.md §5 Gameplay/HUD; mock: serpent-surge-gameplay.html).
+// Gameplay HUD (docs/DESIGN_SPEC.md §5 Gameplay/HUD; mock: docs/mocks/serpent-surge-gameplay.html).
 // Top: SCORE (gold) · ARENA (green) · pause (green outline).
 // Wave line: `WAVE n OF N · FOOD x / y` + segmented fill bar.
 // Bottom: LENGTH · HELD pixel chips with stack counts (no emoji).

@@ -1,4 +1,4 @@
-// Pixel glyphs for the held-power-up chips (DESIGN_SPEC.md §3 + §5 bottom HUD).
+// Pixel glyphs for the held-power-up chips (docs/DESIGN_SPEC.md §3 + §5 bottom HUD).
 // One small ALL-CAPS shape per power-up — no emoji. Each painter receives the
 // chip's inner center (cx, cy) and a size in CSS px.
 

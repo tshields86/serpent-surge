@@ -1,4 +1,4 @@
-// Title screen — DESIGN_SPEC.md §5 (mock: serpent-surge-screens.html).
+// Title screen — docs/DESIGN_SPEC.md §5 (mock: docs/mocks/serpent-surge-screens.html).
 // Logo upper third · primary CTA pulses (off under Reduced Motion) ·
 // menu reordered: Daily → Collection → Leaderboard → hairline → How to Play → Settings.
 // Whole menu uses the green family with brightness as hierarchy.

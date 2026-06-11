@@ -1,4 +1,4 @@
-// Canvas helpers that consume the tokens (DESIGN_SPEC.md §2.3, §2.4).
+// Canvas helpers that consume the tokens (docs/DESIGN_SPEC.md §2.3, §2.4).
 // Keeps screen renderers free of stringified font math and shadow bookkeeping.
 
 import { COLOR, CRT, FONT, GLOW, type GlowName } from './tokens';

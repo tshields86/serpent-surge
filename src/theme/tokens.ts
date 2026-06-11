@@ -1,4 +1,4 @@
-// Serpent Surge — Design tokens (DESIGN_SPEC.md §2)
+// Serpent Surge — Design tokens (docs/DESIGN_SPEC.md §2)
 // Single source of truth. No hardcoded hex anywhere else.
 
 export const COLOR = {

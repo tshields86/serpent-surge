@@ -1,5 +1,5 @@
-// Item + hazard glyphs (DESIGN_SPEC.md §4).
-// Geometry adapted from serpent-surge-items.html and serpent-surge-gameplay.html.
+// Item + hazard glyphs (docs/DESIGN_SPEC.md §4).
+// Geometry adapted from docs/mocks/serpent-surge-items.html and docs/mocks/serpent-surge-gameplay.html.
 // Food = soft rounded silhouettes; hazards = hard/spiky/hazy.
 
 import { applyGlow, clearGlow, COLOR } from '../theme';

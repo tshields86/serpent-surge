@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Serpent Surge — Items, Hazards & Menu Order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070b08; --surface:#0c120d; --line:rgba(54,248,122,.16); --line-soft:rgba(54,248,122,.06);
+    --green:#36f87a; --green-dim:#3f9d63; --green-deep:#1f5c39;
+    --gold:#ffc24b; --cyan:#49d8ff; --white:#e9f3ea; --coral:#ff5566; --purple:#a64dff;
+    --display:'Press Start 2P','Courier New',monospace; --body:'VT323','Courier New',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--white);font-family:var(--body)}
+  body{padding:48px 20px 80px;background-image:
+      radial-gradient(120% 90% at 50% 0%, rgba(54,248,122,.05), transparent 60%),
+      radial-gradient(140% 120% at 50% 100%, rgba(0,0,0,.9), transparent 70%);}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+    background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.22) 3px,rgba(0,0,0,0) 4px);
+    mix-blend-mode:multiply;opacity:.6;}
+  .wrap{max-width:760px;margin:0 auto}
+  .g{text-shadow:0 0 4px var(--green),0 0 12px rgba(54,248,122,.65),0 0 26px rgba(54,248,122,.35)}
+  .gold-g{color:var(--gold);text-shadow:0 0 4px var(--gold),0 0 14px rgba(255,194,75,.5)}
+
+  .mast{text-align:center;margin-bottom:42px}
+  .mast h1{font-family:var(--display);font-size:17px;letter-spacing:1px;color:var(--green);margin:0 0 14px}
+  .mast p{font-size:21px;color:var(--green-dim);margin:0;letter-spacing:.5px}
+
+  .panel{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:22px;margin-bottom:26px}
+  .eyebrow{font-family:var(--display);font-size:9px;letter-spacing:2px;color:var(--green-deep);margin:0 0 18px}
+  .eyebrow b{color:var(--green)}
+  .cap{font-size:16px;color:var(--green-deep);text-align:center;margin-top:16px;letter-spacing:.5px;line-height:1.4}
+
+  .phones{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+  .phone{width:320px;border:2px solid var(--line);border-radius:22px;background:#050806;padding:26px 20px 24px;position:relative;overflow:hidden}
+  .phone::before{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 70px rgba(0,0,0,.85)}
+
+  .modal-title{font-family:var(--display);font-size:15px;letter-spacing:2px;text-align:center;color:var(--green);margin:2px 0 6px}
+  .modal-sub{text-align:center;font-family:var(--display);font-size:11px;letter-spacing:2px;margin:0 0 22px}
+
+  /* item rows */
+  .item{display:flex;gap:14px;align-items:flex-start;margin-bottom:20px}
+  .item .ico{flex:0 0 44px;height:44px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+  .item .body{flex:1}
+  .item .nm{font-family:var(--display);font-size:11px;letter-spacing:1px;color:var(--white);display:flex;align-items:center;gap:8px}
+  .item .eff{font-size:18px;color:var(--gold);margin-top:5px;letter-spacing:.5px}
+  .item .ds{font-size:17px;color:var(--green-dim);margin-top:3px;line-height:1.15}
+  .tag{font-family:var(--display);font-size:6px;letter-spacing:1px;padding:3px 5px;border-radius:3px;border:1px solid}
+  .tag.deadly{color:var(--coral);border-color:var(--coral)}
+  .tag.neutral{color:var(--cyan);border-color:var(--cyan)}
+
+  .dots{display:flex;gap:8px;justify-content:center;margin-top:8px}
+  .dots i{width:7px;height:7px;border-radius:50%;background:var(--green-deep)}
+  .dots i.on{background:var(--green);box-shadow:0 0 7px var(--green)}
+  .close{text-align:center;margin-top:18px}
+  .close button{background:none;border:none;color:var(--green-dim);font-family:var(--display);font-size:10px;letter-spacing:2px}
+
+  /* menu order panel */
+  .menu-demo{max-width:330px;margin:0 auto}
+  .mrow{display:flex;align-items:center;gap:12px;font-family:var(--display);font-size:11px;letter-spacing:1px;
+    color:var(--green-dim);padding:13px 4px}
+  .mrow .ar{color:var(--green-deep);font-size:9px}
+  .mrow.lead{color:var(--green)}
+  .mrow .pip{font-size:6px;color:var(--gold);border:1px solid var(--gold);border-radius:3px;padding:2px 4px;margin-left:auto}
+  .divider{height:1px;background:var(--line-soft);margin:10px 14px}
+  .divlabel{font-size:14px;color:var(--green-deep);letter-spacing:2px;text-align:center;margin:6px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="mast">
+    <h1 class="g">SERPENT&nbsp;SURGE</h1>
+    <p>ITEMS · HAZARDS · MENU ORDER</p>
+  </div>
+
+  <!-- MENU ORDER -->
+  <section class="panel">
+    <p class="eyebrow">// <b>TITLE MENU</b> — RECOMMENDED ORDER</p>
+    <div class="menu-demo">
+      <div class="divlabel">— THE LOOP —</div>
+      <div class="mrow lead"><span class="ar">&#9656;</span>DAILY CHALLENGE<span class="pip">NEW</span></div>
+      <div class="mrow"><span class="ar">&#9656;</span>COLLECTION</div>
+      <div class="mrow"><span class="ar">&#9656;</span>LEADERBOARD</div>
+      <div class="divider"></div>
+      <div class="divlabel">— META —</div>
+      <div class="mrow"><span class="ar">&#9656;</span>HOW TO PLAY</div>
+      <div class="mrow"><span class="ar">&#9656;</span>SETTINGS</div>
+    </div>
+    <p class="cap">Ordered by how often a returning player taps each one · play/progress/compete up top, reference + config sink to the bottom</p>
+  </section>
+
+  <!-- FOOD + HAZARDS -->
+  <section class="panel">
+    <p class="eyebrow">// <b>REDESIGNED ITEMS</b> — SHAPE = WHAT IT DOES, COLOR = IDENTITY</p>
+    <div class="phones">
+
+      <!-- FOOD -->
+      <div class="phone">
+        <div class="modal-title g">HOW TO PLAY</div>
+        <div class="modal-sub gold-g">FOOD TYPES</div>
+
+        <div class="item">
+          <div class="ico" style="filter:drop-shadow(0 0 7px rgba(255,77,82,.7))">
+            <svg viewBox="0 0 48 48" width="42" height="42">
+              <path d="M24 14C18 14 13 18 13 26 13 34 19 40 24 40 29 40 35 34 35 26 35 18 30 14 24 14Z" fill="#ff4d52"/>
+              <rect x="22.5" y="9" width="3" height="7" rx="1.5" fill="#3f9d63"/>
+              <path d="M25 11q6 -3 8 2q-6 2 -8 -2Z" fill="#3f9d63"/>
+              <circle cx="20" cy="24" r="2.5" fill="#ffb0b3" opacity=".8"/></svg>
+          </div>
+          <div class="body"><div class="nm">APPLE</div><div class="eff">+10 PTS · +1 LENGTH</div>
+            <div class="ds">Basic food. Eat to grow and score.</div></div>
+        </div>
+
+        <div class="item">
+          <div class="ico" style="filter:drop-shadow(0 0 8px rgba(255,194,75,.8))">
+            <svg viewBox="0 0 48 48" width="42" height="42">
+              <circle cx="24" cy="26" r="14" fill="none" stroke="#ffc24b" stroke-width="1.2" opacity=".4"/>
+              <path d="M24 14C18 14 13 18 13 26 13 34 19 40 24 40 29 40 35 34 35 26 35 18 30 14 24 14Z" fill="#ffc24b"/>
+              <rect x="22.5" y="9" width="3" height="7" rx="1.5" fill="#7a5a12"/>
+              <path d="M10 14l1.4 3 3 1.4 -3 1.4 -1.4 3 -1.4 -3 -3 -1.4 3 -1.4Z" fill="#ffe08a"/></svg>
+          </div>
+          <div class="body"><div class="nm">GOLDEN APPLE</div><div class="eff">+50 PTS · +1 LENGTH</div>
+            <div class="ds">Rare and valuable. Pulsing gold glow.</div></div>
+        </div>
+
+        <div class="item">
+          <div class="ico" style="filter:drop-shadow(0 0 7px rgba(73,216,255,.7))">
+            <svg viewBox="0 0 48 48" width="42" height="42">
+              <rect x="11" y="16" width="26" height="18" rx="9" fill="#49d8ff"/>
+              <path d="M18 22l6 6 6 -6" stroke="#04212b" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="body"><div class="nm">SHRINK PELLET</div><div class="eff">+25 PTS · &minus;2 LENGTH</div>
+            <div class="ds">Makes you shorter. Great for tight spaces.</div></div>
+        </div>
+
+        <div class="item">
+          <div class="ico" style="filter:drop-shadow(0 0 7px rgba(92,255,92,.7))">
+            <svg viewBox="0 0 48 48" width="42" height="42">
+              <path d="M6 19h6M5 24h8M6 29h6" stroke="#5cff5c" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+              <circle cx="27" cy="24" r="11" fill="#5cff5c"/>
+              <path d="M21 18l6 6 -6 6M28 18l6 6 -6 6" stroke="#04210f" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="body"><div class="nm">SPEED FRUIT</div><div class="eff">+15 PTS · 1.5&times; SPEED</div>
+            <div class="ds">Temporary speed boost for 3 seconds.</div></div>
+        </div>
+
+        <div class="item">
+          <div class="ico" style="filter:drop-shadow(0 0 7px rgba(255,140,40,.8))">
+            <svg viewBox="0 0 48 48" width="42" height="42">
+              <circle cx="23" cy="28" r="11" fill="#ff8c28"/>
+              <path d="M28 14q5 -5 9 0" stroke="#ffc24b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <path d="M37 9l1 3 3 1 -3 1 -1 3 -1 -3 -3 -1 3 -1Z" fill="#ffe08a"/>
+              <circle cx="19" cy="26" r="2.5" fill="#ffd9a8" opacity=".7"/></svg>
+          </div>
+          <div class="body"><div class="nm">BOMB FRUIT</div><div class="eff">+30 PTS · CLEARS HAZARDS</div>
+            <div class="ds">Destroys hazards in a 3&times;3 area.</div></div>
+        </div>
+
+        <div class="dots"><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="close"><button>&#9664; CLOSE</button></div>
+      </div>
+
+      <!-- HAZARDS -->
+      <div class="phone">
+        <div class="modal-title g">HOW TO PLAY</div>
+        <div class="modal-sub gold-g">HAZARDS</div>
+
+        <div class="item">
+          <div class="ico" style="filter:drop-shadow(0 0 6px rgba(138,43,43,.8))">
+            <svg viewBox="0 0 48 48" width="42" height="42">
+              <rect x="10" y="12" width="28" height="24" rx="2" fill="#8a2b2b"/>
+              <path d="M10 20h28M10 28h28M19 12v8M29 20v8M19 28v8" stroke="#5a1818" stroke-width="1.5"/></svg>
+          </div>
+          <div class="body"><div class="nm">WALL BLOCK <span class="tag deadly">DEADLY</span></div>
+            <div class="ds">Static obstacle. Destroyed by Bomb Fruit or Head Bash.</div></div>
+        </div>
+
+        <div class="item">
+          <div class="ico" style="filter:drop-shadow(0 0 7px rgba(255,77,82,.8))">
+            <svg viewBox="0 0 48 48" width="42" height="42">
+              <rect x="9" y="32" width="30" height="6" rx="1" fill="#7a2a2e"/>
+              <path d="M11 32l4 -11 4 11ZM20 32l4 -13 4 13ZM29 32l4 -11 4 11Z" fill="#ff4d52"/></svg>
+          </div>
+          <div class="body"><div class="nm">SPIKE TRAP <span class="tag deadly">DEADLY</span></div>
+            <div class="ds">Toggles every few ticks. Safe when retracted, deadly when red.</div></div>
+        </div>
+
+        <div class="item">
+          <div class="ico" style="filter:drop-shadow(0 0 7px rgba(166,77,255,.8))">
+            <svg viewBox="0 0 48 48" width="42" height="42">
+              <path d="M14 30q-2 -8 6 -9q4 -6 9 -1q7 0 5 8q2 6 -5 6q-7 3 -10 -1q-7 1 -5 -3Z" fill="#a64dff" opacity=".9"/>
+              <circle cx="20" cy="26" r="2" fill="#d6a3ff"/><circle cx="28" cy="29" r="1.6" fill="#d6a3ff"/><circle cx="24" cy="23" r="1.3" fill="#d6a3ff"/></svg>
+          </div>
+          <div class="body"><div class="nm">POISON TRAIL <span class="tag deadly">DEADLY</span></div>
+            <div class="ds">Fades after 8 ticks. Avoid the purple glow until it clears.</div></div>
+        </div>
+
+        <div class="item">
+          <div class="ico" style="filter:drop-shadow(0 0 7px rgba(73,216,255,.8))">
+            <svg viewBox="0 0 48 48" width="42" height="42">
+              <circle cx="24" cy="24" r="14" fill="none" stroke="#49d8ff" stroke-width="2.5" opacity=".45"/>
+              <circle cx="24" cy="24" r="9.5" fill="none" stroke="#49d8ff" stroke-width="2.5" opacity=".75"/>
+              <circle cx="24" cy="24" r="4.5" fill="#49d8ff"/></svg>
+          </div>
+          <div class="body"><div class="nm">WARP HOLE <span class="tag neutral">NEUTRAL</span></div>
+            <div class="ds">Comes in pairs. Enter one, exit the other. Disorienting, not deadly.</div></div>
+        </div>
+
+        <div class="item">
+          <div class="ico" style="filter:drop-shadow(0 0 7px rgba(255,160,51,.8))">
+            <svg viewBox="0 0 48 48" width="42" height="42">
+              <path d="M16 13v13a8 8 0 0 0 16 0V13" fill="none" stroke="#ffa033" stroke-width="5"/>
+              <rect x="13.5" y="12" width="5" height="6" fill="#e9f3ea"/><rect x="29.5" y="12" width="5" height="6" fill="#e9f3ea"/>
+              <path d="M37 18q4 6 0 12M41 16q5 8 0 16" stroke="#ffa033" stroke-width="1.5" fill="none" opacity=".5"/></svg>
+          </div>
+          <div class="body"><div class="nm">MAGNET <span class="tag neutral">NEUTRAL</span></div>
+            <div class="ds">Pulls nearby food toward it each tick. Plan your route.</div></div>
+        </div>
+
+        <div class="dots"><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+        <div class="close"><button>&#9664; CLOSE</button></div>
+      </div>
+
+    </div>
+    <p class="cap">Food = soft rounded silhouettes · hazards = hard / spiky shapes · Warp Hole moved from purple to cyan so purple now means &ldquo;poison, deadly&rdquo; only · DEADLY vs NEUTRAL tags tell players what actually kills them</p>
+  </section>
+
+</div>
+</body>
+</html>

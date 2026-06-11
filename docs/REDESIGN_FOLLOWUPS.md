@@ -34,11 +34,6 @@ Polish items deferred during the App Store redesign — revisit before final QA.
 
 ## Infrastructure
 
-- [ ] **Mock files (`serpent-surge-*.html`) and `DESIGN_SPEC.md` /
-  `REDESIGN_TASKS.md` are untracked.** Decide whether they belong in the repo
-  as historical reference or stay out. They've been used as the source of truth
-  this whole pass.
-
 - [ ] **Self-host Press Start 2P + VT323 for the Capacitor build.** The dev/web
   builds use Google Fonts; the iOS / Android Capacitor builds need offline
   font files. Flagged in `index.html` with a TODO comment.

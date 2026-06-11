@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Serpent Surge is a roguelike reimagining of Snake built with TypeScript + HTML5 Canvas + Vite. Target platforms: Web (PWA), mobile web, iOS/Android (Capacitor). See `SERPENT_SURGE_SPEC.md` for the full game design document.
+Serpent Surge is a roguelike reimagining of Snake built with TypeScript + HTML5 Canvas + Vite. Target platforms: Web (PWA), mobile web, iOS/Android (Capacitor). See `docs/SERPENT_SURGE_SPEC.md` for the full game design document.
 
 ---
 
@@ -24,7 +24,7 @@ Serpent Surge is a roguelike reimagining of Snake built with TypeScript + HTML5 
 ### Commit Frequently
 - Commit after every meaningful change — do NOT batch large changes into single commits.
 - Aim for small, atomic commits: one feature, one fix, one refactor per commit.
-- Commit after completing each task or subtask from `TASKS.md`.
+- Commit after completing each task or subtask from `docs/TASKS.md`.
 - Commit before and after any risky refactor.
 
 ### Commit Message Format
@@ -120,7 +120,7 @@ After each visual feature:
 ## Code Style & Architecture
 
 ### File Organization
-Follow the project structure defined in `TECHNICAL_SPEC.md`. Key rules:
+Follow the project structure defined in `docs/TECHNICAL_SPEC.md`. Key rules:
 - One class/module per file
 - Game logic in `src/game/`
 - Rendering in `src/rendering/`
@@ -192,10 +192,18 @@ After each phase:
 
 | File | Purpose |
 |------|---------|
-| `SERPENT_SURGE_SPEC.md` | Full game design doc — source of truth for gameplay, visuals, audio |
-| `TASKS.md` | Ordered task list with checkboxes — work through sequentially |
-| `TECHNICAL_SPEC.md` | Architecture, data structures, algorithms, interfaces |
-| `CLAUDE.md` | This file — development workflow and rules |
+| `CLAUDE.md` | This file — development workflow and rules (stays at repo root) |
+| `README.md` | GitHub landing page (stays at repo root) |
+| `docs/SERPENT_SURGE_SPEC.md` | Full game design doc — source of truth for gameplay, visuals, audio |
+| `docs/TECHNICAL_SPEC.md` | Architecture, data structures, algorithms, interfaces |
+| `docs/TASKS.md` | Original phased task list with checkboxes |
+| `docs/DESIGN_SPEC.md` | Visual redesign rules (tokens, components, per-screen specs) |
+| `docs/REDESIGN_TASKS.md` | Ordered redesign workplan — current pass |
+| `docs/REDESIGN_FOLLOWUPS.md` | Polish work deferred during the redesign |
+| `docs/APP_STORE_DEPLOY.md` | iOS/Android deployment checklist |
+| `docs/STORE_LISTING.md` | App store name, description, keywords |
+| `docs/QA_CHECKLIST.md` | Pre-release QA pass |
+| `docs/mocks/*.html` | Design mock files (the visual source of truth for the redesign) |
 
 ---
 
@@ -215,12 +223,12 @@ After each phase:
 ## Development Workflow (Repeat for Each Task)
 
 ```
-1. Read the next unchecked task from TASKS.md
+1. Read the next unchecked task from docs/TASKS.md (or docs/REDESIGN_TASKS.md for the current pass)
 2. Implement the feature
 3. Run `npm run dev` and verify with Playwright MCP (screenshot + check)
 4. Run tests if applicable: `npm test`
 5. Run `npm run build` to confirm it compiles
 6. Git add + commit with a descriptive message (no --trailer)
-7. Check off the task in TASKS.md and commit that too
+7. Check off the task in docs/TASKS.md and commit that too
 8. Move to next task
 ```

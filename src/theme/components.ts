@@ -1,4 +1,4 @@
-// Shared canvas components — DESIGN_SPEC.md §3.
+// Shared canvas components — docs/DESIGN_SPEC.md §3.
 // One title, one CLOSE, one button, one toggle, one slider, one card — reused everywhere.
 //
 // Every function pre-saves and post-restores ctx, so callers don't need to.

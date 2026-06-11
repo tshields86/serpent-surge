@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Serpent Surge — Gameplay & HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070b08; --surface:#0c120d; --line:rgba(54,248,122,.16);
+    --green:#36f87a; --green-dim:#3f9d63; --green-deep:#1f5c39;
+    --gold:#ffc24b; --cyan:#49d8ff; --white:#e9f3ea; --coral:#ff5566;
+    --display:'Press Start 2P','Courier New',monospace; --body:'VT323','Courier New',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--white);font-family:var(--body)}
+  body{padding:48px 20px 80px;background-image:
+      radial-gradient(120% 90% at 50% 0%, rgba(54,248,122,.05), transparent 60%),
+      radial-gradient(140% 120% at 50% 100%, rgba(0,0,0,.9), transparent 70%);}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+    background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.2) 3px,rgba(0,0,0,0) 4px);
+    mix-blend-mode:multiply;opacity:.55;}
+  .wrap{max-width:720px;margin:0 auto;text-align:center}
+  .g{text-shadow:0 0 4px var(--green),0 0 12px rgba(54,248,122,.6),0 0 24px rgba(54,248,122,.3)}
+
+  .mast{text-align:center;margin-bottom:34px}
+  .mast h1{font-family:var(--display);font-size:17px;color:var(--green);margin:0 0 12px}
+  .mast p{font-size:21px;color:var(--green-dim);margin:0}
+
+  .phone{width:360px;margin:0 auto;border:2px solid var(--line);border-radius:26px;background:#050806;
+    padding:0;position:relative;overflow:hidden}
+  .phone::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:9;
+    box-shadow:inset 0 0 90px rgba(0,0,0,.9)}
+
+  /* TOP HUD */
+  .top{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 20px 0}
+  .stat{text-align:left}
+  .stat.c{text-align:center}
+  .stat .lbl{font-family:var(--display);font-size:8px;letter-spacing:1px;color:var(--green-deep)}
+  .stat .val{font-family:var(--display);font-size:15px;color:var(--gold);margin-top:6px;
+    text-shadow:0 0 10px rgba(255,194,75,.4)}
+  .stat.c .val{color:var(--green);text-shadow:0 0 10px rgba(54,248,122,.4)}
+  .pause{width:30px;height:30px;border:1.5px solid var(--green);border-radius:6px;display:flex;
+    align-items:center;justify-content:center;box-shadow:0 0 10px rgba(54,248,122,.4)}
+  .pause i{width:4px;height:13px;background:var(--green);margin:0 2px;border-radius:1px}
+  .wave{padding:14px 20px 12px}
+  .wave .wlbl{font-size:16px;color:var(--green-dim);letter-spacing:1px;margin-bottom:6px}
+  .seg{display:flex;gap:3px}
+  .seg i{height:8px;flex:1;border-radius:2px;background:var(--green-deep)}
+  .seg i.on{background:var(--green);box-shadow:0 0 7px rgba(54,248,122,.7)}
+
+  /* PLAYFIELD */
+  .field{padding:6px 16px 6px;position:relative}
+
+  /* BOTTOM HUD */
+  .bot{display:flex;justify-content:space-between;align-items:center;padding:12px 20px 24px}
+  .len{text-align:left}
+  .len .lbl{font-family:var(--display);font-size:8px;letter-spacing:1px;color:var(--green-deep)}
+  .len .val{font-family:var(--display);font-size:14px;color:var(--white);margin-top:6px}
+  .held{display:flex;align-items:center;gap:8px}
+  .held .hl{font-family:var(--display);font-size:7px;color:var(--green-deep);letter-spacing:1px;margin-right:2px}
+  .chip{width:30px;height:30px;border:1px solid var(--line);border-radius:7px;background:#0a0f0b;
+    display:flex;align-items:center;justify-content:center;position:relative}
+  .chip .ct{position:absolute;right:-4px;bottom:-5px;font-family:var(--display);font-size:7px;color:var(--bg);
+    background:var(--gold);border-radius:3px;padding:1px 3px;line-height:1}
+
+  .note{font-size:17px;color:var(--green-dim);max-width:520px;margin:24px auto 0;line-height:1.5}
+  .note b{color:var(--green)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mast">
+    <h1 class="g">SERPENT&nbsp;SURGE</h1>
+    <p>GAMEPLAY &amp; HUD</p>
+  </div>
+
+  <div class="phone">
+    <!-- TOP HUD -->
+    <div class="top">
+      <div class="stat"><div class="lbl">SCORE</div><div class="val">1,250</div></div>
+      <div class="stat c"><div class="lbl">ARENA</div><div class="val">2</div></div>
+      <div class="pause"><i></i><i></i></div>
+    </div>
+    <div class="wave">
+      <div class="wlbl">WAVE 2 OF 3 &nbsp;·&nbsp; FOOD 4 / 9</div>
+      <div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <!-- PLAYFIELD -->
+    <div class="field">
+      <svg viewBox="0 0 300 300" width="100%" style="display:block">
+        <rect x="0" y="0" width="300" height="300" rx="6" fill="#04070a"/>
+        <!-- grid -->
+        <g stroke="rgba(54,248,122,0.07)" stroke-width="1">
+          <path d="M20 0V300M40 0V300M60 0V300M80 0V300M100 0V300M120 0V300M140 0V300M160 0V300M180 0V300M200 0V300M220 0V300M240 0V300M260 0V300M280 0V300"/>
+          <path d="M0 20H300M0 40H300M0 60H300M0 80H300M0 100H300M0 120H300M0 140H300M0 160H300M0 180H300M0 200H300M0 220H300M0 240H300M0 260H300M0 280H300"/>
+        </g>
+
+        <!-- ITEMS -->
+        <!-- apple (11,4) -->
+        <g transform="translate(230,90) scale(0.46) translate(-24,-24)" style="filter:drop-shadow(0 0 5px rgba(255,77,82,.8))">
+          <path d="M24 14C18 14 13 18 13 26 13 34 19 40 24 40 29 40 35 34 35 26 35 18 30 14 24 14Z" fill="#ff4d52"/>
+          <rect x="22.5" y="9" width="3" height="7" rx="1.5" fill="#3f9d63"/></g>
+        <!-- golden (3,3) -->
+        <g transform="translate(70,70) scale(0.46) translate(-24,-24)" style="filter:drop-shadow(0 0 6px rgba(255,194,75,.9))">
+          <circle cx="24" cy="26" r="14" fill="none" stroke="#ffc24b" stroke-width="1.4" opacity=".4"/>
+          <path d="M24 14C18 14 13 18 13 26 13 34 19 40 24 40 29 40 35 34 35 26 35 18 30 14 24 14Z" fill="#ffc24b"/>
+          <path d="M10 14l1.4 3 3 1.4 -3 1.4 -1.4 3 -1.4 -3 -3 -1.4 3 -1.4Z" fill="#ffe08a"/></g>
+        <!-- speed (3,11) -->
+        <g transform="translate(70,230) scale(0.46) translate(-24,-24)" style="filter:drop-shadow(0 0 5px rgba(92,255,92,.8))">
+          <circle cx="27" cy="24" r="11" fill="#5cff5c"/>
+          <path d="M21 18l6 6 -6 6M28 18l6 6 -6 6" stroke="#04210f" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+        <!-- warp (12,11) -->
+        <g transform="translate(250,230) scale(0.46) translate(-24,-24)" style="filter:drop-shadow(0 0 6px rgba(73,216,255,.9))">
+          <circle cx="24" cy="24" r="14" fill="none" stroke="#49d8ff" stroke-width="2.5" opacity=".45"/>
+          <circle cx="24" cy="24" r="9.5" fill="none" stroke="#49d8ff" stroke-width="2.5" opacity=".75"/>
+          <circle cx="24" cy="24" r="4.5" fill="#49d8ff"/></g>
+        <!-- spike (2,7) -->
+        <g transform="translate(50,150) scale(0.46) translate(-24,-24)" style="filter:drop-shadow(0 0 6px rgba(255,77,82,.9))">
+          <rect x="9" y="32" width="30" height="6" rx="1" fill="#7a2a2e"/>
+          <path d="M11 32l4 -11 4 11ZM20 32l4 -13 4 13ZM29 32l4 -11 4 11Z" fill="#ff4d52"/></g>
+        <!-- magnet (12,7) -->
+        <g transform="translate(250,150) scale(0.46) translate(-24,-24)" style="filter:drop-shadow(0 0 5px rgba(255,160,51,.8))">
+          <path d="M16 13v13a8 8 0 0 0 16 0V13" fill="none" stroke="#ffa033" stroke-width="5"/>
+          <rect x="13.5" y="12" width="5" height="6" fill="#e9f3ea"/><rect x="29.5" y="12" width="5" height="6" fill="#e9f3ea"/></g>
+
+        <!-- SNAKE (head -> tail), glow -->
+        <g style="filter:drop-shadow(0 0 6px rgba(54,248,122,.7))">
+          <rect x="161" y="121" width="18" height="18" rx="5" fill="#36f87a"/>
+          <rect x="141" y="121" width="18" height="18" rx="5" fill="#34ef76"/>
+          <rect x="121" y="121" width="18" height="18" rx="5" fill="#31e070"/>
+          <rect x="121" y="141" width="18" height="18" rx="5" fill="#2ed369"/>
+          <rect x="121" y="161" width="18" height="18" rx="5" fill="#2bc763"/>
+          <rect x="141" y="161" width="18" height="18" rx="5" fill="#28ba5c"/>
+          <rect x="161" y="161" width="18" height="18" rx="5" fill="#26ad56"/>
+          <rect x="161" y="181" width="18" height="18" rx="5" fill="#23a050"/>
+          <rect x="161" y="201" width="16" height="16" rx="5" x2="0" transform="translate(1,1)" fill="#20934a"/>
+          <!-- eyes (facing right) -->
+          <rect x="173" y="126" width="3.4" height="3.4" rx="1" fill="#04210f"/>
+          <rect x="173" y="132" width="3.4" height="3.4" rx="1" fill="#04210f"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- BOTTOM HUD -->
+    <div class="bot">
+      <div class="len"><div class="lbl">LENGTH</div><div class="val">18</div></div>
+      <div class="held">
+        <span class="hl">HELD</span>
+        <div class="chip" style="filter:drop-shadow(0 0 5px rgba(54,248,122,.5))">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 19V11a6 6 0 0 1 12 0v8l-2 -2 -2 2 -2 -2 -2 2 -2 -2Z" fill="#36f87a"/><rect x="9" y="10" width="2" height="2" fill="#04210f"/><rect x="13" y="10" width="2" height="2" fill="#04210f"/></svg>
+        </div>
+        <div class="chip" style="filter:drop-shadow(0 0 5px rgba(255,194,75,.5))">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M13 2L5 13h5l-2 9 9 -12h-5l2 -8Z" fill="#ffc24b"/></svg>
+          <span class="ct">2</span>
+        </div>
+        <div class="chip" style="filter:drop-shadow(0 0 5px rgba(73,216,255,.5))">
+          <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="8" fill="none" stroke="#49d8ff" stroke-width="2.2" opacity=".5"/><circle cx="12" cy="12" r="4" fill="none" stroke="#49d8ff" stroke-width="2.2"/><circle cx="12" cy="12" r="1.4" fill="#49d8ff"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note"><b>What changed:</b> the wave bar now reads in plain words and fills as you eat · the snake head has eyes so direction is instantly legible, and the body dims toward the tail · items use the new glyphs · held power-ups are pixel chips with stack counts instead of emoji · the arena sits in a CRT-framed bezel so the margins read as intentional.</p>
+</div>
+</body>
+</html>
