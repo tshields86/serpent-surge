@@ -34,7 +34,7 @@ import { AchievementTracker } from '../meta/Achievements';
 import { SkinColors } from '../rendering/SnakeRenderer';
 import { BossSnake, createBoss, updateBoss, checkBossCollision, damageBoss, isBossArena } from './Boss';
 import { createSeededRng, todaySeed } from '../utils/math';
-import { Leaderboard } from '../meta/Leaderboard';
+import { Leaderboard, type LeaderboardEntry } from '../meta/Leaderboard';
 import { Analytics } from '../meta/Analytics';
 
 export enum GameState {
@@ -1929,11 +1929,16 @@ export class Game {
   private showLeaderboard(): void {
     this.leaderboardScreen.show();
     this.leaderboardScreen.setLoading(true);
+    const playerName = this.persistedData?.playerName ?? '';
+    const seed = todaySeed();
     Promise.all([
       this.leaderboard.getTopScores(),
-      this.leaderboard.getDailyScores(todaySeed()),
-    ]).then(([allTime, daily]) => {
+      this.leaderboard.getDailyScores(seed),
+      playerName ? this.leaderboard.getPlayerStanding(playerName) : Promise.resolve(null),
+      playerName ? this.leaderboard.getPlayerStanding(playerName, { isDaily: true, seed }) : Promise.resolve(null),
+    ]).then(([allTime, daily, allTimeStanding, dailyStanding]) => {
       this.leaderboardScreen.setEntries(allTime, daily);
+      this.leaderboardScreen.setPlayerStandings(allTimeStanding, dailyStanding);
     }).catch(() => {
       this.leaderboardScreen.setLoading(false);
     });
@@ -1991,6 +1996,9 @@ export class Game {
           break;
         case 'leaderboard':
           this.setupLeaderboardScreenshot();
+          break;
+        case 'leaderboard-overflow':
+          this.setupLeaderboardScreenshot({ playerOutsideTop10: true });
           break;
         case 'settings':
           this.openSettings();
@@ -2275,7 +2283,7 @@ export class Game {
     this.collectionScreen.show();
   }
 
-  private setupLeaderboardScreenshot(): void {
+  private setupLeaderboardScreenshot(opts: { playerOutsideTop10?: boolean } = {}): void {
     this.state = GameState.TITLE;
     this.highScore = 2450;
     // Match the player's name to a row so the screenshot demonstrates the highlight.
@@ -2293,19 +2301,39 @@ export class Game {
       playerName: 'YOU',
     };
     this.leaderboardScreen.show();
+
+    const baseAllTime: LeaderboardEntry[] = [
+      { player_name: 'ACE', score: 4250, arenas_cleared: 5, food_eaten: 82, is_daily: false, daily_seed: null },
+      { player_name: 'VPR', score: 3800, arenas_cleared: 4, food_eaten: 71, is_daily: false, daily_seed: null },
+      { player_name: 'SSS', score: 3100, arenas_cleared: 4, food_eaten: 63, is_daily: false, daily_seed: null },
+      { player_name: 'ZAP', score: 2750, arenas_cleared: 3, food_eaten: 55, is_daily: false, daily_seed: null },
+      { player_name: 'YOU', score: 2450, arenas_cleared: 3, food_eaten: 60, is_daily: false, daily_seed: null },
+      { player_name: 'NYX', score: 2400, arenas_cleared: 3, food_eaten: 48, is_daily: false, daily_seed: null },
+      { player_name: 'KAI', score: 1800, arenas_cleared: 2, food_eaten: 35, is_daily: false, daily_seed: null },
+      { player_name: 'RAY', score: 1500, arenas_cleared: 2, food_eaten: 30, is_daily: false, daily_seed: null },
+      { player_name: 'BUG', score: 1200, arenas_cleared: 2, food_eaten: 25, is_daily: false, daily_seed: null },
+      { player_name: 'OWL', score: 900, arenas_cleared: 1, food_eaten: 18, is_daily: false, daily_seed: null },
+    ];
+
+    let allTime = baseAllTime;
+    if (opts.playerOutsideTop10) {
+      // Push YOU down to rank 17 to exercise the pinned-row behavior.
+      const withoutYou = baseAllTime.filter(e => e.player_name !== 'YOU');
+      const fillers: LeaderboardEntry[] = [
+        { player_name: 'JAX', score: 850, arenas_cleared: 1, food_eaten: 17, is_daily: false, daily_seed: null },
+        { player_name: 'PIX', score: 800, arenas_cleared: 1, food_eaten: 16, is_daily: false, daily_seed: null },
+        { player_name: 'TIK', score: 750, arenas_cleared: 1, food_eaten: 15, is_daily: false, daily_seed: null },
+        { player_name: 'MOX', score: 700, arenas_cleared: 1, food_eaten: 14, is_daily: false, daily_seed: null },
+        { player_name: 'QUO', score: 650, arenas_cleared: 1, food_eaten: 13, is_daily: false, daily_seed: null },
+        { player_name: 'WIN', score: 600, arenas_cleared: 1, food_eaten: 12, is_daily: false, daily_seed: null },
+        { player_name: 'ECO', score: 550, arenas_cleared: 1, food_eaten: 11, is_daily: false, daily_seed: null },
+        { player_name: 'YOU', score: 320, arenas_cleared: 1, food_eaten: 8,  is_daily: false, daily_seed: null },
+      ];
+      allTime = [...withoutYou, ...fillers];
+    }
+
     this.leaderboardScreen.setEntries(
-      [
-        { player_name: 'ACE', score: 4250, arenas_cleared: 5, food_eaten: 82, is_daily: false, daily_seed: null },
-        { player_name: 'VPR', score: 3800, arenas_cleared: 4, food_eaten: 71, is_daily: false, daily_seed: null },
-        { player_name: 'SSS', score: 3100, arenas_cleared: 4, food_eaten: 63, is_daily: false, daily_seed: null },
-        { player_name: 'ZAP', score: 2750, arenas_cleared: 3, food_eaten: 55, is_daily: false, daily_seed: null },
-        { player_name: 'YOU', score: 2450, arenas_cleared: 3, food_eaten: 60, is_daily: false, daily_seed: null },
-        { player_name: 'NYX', score: 2400, arenas_cleared: 3, food_eaten: 48, is_daily: false, daily_seed: null },
-        { player_name: 'KAI', score: 1800, arenas_cleared: 2, food_eaten: 35, is_daily: false, daily_seed: null },
-        { player_name: 'RAY', score: 1500, arenas_cleared: 2, food_eaten: 30, is_daily: false, daily_seed: null },
-        { player_name: 'BUG', score: 1200, arenas_cleared: 2, food_eaten: 25, is_daily: false, daily_seed: null },
-        { player_name: 'OWL', score: 900, arenas_cleared: 1, food_eaten: 18, is_daily: false, daily_seed: null },
-      ],
+      allTime,
       [
         { player_name: 'ACE', score: 3200, arenas_cleared: 4, food_eaten: 60, is_daily: true, daily_seed: 0 },
         { player_name: 'ZAP', score: 2900, arenas_cleared: 3, food_eaten: 52, is_daily: true, daily_seed: 0 },

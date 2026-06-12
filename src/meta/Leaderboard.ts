@@ -12,6 +12,12 @@ export interface LeaderboardEntry {
   created_at?: string;
 }
 
+/** The player's personal best plus their rank — works no matter how far down they are. */
+export interface PlayerStanding {
+  entry: LeaderboardEntry;
+  rank: number;
+}
+
 export class Leaderboard {
   private db: Firestore | null = null;
   private offlineQueue: LeaderboardEntry[] = [];
@@ -63,14 +69,17 @@ export class Leaderboard {
 
     const { collection, query, where, orderBy, limit: firestoreLimit, getDocs } = await import('firebase/firestore');
     try {
+      // Overfetch so dedupe still produces `limit` distinct players when
+      // the top of the board is dominated by one user's streak.
       const q = query(
         collection(this.db, 'leaderboard'),
         where('is_daily', '==', false),
         orderBy('score', 'desc'),
-        firestoreLimit(limit),
+        firestoreLimit(limit * 2),
       );
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as LeaderboardEntry);
+      const raw = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as LeaderboardEntry);
+      return dedupeByPlayer(raw).slice(0, limit);
     } catch (e) {
       console.warn('Failed to fetch leaderboard:', e);
       return [];
@@ -87,13 +96,69 @@ export class Leaderboard {
         where('is_daily', '==', true),
         where('daily_seed', '==', seed),
         orderBy('score', 'desc'),
-        firestoreLimit(limit),
+        firestoreLimit(limit * 2),
       );
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as LeaderboardEntry);
+      const raw = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as LeaderboardEntry);
+      return dedupeByPlayer(raw).slice(0, limit);
     } catch (e) {
       console.warn('Failed to fetch daily leaderboard:', e);
       return [];
+    }
+  }
+
+  /**
+   * Look up the player's personal best plus their rank — used to pin a "YOU"
+   * row when the player isn't in the top 10. Two Firestore reads (one for the
+   * best score, one count-aggregation for entries scoring higher).
+   *
+   * Rank is approximate: the count includes duplicate entries from other
+   * players (someone with 3 scores above the player counts as 3, not 1). For
+   * the current player base this is fine; a future server-side dedupe pass
+   * would tighten it.
+   */
+  async getPlayerStanding(
+    playerName: string,
+    opts: { isDaily?: boolean; seed?: number } = {},
+  ): Promise<PlayerStanding | null> {
+    if (!this.db) return null;
+    if (!playerName) return null;
+
+    const { collection, query, where, orderBy, limit, getDocs, getCountFromServer } =
+      await import('firebase/firestore');
+
+    const isDaily = opts.isDaily ?? false;
+    const constraints = isDaily
+      ? [where('is_daily', '==', true), where('daily_seed', '==', opts.seed ?? 0)]
+      : [where('is_daily', '==', false)];
+
+    try {
+      // 1. Player's personal best in this category.
+      const bestQ = query(
+        collection(this.db, 'leaderboard'),
+        ...constraints,
+        where('player_name', '==', playerName),
+        orderBy('score', 'desc'),
+        limit(1),
+      );
+      const bestSnap = await getDocs(bestQ);
+      if (bestSnap.empty) return null;
+      const bestDoc = bestSnap.docs[0]!;
+      const entry = { id: bestDoc.id, ...bestDoc.data() } as LeaderboardEntry;
+
+      // 2. Count entries strictly above their score.
+      const aboveQ = query(
+        collection(this.db, 'leaderboard'),
+        ...constraints,
+        where('score', '>', entry.score),
+      );
+      const aboveSnap = await getCountFromServer(aboveQ);
+      const rank = aboveSnap.data().count + 1;
+
+      return { entry, rank };
+    } catch (e) {
+      console.warn('Failed to fetch player standing:', e);
+      return null;
     }
   }
 
@@ -119,4 +184,17 @@ export class Leaderboard {
   get isAvailable(): boolean {
     return this.initialized && this.db !== null;
   }
+}
+
+// Keep one row per player (best score). Input must already be sorted score desc.
+function dedupeByPlayer(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+  const seen = new Set<string>();
+  const out: LeaderboardEntry[] = [];
+  for (const e of entries) {
+    const key = e.player_name.toUpperCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(e);
+  }
+  return out;
 }

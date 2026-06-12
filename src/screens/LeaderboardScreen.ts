@@ -4,7 +4,7 @@
 // and tint, and ALL TIME / DAILY tabs are styled per spec (active = cyan, inactive
 // = green-deep). Shared title + CLOSE chrome.
 
-import { LeaderboardEntry } from '../meta/Leaderboard';
+import { LeaderboardEntry, PlayerStanding } from '../meta/Leaderboard';
 import { safeAreaInsetTop } from '../rendering/Renderer';
 import {
   applyScaledGlow,
@@ -28,6 +28,8 @@ export class LeaderboardScreen {
   private activeTab: Tab = 'all-time';
   private allTimeEntries: LeaderboardEntry[] = [];
   private dailyEntries: LeaderboardEntry[] = [];
+  private allTimeStanding: PlayerStanding | null = null;
+  private dailyStanding: PlayerStanding | null = null;
   private loading = false;
   private closeBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
   private allTimeTabBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
@@ -41,6 +43,10 @@ export class LeaderboardScreen {
     this.allTimeEntries = allTime;
     this.dailyEntries = daily;
     this.loading = false;
+  }
+  setPlayerStandings(allTime: PlayerStanding | null, daily: PlayerStanding | null): void {
+    this.allTimeStanding = allTime;
+    this.dailyStanding = daily;
   }
 
   draw(
@@ -94,12 +100,44 @@ export class LeaderboardScreen {
       ctx.fillText('NO SCORES YET', width / 2, usableHeight / 2);
       ctx.restore();
     } else {
+      // Fixed Top 10 across every device so rank means the same thing
+      // whether you're on an iPhone SE or an iPad Air.
+      const TOP_N = 10;
       const playerNameUpper = playerName.toUpperCase();
-      const maxRows = Math.min(entries.length, Math.floor((usableHeight - listY - 80) / rowHeight));
-      for (let i = 0; i < maxRows; i++) {
+      const topRows = Math.min(entries.length, TOP_N);
+      for (let i = 0; i < topRows; i++) {
         const entry = entries[i]!;
         const isPlayer = playerNameUpper !== '' && entry.player_name.toUpperCase() === playerNameUpper;
         drawRow(ctx, i + 1, entry.player_name, entry.score, isPlayer, listX, listY + i * rowHeight, listWidth, rowHeight, scale);
+      }
+
+      // If the player ranked outside the top 10, pin their row below a gap so
+      // they always know where they stand — works even if they're rank 1000,
+      // because the standing comes from a targeted query, not this slice.
+      if (playerNameUpper !== '') {
+        const standing = this.activeTab === 'all-time' ? this.allTimeStanding : this.dailyStanding;
+        let pinRank = -1;
+        let pinName = '';
+        let pinScore = 0;
+        if (standing && standing.entry.player_name.toUpperCase() === playerNameUpper && standing.rank > TOP_N) {
+          pinRank = standing.rank;
+          pinName = standing.entry.player_name;
+          pinScore = standing.entry.score;
+        } else if (!standing) {
+          // Fallback for screenshot/test cases that pass entries directly.
+          const idx = entries.findIndex(e => e.player_name.toUpperCase() === playerNameUpper);
+          if (idx >= TOP_N) {
+            pinRank = idx + 1;
+            pinName = entries[idx]!.player_name;
+            pinScore = entries[idx]!.score;
+          }
+        }
+        if (pinRank > 0) {
+          const gap = rowHeight * 0.6;
+          const pinY = listY + topRows * rowHeight + gap;
+          drawEllipsisGap(ctx, listX, listY + topRows * rowHeight, listWidth, gap, scale);
+          drawRow(ctx, pinRank, pinName, pinScore, true, listX, pinY, listWidth, rowHeight, scale);
+        }
       }
     }
 
@@ -219,6 +257,24 @@ function drawRow(
   ctx.fillStyle = COLOR.gold;
   ctx.fillText(score.toLocaleString(), x + width - padX, midY);
 
+  ctx.restore();
+}
+
+function drawEllipsisGap(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  scale: number,
+): void {
+  ctx.save();
+  ctx.font = displayFont(Math.max(10, 12 * scale));
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = COLOR.greenDeep;
+  clearGlow(ctx);
+  ctx.fillText('···', x + width / 2, y + height / 2);
   ctx.restore();
 }
 
