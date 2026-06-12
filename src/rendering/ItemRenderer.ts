@@ -87,14 +87,18 @@ function drawGoldenApple(
   const pulse = (Math.sin(timeMs / 350) + 1) / 2;            // 0..1
   const r = cellSize * 0.34;
 
-  // Halo ring
-  ctx.strokeStyle = COLOR.goldenApple;
-  ctx.globalAlpha = 0.25 + pulse * 0.35;
-  ctx.lineWidth = Math.max(1, cellSize * 0.04);
+  // Soft radial halo — reads as aura, not outline. Inner stop is bright at
+  // the apple body, fading to transparent at ~1.8r.
+  const haloR = r * 1.8;
+  const halo = ctx.createRadialGradient(cx, cy + r * 0.1, r * 0.6, cx, cy + r * 0.1, haloR);
+  const inner = 0.35 + pulse * 0.35;
+  halo.addColorStop(0, `rgba(255,194,75,${inner.toFixed(3)})`);
+  halo.addColorStop(0.55, `rgba(255,194,75,${(inner * 0.35).toFixed(3)})`);
+  halo.addColorStop(1, 'rgba(255,194,75,0)');
+  ctx.fillStyle = halo;
   ctx.beginPath();
-  ctx.arc(cx, cy + r * 0.1, r * 1.55, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
+  ctx.arc(cx, cy + r * 0.1, haloR, 0, Math.PI * 2);
+  ctx.fill();
 
   // Apple body
   applyGlow(ctx, 'gold');

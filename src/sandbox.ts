@@ -80,20 +80,26 @@ function wrapText(
   maxWidth: number,
   lineHeight: number,
 ): void {
-  const words = text.split(' ');
-  let line = '';
-  let cy = y;
+  // Build the line list up front, then draw — the old in-loop draw-and-shift
+  // pattern dropped a word at very narrow widths when the overflow test fired
+  // on the last iteration.
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = '';
   for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (c.measureText(test).width > maxWidth && line) {
-      c.fillText(line, cx, cy);
-      line = word;
-      cy += lineHeight;
+    if (!current) { current = word; continue; }
+    const candidate = `${current} ${word}`;
+    if (c.measureText(candidate).width <= maxWidth) {
+      current = candidate;
     } else {
-      line = test;
+      lines.push(current);
+      current = word;
     }
   }
-  if (line) c.fillText(line, cx, cy);
+  if (current) lines.push(current);
+  for (let i = 0; i < lines.length; i++) {
+    c.fillText(lines[i]!, cx, y + i * lineHeight);
+  }
 }
 
 function roundedRectPath(

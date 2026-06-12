@@ -2005,6 +2005,9 @@ export class Game {
         case 'gameplay2':
           this.setupGameplay2Screenshot();
           break;
+        case 'gameplay-all':
+          this.setupGameplayAllScreenshot();
+          break;
         case 'powerup':
           this.setupPowerUpScreenshot();
           break;
@@ -2161,6 +2164,29 @@ export class Game {
 
     this.interpolation = 0;
     this.countdownTimer = 0;
+  }
+
+  /** Like gameplay2 but places one of every food type and hazard for legend-completeness Playwright checks. */
+  private setupGameplayAllScreenshot(): void {
+    this.setupGameplay2Screenshot();
+
+    this.foods = [
+      { position: { x: 17, y: 8 },  type: FoodType.APPLE,          spawnTick: 190 },
+      { position: { x: 5,  y: 14 }, type: FoodType.GOLDEN_APPLE,   spawnTick: 185 },
+      { position: { x: 3,  y: 4 },  type: FoodType.SPEED_FRUIT,    spawnTick: 180 },
+      { position: { x: 17, y: 16 }, type: FoodType.BOMB_FRUIT,     spawnTick: 178 },
+      { position: { x: 17, y: 4 },  type: FoodType.SHRINK_PELLET,  spawnTick: 175 },
+    ];
+
+    this.hazards = [
+      { position: { x: 2,  y: 8 },  type: HazardType.WALL_BLOCK,   state: 'active' as const,   ticksRemaining: null, spawnTick: 100 },
+      { position: { x: 3,  y: 8 },  type: HazardType.WALL_BLOCK,   state: 'active' as const,   ticksRemaining: null, spawnTick: 100 },
+      { position: { x: 7,  y: 15 }, type: HazardType.SPIKE_TRAP,   state: 'active' as const,   ticksRemaining: null, spawnTick: 100 },
+      { position: { x: 15, y: 11 }, type: HazardType.POISON_TRAIL, state: 'active' as const,   ticksRemaining: 6,    spawnTick: 195 },
+      { position: { x: 16, y: 3 },  type: HazardType.WARP_HOLE,    state: 'active' as const,   ticksRemaining: null, spawnTick: 100, id: 0, partnerId: 1 },
+      { position: { x: 4,  y: 17 }, type: HazardType.WARP_HOLE,    state: 'active' as const,   ticksRemaining: null, spawnTick: 100, id: 1, partnerId: 0 },
+      { position: { x: 18, y: 14 }, type: HazardType.MAGNET,       state: 'active' as const,   ticksRemaining: null, spawnTick: 100, id: 2 },
+    ];
   }
 
   private setupPowerUpScreenshot(): void {

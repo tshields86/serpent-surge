@@ -167,11 +167,13 @@ function paintEye(
 
 /**
  * Darken `baseHex` proportionally to (i / total) so the snake fades head→tail.
- * Lerps each channel from 1.0× to ~0.55× across the body.
+ * Lerps each channel from 1.0× to ~0.45× across the body.
  */
 function taperBody(baseHex: string, index: number, total: number): string {
   const t = Math.min(1, index / Math.max(1, total - 1));
-  const factor = 1 - t * 0.45;
+  // Steeper than the original 0.45 so the taper is visible at small cell sizes
+  // (mobile 390 viewport) rather than only on iPad / desktop.
+  const factor = 1 - t * 0.55;
   return scaleHex(baseHex, factor);
 }
 

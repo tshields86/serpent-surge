@@ -135,8 +135,11 @@ function paintShield(ctx: CanvasRenderingContext2D, cx: number, cy: number, size
 }
 
 function paintApple(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number): void {
+  // Scavenger is a value/score bonus (extra apple on the grid). At HUD size
+  // the full-saturation red read as "danger", competing with hazard chrome.
+  // Painted gold so the chip signals bonus, not threat.
   const r = size * 0.3;
-  ctx.fillStyle = COLOR.apple;
+  ctx.fillStyle = COLOR.gold;
   ctx.beginPath();
   ctx.arc(cx, cy + size * 0.04, r, 0, Math.PI * 2);
   ctx.fill();
