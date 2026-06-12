@@ -1929,16 +1929,36 @@ export class Game {
   private showLeaderboard(): void {
     this.leaderboardScreen.show();
     this.leaderboardScreen.setLoading(true);
+    // Clear any pin from a prior session — stale standing must not leak in.
+    this.leaderboardScreen.setPlayerStandings(null, null);
     const playerName = this.persistedData?.playerName ?? '';
     const seed = todaySeed();
+
     Promise.all([
       this.leaderboard.getTopScores(),
       this.leaderboard.getDailyScores(seed),
-      playerName ? this.leaderboard.getPlayerStanding(playerName) : Promise.resolve(null),
-      playerName ? this.leaderboard.getPlayerStanding(playerName, { isDaily: true, seed }) : Promise.resolve(null),
-    ]).then(([allTime, daily, allTimeStanding, dailyStanding]) => {
+    ]).then(([allTime, daily]) => {
+      // Render the top 10 immediately — pin (if any) can stream in after.
       this.leaderboardScreen.setEntries(allTime, daily);
-      this.leaderboardScreen.setPlayerStandings(allTimeStanding, dailyStanding);
+      if (!playerName) return;
+
+      // If the player's already visible in the top 10 of a tab, skip that
+      // tab's standing fetch entirely (saves two round trips).
+      const TOP_N = 10;
+      const upper = playerName.toUpperCase();
+      const inAllTimeTop = allTime.slice(0, TOP_N).some(e => e.player_name.toUpperCase() === upper);
+      const inDailyTop = daily.slice(0, TOP_N).some(e => e.player_name.toUpperCase() === upper);
+
+      const allTimeP = inAllTimeTop
+        ? Promise.resolve(null)
+        : this.leaderboard.getPlayerStanding(playerName);
+      const dailyP = inDailyTop
+        ? Promise.resolve(null)
+        : this.leaderboard.getPlayerStanding(playerName, { isDaily: true, seed });
+
+      Promise.all([allTimeP, dailyP]).then(([atStanding, dStanding]) => {
+        this.leaderboardScreen.setPlayerStandings(atStanding, dStanding);
+      }).catch(() => { /* pin will just stay hidden */ });
     }).catch(() => {
       this.leaderboardScreen.setLoading(false);
     });
