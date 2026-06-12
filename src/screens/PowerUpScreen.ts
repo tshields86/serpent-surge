@@ -76,10 +76,10 @@ export class PowerUpScreen {
     canvasHeight: number,
     heldPowerUps: readonly PowerUpInstance[],
   ): void {
-    // Darkened backdrop over gameplay — keeps the snake visible as a hint of
-    // context but kills enough contrast that the cards stay legible.
+    // Fully cover the running HUD — the previous 0.97 alpha left the score
+    // and wave bar bleeding through behind the cards.
     ctx.save();
-    ctx.globalAlpha = 0.97 * this.fadeIn;
+    ctx.globalAlpha = this.fadeIn;
     ctx.fillStyle = COLOR.bg;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     ctx.restore();

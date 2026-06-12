@@ -43,13 +43,12 @@ export class DeathScreen {
     const cx = width / 2;
     const scale = pickScale(width);
 
-    // Darken backdrop so stats stay legible — only a faint shape of the arena
-    // should bleed through. Otherwise HUD chrome competes with the buttons.
+    // Fully cover the running HUD — at 0.97 the bright SCORE/LENGTH text
+    // bled through and read as duplicate stats next to the gold panel.
     ctx.save();
-    ctx.globalAlpha = this.opacity * 0.97;
+    ctx.globalAlpha = this.opacity;
     ctx.fillStyle = COLOR.bg;
     ctx.fillRect(0, 0, width, height);
-    ctx.globalAlpha = this.opacity;
 
     // ===== GAME OVER title — coral (the only place coral is allowed) =====
     const titleSize = Math.min(28 * scale, Math.floor(width / 12));
