@@ -12,11 +12,13 @@
     "cap:sync": "npm run build && npx cap sync",
     "cap:ios": "npm run build && npx cap sync ios && npx cap open ios",
     "cap:android": "npm run build && npx cap sync android && npx cap open android",
-    "cap:assets": "npx @capacitor/assets generate --iconBackgroundColor '#0a0a0a' --splashBackgroundColor '#0a0a0a'"
+    "cap:assets": "npx @capacitor/assets generate --iconBackgroundColor '#0a0a0a' --splashBackgroundColor '#0a0a0a'",
+    "screenshots:store": "node scripts/capture-store-screenshots.mjs"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.2.0",
+    "playwright": "^1.60.0",
     "typescript": "^5.9.3",
     "vite": "^8.0.0",
     "vitest": "^4.1.0"

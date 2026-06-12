@@ -24,13 +24,20 @@
 
 Screenshots are captured using a built-in screenshot mode. Append `?screenshot=<scene>` to the dev server URL to load a pre-built game state with mock data (exciting mid-run snake, hazards, power-ups, scores, etc.).
 
-**Available scenes:** `title`, `gameplay`, `gameplay2`, `powerup`, `death`, `collection`, `leaderboard`
+**Store-shipping scenes** (used by `npm run screenshots:store`): `title`, `gameplay`, `gameplay2`, `powerup`, `death`, `collection`, `leaderboard`
 
-**Example:** `http://localhost:5174/?screenshot=gameplay`
+**Additional QA-only scenes:** `gameplay-all` (every food + hazard for legend checks), `leaderboard-overflow` (player ranked outside top 10 — verifies the pinned YOU row), `settings`, `howtoplay`, `howtoplay-food`, `howtoplay-hazards`
+
+**Example:** `http://localhost:5173/?screenshot=gameplay`
 
 The mock states are defined in `Game.setupScreenshot()` and related `setup*Screenshot()` methods in `src/game/Game.ts`. The game loop is frozen in screenshot mode so the state stays static.
 
-**To recapture:** Run `npm run dev`, then use Playwright MCP or a browser to navigate to each scene at each viewport size.
+**To recapture all 28 store screenshots:**
+```bash
+npm run dev                # in one terminal
+npm run screenshots:store  # in another
+```
+The capture script lives at `scripts/capture-store-screenshots.mjs` and uses Playwright with per-device `deviceScaleFactor` so the output PNGs match each store's required device-pixel resolution.
 
 **Screens captured:**
 - [x] Title screen
@@ -40,15 +47,13 @@ The mock states are defined in `Game.setupScreenshot()` and related `setup*Scree
 - [x] Collection screen
 - [x] Leaderboard screen
 
-**Sizes captured** (saved to `screenshots/store/`, committed to repo):
-- [x] 6.7" iPhone (430x932 CSS viewport) → `screenshots/store/ios-6.7/`
-- [x] 5.5" iPhone (414x736 CSS viewport) → `screenshots/store/ios-5.5/`
-- [x] iPad (1024x1366 CSS viewport) → `screenshots/store/ios-ipad/`
-- [x] Google Play phone (360x640 CSS viewport) → `screenshots/store/google-play/`
+**Sizes captured** (saved to `screenshots/store/`, committed to repo — all at device-pixel resolution):
+- [x] 6.7" iPhone → `screenshots/store/ios-6.7/` — **1290×2796** (430×932 CSS @ 3x)
+- [x] 5.5" iPhone → `screenshots/store/ios-5.5/` — **1242×2208** (414×736 CSS @ 3x)
+- [x] iPad Pro 12.9" → `screenshots/store/ios-ipad/` — **2048×2732** (1024×1366 CSS @ 2x)
+- [x] Google Play phone → `screenshots/store/google-play/` — **1080×1920** (360×640 CSS @ 3x)
 - [ ] 6.5" iPhone — skipped, nearly identical to 6.7" (2px difference)
 - [x] Feature graphic (1024x500 banner image) → `screenshots/store/serpent-surge-feature-graphic.png`
-
-**Note:** Screenshots are at 1x CSS resolution. App stores may require device-pixel resolution (e.g. 1290x2796 for 6.7" iPhone at 3x). Upscale if needed or recapture with higher device scale factor.
 
 ---
 
