@@ -134,8 +134,14 @@ export class TitleScreen {
     const dividerHeight = menuItemHeight * 0.4;
     const dividerAfterIndex = 2; // hairline after LEADERBOARD
     const totalMenuHeight = items.length * menuItemHeight + dividerHeight;
-    const menuBottom = height * 0.94;
-    const menuStartY = menuBottom - totalMenuHeight;
+    // Anchor near the bottom on short screens, but cap the gap between stats
+    // and the menu so the composition doesn't fall apart on tall viewports
+    // (iPad / desktop). statBlockBottom is a generous bound regardless of
+    // whether HIGH SCORE / SCALES are drawn.
+    const statBlockBottom = height * 0.5 + statSize * 3.5;
+    const cappedMenuStartY = statBlockBottom + 40 * scale;
+    const naturalMenuStartY = height * 0.94 - totalMenuHeight;
+    const menuStartY = Math.min(naturalMenuStartY, cappedMenuStartY);
 
     ctx.font = displayFont(menuItemSize);
 
