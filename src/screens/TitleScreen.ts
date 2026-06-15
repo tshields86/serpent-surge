@@ -9,6 +9,7 @@ import {
   clearGlow,
   COLOR,
   displayFont,
+  drawScaleDiamond,
   fillBackground,
   LETTER_SPACING,
   TEXT,
@@ -116,7 +117,16 @@ export class TitleScreen {
     }
     if (totalScales !== undefined && totalScales > 0) {
       ctx.fillStyle = COLOR.greenDim;
-      ctx.fillText(`◆ ${totalScales} SCALES`, cx, statY);
+      const scalesText = `${totalScales} SCALES`;
+      const scalesTextWidth = ctx.measureText(scalesText).width;
+      const scalesIconSize = statSize * 0.7;
+      const scalesIconGap = statSize * 0.5;
+      const scalesTotalW = scalesIconSize + scalesIconGap + scalesTextWidth;
+      const scalesStartX = cx - scalesTotalW / 2;
+      drawScaleDiamond(ctx, scalesStartX + scalesIconSize / 2, statY, scalesIconSize);
+      ctx.textAlign = 'left';
+      ctx.fillText(scalesText, scalesStartX + scalesIconSize + scalesIconGap, statY);
+      ctx.textAlign = 'center';
     }
 
     // ===== Menu =====

@@ -12,6 +12,7 @@ import {
   COLOR,
   displayFont,
   drawCloseButton,
+  drawScaleDiamond,
   drawScreenTitle,
   fillBackground,
   hitTest,
@@ -51,16 +52,23 @@ export class CollectionScreen {
     const titleY = Math.floor(usableHeight * 0.06);
     drawScreenTitle(ctx, 'COLLECTION', width / 2, titleY, scale);
 
-    // ◆ N SCALES (gold, glow)
+    // ◆ N SCALES (gold, glow) — diamond drawn as a shape; see drawScaleDiamond.
     const balanceSize = Math.min(13 * scale, Math.floor(width / 28));
     const balanceY = titleY + 28 * scale;
     ctx.save();
-    ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = displayFont(balanceSize);
     applyScaledGlow(ctx, 'gold', scale);
     ctx.fillStyle = COLOR.gold;
-    ctx.fillText(`◆ ${data.totalScales} SCALES`, width / 2, balanceY);
+    const balanceText = `${data.totalScales} SCALES`;
+    const balanceTextWidth = ctx.measureText(balanceText).width;
+    const balanceIconSize = balanceSize * 0.7;
+    const balanceIconGap = balanceSize * 0.55;
+    const balanceTotalW = balanceIconSize + balanceIconGap + balanceTextWidth;
+    const balanceStartX = width / 2 - balanceTotalW / 2;
+    drawScaleDiamond(ctx, balanceStartX + balanceIconSize / 2, balanceY, balanceIconSize);
+    ctx.textAlign = 'left';
+    ctx.fillText(balanceText, balanceStartX + balanceIconSize + balanceIconGap, balanceY);
     clearGlow(ctx);
     ctx.restore();
 
@@ -174,16 +182,25 @@ export class CollectionScreen {
     ctx.fillStyle = COLOR.greenDim;
     ctx.fillText(description, x + padX, y + padY + nameSize + 6 * scale);
 
-    // Right-side state label
-    const stateLabel = state === 'owned' ? 'OWNED' : `${cost} ◆`;
+    // Right-side state label — diamond drawn as a shape for clean alignment.
     const stateSize = Math.min(10 * scale, Math.floor(width / 32));
     ctx.font = displayFont(stateSize);
-    ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = state === 'owned' ? COLOR.green
                  : state === 'buy'   ? COLOR.gold
                                      : COLOR.greenDeep;
-    ctx.fillText(stateLabel, x + width - padX, y + height / 2);
+    const labelMidY = y + height / 2;
+    const labelRight = x + width - padX;
+    if (state === 'owned') {
+      ctx.textAlign = 'right';
+      ctx.fillText('OWNED', labelRight, labelMidY);
+    } else {
+      const iconSize = stateSize * 0.7;
+      const iconGap = stateSize * 0.5;
+      drawScaleDiamond(ctx, labelRight - iconSize / 2, labelMidY, iconSize);
+      ctx.textAlign = 'right';
+      ctx.fillText(`${cost}`, labelRight - iconSize - iconGap, labelMidY);
+    }
 
     ctx.restore();
   }

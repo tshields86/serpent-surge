@@ -492,6 +492,23 @@ function measureSpacedText(
   );
 }
 
+// Diamond (rotated square) used for the SCALES currency icon. We draw it as
+// a shape rather than the ◆ glyph because the pixel font renders ◆ below the
+// optical center of accompanying digits, throwing off vertical alignment.
+export function drawScaleDiamond(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+): void {
+  const half = size / 2;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillRect(-half, -half, size, size);
+  ctx.restore();
+}
+
 function roundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
