@@ -27,7 +27,6 @@ export interface GameSettings {
   sfxVolume: number;    // 0-100
   crtEnabled: boolean;
   muted: boolean;
-  colorblindMode: boolean;
   reducedMotion: boolean;
   playerName: string;
 }
@@ -37,7 +36,6 @@ const DEFAULT_SETTINGS: GameSettings = {
   sfxVolume: 80,
   crtEnabled: true,
   muted: false,
-  colorblindMode: false,
   reducedMotion: false,
   playerName: 'AAA',
 };
@@ -45,7 +43,7 @@ const DEFAULT_SETTINGS: GameSettings = {
 const NAME_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-'.split('');
 const MAX_NAME_LENGTH = 10;
 
-type ToggleKey = 'crtEnabled' | 'muted' | 'colorblindMode' | 'reducedMotion';
+type ToggleKey = 'crtEnabled' | 'muted' | 'reducedMotion';
 type SliderKey = 'musicVolume' | 'sfxVolume';
 
 interface SliderRow { kind: 'slider'; label: string; key: SliderKey; }
@@ -57,7 +55,6 @@ const ROWS: Row[] = [
   { kind: 'slider', label: 'SFX',             key: 'sfxVolume' },
   { kind: 'toggle', label: 'CRT EFFECT',      key: 'crtEnabled' },
   { kind: 'toggle', label: 'MUTED',           key: 'muted' },
-  { kind: 'toggle', label: 'COLORBLIND',      key: 'colorblindMode' },
   { kind: 'toggle', label: 'REDUCED MOTION',  key: 'reducedMotion' },
 ];
 

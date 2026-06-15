@@ -11,7 +11,6 @@ export interface PersistedData {
   dailyBest: { seed: number; score: number } | null;
   settings: {
     muted: boolean;
-    colorblindMode: boolean;
     reducedMotion: boolean;
     musicVolume: number;
     sfxVolume: number;
@@ -32,7 +31,6 @@ const DEFAULT_DATA: PersistedData = {
   dailyBest: null,
   settings: {
     muted: false,
-    colorblindMode: false,
     reducedMotion: false,
     musicVolume: 70,
     sfxVolume: 80,

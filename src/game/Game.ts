@@ -1919,7 +1919,6 @@ export class Game {
       sfxVolume: this.persistedData?.settings?.sfxVolume ?? 80,
       crtEnabled: this.persistedData?.settings?.crtEnabled ?? true,
       muted: this.persistedData?.settings?.muted ?? false,
-      colorblindMode: this.persistedData?.settings?.colorblindMode ?? false,
       reducedMotion: this.forcedReducedMotion || (this.persistedData?.settings?.reducedMotion ?? false),
       playerName: this.persistedData?.playerName ?? 'AAA',
     };
@@ -2319,7 +2318,7 @@ export class Game {
       totalScales: 350,
       totalRuns: 15,
       unlockedIds: ['STARTING_LENGTH_4'],
-      settings: { muted: false, colorblindMode: false, reducedMotion: false, musicVolume: 70, sfxVolume: 80, crtEnabled: true },
+      settings: { muted: false, reducedMotion: false, musicVolume: 70, sfxVolume: 80, crtEnabled: true },
       playerName: 'ACE',
       selectedSkin: 'default',
       achievementIds: [],
@@ -2339,7 +2338,7 @@ export class Game {
         totalScales: 350,
         totalRuns: 15,
         unlockedIds: [],
-        settings: { muted: false, colorblindMode: false, reducedMotion: false, musicVolume: 70, sfxVolume: 80, crtEnabled: true },
+        settings: { muted: false, reducedMotion: false, musicVolume: 70, sfxVolume: 80, crtEnabled: true },
         selectedSkin: 'default',
         achievementIds: [],
         dailyBest: null,
@@ -2411,7 +2410,6 @@ export class Game {
         sfxVolume: settings.sfxVolume,
         crtEnabled: settings.crtEnabled,
         muted: settings.muted,
-        colorblindMode: settings.colorblindMode,
         reducedMotion: settings.reducedMotion,
       };
       saveData(this.persistedData);
