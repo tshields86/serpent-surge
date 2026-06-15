@@ -17,6 +17,7 @@ import { SettingsScreen, GameSettings } from '../screens/SettingsScreen';
 import { LeaderboardScreen } from '../screens/LeaderboardScreen';
 import { CollectionScreen } from '../screens/CollectionScreen';
 import { HowToPlayScreen } from '../screens/HowToPlayScreen';
+import { PauseScreen } from '../screens/PauseScreen';
 import { AudioManager } from '../audio/AudioManager';
 import { MusicPlayer } from '../audio/Music';
 import { PowerUpId, PowerUpInstance, acquirePowerUp, hasPowerUp, getStackCount, rollPowerUpOfferings } from './PowerUp';
@@ -61,6 +62,7 @@ export class Game {
   private leaderboardScreen: LeaderboardScreen;
   private collectionScreen: CollectionScreen;
   private howToPlayScreen: HowToPlayScreen;
+  private pauseScreen: PauseScreen;
   private audio: AudioManager;
   private music: MusicPlayer;
   private input: InputManager;
@@ -137,6 +139,7 @@ export class Game {
     this.leaderboardScreen = new LeaderboardScreen();
     this.collectionScreen = new CollectionScreen();
     this.howToPlayScreen = new HowToPlayScreen();
+    this.pauseScreen = new PauseScreen();
     this.audio = new AudioManager();
     this.music = new MusicPlayer();
     this.input = new InputManager();
@@ -344,17 +347,7 @@ export class Game {
       return;
     }
     if (this.state === GameState.PAUSED) {
-      if (this.isInBounds(e.offsetX, e.offsetY, this.pauseSettingsBounds)) {
-        this.openSettings();
-        return;
-      }
-      const b = this.pauseQuitBounds;
-      if (e.offsetX >= b.x && e.offsetX <= b.x + b.width &&
-          e.offsetY >= b.y && e.offsetY <= b.y + b.height) {
-        this.quitToTitle();
-      } else {
-        this.togglePause();
-      }
+      this.handlePauseAction(this.pauseScreen.handleClick(e.offsetX, e.offsetY));
       return;
     }
     if (this.state === GameState.POWER_UP_SELECT) {
@@ -452,15 +445,7 @@ export class Game {
     if (this.state === GameState.PAUSED) {
       const pos = this.getTapPos(e);
       if (!pos) return;
-      if (this.isInBounds(pos.x, pos.y, this.pauseSettingsBounds)) {
-        this.openSettings();
-        return;
-      }
-      if (this.isInBounds(pos.x, pos.y, this.pauseQuitBounds)) {
-        this.quitToTitle();
-      } else {
-        this.togglePause();
-      }
+      this.handlePauseAction(this.pauseScreen.handleClick(pos.x, pos.y));
       return;
     }
     if (this.state === GameState.POWER_UP_SELECT) {
@@ -1389,7 +1374,7 @@ export class Game {
     }
 
     if (this.state === GameState.PAUSED) {
-      this.drawPauseMenu();
+      this.pauseScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
       if (this.settingsScreen.isVisible()) {
         this.settingsScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
       }
@@ -1750,16 +1735,24 @@ export class Game {
   private togglePause(): void {
     if (this.state === GameState.PLAYING) {
       this.state = GameState.PAUSED;
+      this.pauseScreen.show();
       this.music.transition('menu');
     } else if (this.state === GameState.PAUSED) {
       this.state = GameState.PLAYING;
+      this.pauseScreen.hide();
       this.music.transition('gameplay');
     }
   }
 
   private pauseBtnBounds = { x: 0, y: 0, width: 0, height: 0 };
-  private pauseQuitBounds = { x: 0, y: 0, width: 0, height: 0 };
-  private pauseSettingsBounds = { x: 0, y: 0, width: 0, height: 0 };
+
+  private handlePauseAction(action: 'resume' | 'settings' | 'quit'): void {
+    switch (action) {
+      case 'settings': this.openSettings(); break;
+      case 'quit':     this.quitToTitle(); break;
+      case 'resume':   this.togglePause(); break;
+    }
+  }
 
   private drawPauseButton(): void {
     const ctx = this.renderer.ctx;
@@ -1804,65 +1797,6 @@ export class Game {
       width: hitSize,
       height: hitSize,
     };
-  }
-
-  private drawPauseMenu(): void {
-    const ctx = this.renderer.ctx;
-    const { width, height } = ctx.canvas;
-
-    ctx.save();
-    ctx.fillStyle = 'rgba(10, 10, 10, 0.8)';
-    ctx.fillRect(0, 0, width, height);
-
-    const titleSize = Math.min(24, Math.floor(width / 18));
-    ctx.font = `${titleSize}px "Press Start 2P", monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = THEME_COLOR.green;
-    ctx.shadowColor = THEME_COLOR.green;
-    ctx.shadowBlur = 15;
-    ctx.fillText('PAUSED', width / 2, height / 2 - 60);
-    ctx.shadowBlur = 0;
-
-    const itemSize = Math.min(12, Math.floor(width / 35));
-    ctx.font = `${itemSize}px "Press Start 2P", monospace`;
-    ctx.fillStyle = THEME_COLOR.bone;
-    ctx.fillText('TAP TO RESUME', width / 2, height / 2 - 10);
-
-    // Settings button
-    ctx.fillStyle = THEME_COLOR.greenDim;
-    const settingsY = height / 2 + 35;
-    const settingsText = 'SETTINGS';
-    ctx.fillText(settingsText, width / 2, settingsY);
-    const settingsMetrics = ctx.measureText(settingsText);
-    this.pauseSettingsBounds = {
-      x: width / 2 - settingsMetrics.width / 2 - 10,
-      y: settingsY - itemSize,
-      width: settingsMetrics.width + 20,
-      height: Math.max(44, itemSize * 2.5),
-    };
-
-    // Quit Run button — destructive action, so it carries the danger-only coral.
-    ctx.fillStyle = THEME_COLOR.coral;
-    const quitY = height / 2 + 80;
-    const quitText = 'QUIT RUN';
-    ctx.fillText(quitText, width / 2, quitY);
-    const quitMetrics = ctx.measureText(quitText);
-    const quitH = Math.max(44, itemSize * 2.5);
-    this.pauseQuitBounds = {
-      x: width / 2 - quitMetrics.width / 2 - 10,
-      y: quitY - itemSize,
-      width: quitMetrics.width + 20,
-      height: quitH,
-    };
-
-    // Only show ESC hint on non-touch devices
-    if (!('ontouchstart' in window)) {
-      ctx.fillStyle = '#666';
-      ctx.fillText('ESC TO RESUME', width / 2, height / 2 + 130);
-    }
-
-    ctx.restore();
   }
 
   private quitToTitle(): void {

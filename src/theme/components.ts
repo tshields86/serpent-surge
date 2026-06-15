@@ -90,9 +90,9 @@ export function drawCloseButton(
   cx: number,
   y: number,
   scale: number = 1,
+  label: string = 'CLOSE',
 ): Bounds {
   const size = TEXT.closeButton * scale;
-  const label = 'CLOSE';
   const arrowSize = size * 0.6;
   const arrowGap = size * 0.7;
 
