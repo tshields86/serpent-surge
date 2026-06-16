@@ -170,14 +170,18 @@ Back to https://appstoreconnect.apple.com in the browser. Open your `Serpent Sur
   - Primary: **Games**, then sub-category **Arcade**
   - Secondary: **Games** → **Casual**
 - **Content Rights:** check the box confirming you own or have license for the content
+- **Copyright:** `© 2026 Travis Shields` — the `©` symbol is **required** by Apple (⌥+G on Mac). Use the legal name on your Apple Developer account. This field is easy to miss; if you skip it, "Add for Review" will fail at the end with "You must provide copyright information."
 - **Age Rating:** click **Edit**, answer the questionnaire honestly. For Serpent Surge: all "None" — no violence, no profanity, no mature themes, no gambling, no user-generated content. Result will be 4+.
 - Save
 
 ### 4.2 Pricing and Availability
 
-- **Price:** Free
+You **must explicitly set** a price tier here — leaving it blank trips "You must choose a price tier in Pricing" when you try to submit.
+
+- Click **Set Up Pricing** (or **+ Add Pricing** in the Price Schedule section)
+- Pick **USD 0 (Free)** as the base price → apply to all territories
 - **Availability:** All countries and regions (default)
-- Save
+- **Save**
 
 ### 4.3 App Privacy
 
