@@ -36,7 +36,6 @@ import { SkinColors } from '../rendering/SnakeRenderer';
 import { BossSnake, createBoss, updateBoss, checkBossCollision, damageBoss, isBossArena } from './Boss';
 import { createSeededRng, todaySeed } from '../utils/math';
 import { Leaderboard, type LeaderboardEntry } from '../meta/Leaderboard';
-import { Analytics } from '../meta/Analytics';
 
 export enum GameState {
   TITLE = 'TITLE',
@@ -109,7 +108,6 @@ export class Game {
    *  `persistedData.settings.reducedMotion` should behave as if it were on. */
   private forcedReducedMotion = false;
   private leaderboard = new Leaderboard();
-  private analytics = new Analytics();
 
   // Run stats
   score = 0;
@@ -525,7 +523,6 @@ export class Game {
       }
     });
     this.leaderboard.init().catch(() => {});
-    this.analytics.init().catch(() => {});
     requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -1694,7 +1691,6 @@ export class Game {
       saveData(this.persistedData);
     }
 
-    // Submit to leaderboard and analytics (fire-and-forget)
     const wasDaily = this.isDailyChallenge;
     const seed = this.dailySeed;
     this.leaderboard.submitScore({
@@ -1705,17 +1701,6 @@ export class Game {
       is_daily: wasDaily,
       daily_seed: wasDaily ? seed : null,
     }).catch(() => {});
-    this.analytics.logRun({
-      arenas_reached: this.arena.currentArena,
-      score: this.score,
-      food_eaten: this.totalFoodEaten,
-      power_ups_used: this.heldPowerUps.map(p => p.id),
-      is_daily: wasDaily,
-      is_endless: false,
-    }).catch(() => {});
-    if (wasDaily) {
-      this.analytics.logDailyChallenge(seed, this.score).catch(() => {});
-    }
 
     this.isDailyChallenge = false;
 

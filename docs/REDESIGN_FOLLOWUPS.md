@@ -8,6 +8,17 @@ Polish items deferred during the App Store redesign — revisit before final QA.
   builds use Google Fonts; the iOS / Android Capacitor builds need offline
   font files. Flagged in `index.html` with a TODO comment.
 
+- [ ] **Add proper gameplay analytics post-launch (v1.1).** The pre-launch
+  `src/meta/Analytics.ts` was removed during App Store prep — it was writing
+  to `analytics_runs` / `analytics_daily` collections that weren't covered by
+  `firestore.rules`, so the writes were silently failing. The right rebuild
+  is decide-what-questions-to-answer first, then either: (a) extend the custom
+  Firestore collections with matching rules, or (b) integrate the Firebase
+  Analytics SDK (`firebase/analytics`) for automatic event tracking. Either
+  way, update the App Privacy declaration in App Store Connect at the same
+  time — currently only **Identifiers → User ID** is declared (linked to the
+  anonymous Firebase Auth UID + 3-char player name).
+
 - [ ] **Leaderboard pin rank is approximate at scale.** `getPlayerStanding`
   in `src/meta/Leaderboard.ts` uses a Firestore count aggregation
   (`where('score', '>', yourBest)`) to compute the rank shown in the pinned
