@@ -202,25 +202,28 @@ In the left sidebar under iOS App, click **1.0 Prepare for Submission**.
 
 #### Screenshots (the part that takes longest manually)
 
-Apple requires screenshots for the largest device size; smaller sizes are auto-derived but you should upload them too for quality.
+Apple's current Media Manager has more device slots than your screenshot folders cover — that's fine. Apple only **requires** the largest iPhone and the largest iPad; smaller slots auto-derive from those unless you override them. You'll see eight iPhone slots (6.9", 6.5", 6.3", 6.1", 5.5", 4.7", 4", 3.5") and five iPad slots (13", 11", iPad Pro 2nd Gen 12.9", 10.5", 9.7") — most stay empty.
 
-For each device size:
+The 7 files in each folder, in recommended upload order: **title → gameplay → gameplay2 → powerup → death → collection → leaderboard**. The first one is what shows in App Store search results, so lead with `title.png`.
 
-**6.7" iPhone display** (required — your largest):
-1. Click the **6.7" Display** section
-2. Drag the 7 PNG files from `screenshots/store/ios-6.7/` into the upload area:
-   - title.png, gameplay.png, gameplay2.png, powerup.png, death.png, collection.png, leaderboard.png
-3. Reorder by dragging — recommended order: title → gameplay → gameplay2 → powerup → death → collection → leaderboard
-4. The first screenshot is the most important — it's what shows in search results
+**iPhone tab — iPhone 6.9" Display** (required, your largest):
+- Folder: `screenshots/store/ios-6.9/` (1290×2796 — iPhone 15/16 Pro Max class)
+- Click into the **6.9" Display** slot, drag all 7 PNGs in
 
-**6.5" iPhone display:** skipped (per `APP_STORE_DEPLOY.md` line 55, the 6.7" set is nearly identical and Apple now allows omitting this).
+**iPhone tab — iPhone 5.5" Display** (optional but recommended; preserves quality for older devices):
+- Folder: `screenshots/store/ios-5.5/`
+- 1242×2208 — matches the slot's requirement exactly
 
-**5.5" iPhone display** (still required for older devices):
-- Drag the 7 PNGs from `screenshots/store/ios-5.5/`
+**iPhone tab — all other slots** (6.5", 6.3", 6.1", 4.7", 4", 3.5"): leave empty. Apple will auto-derive from your 6.9" uploads. Your `ios-6.9/` files (1290×2796) don't match the dimensions any of these slots accept (6.5" wants 1242×2688 or 1284×2778), so don't try to force them in.
 
-**iPad Pro 12.9" (6th gen) and 12.9" (2nd gen):**
-- Drag the 7 PNGs from `screenshots/store/ios-ipad/` into the **iPad Pro 12.9" Display (6th gen)** slot
-- For the 2nd gen slot (if shown as required), upload the same set
+**iPad tab — iPad 13" Display** (required, your largest):
+- Folder: `screenshots/store/ios-ipad/`
+- 2048×2732 — accepted by the 13" slot per Apple's dimension list
+
+**iPad tab — iPad Pro (2nd Gen) 12.9" Display** (optional, recommended for older iPads):
+- Same folder `screenshots/store/ios-ipad/` — 2048×2732 is this slot's native size
+
+**iPad tab — all other slots** (11", 10.5", 9.7"): leave empty. Auto-derived.
 
 #### Promotional Text (optional, 170 chars)
 Skip for launch. You can update this any time without a new review.

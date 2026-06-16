@@ -48,7 +48,7 @@ The capture script lives at `scripts/capture-store-screenshots.mjs` and uses Pla
 - [x] Leaderboard screen
 
 **Sizes captured** (saved to `screenshots/store/`, committed to repo — all at device-pixel resolution):
-- [x] 6.7" iPhone → `screenshots/store/ios-6.7/` — **1290×2796** (430×932 CSS @ 3x)
+- [x] 6.9" iPhone → `screenshots/store/ios-6.9/` — **1290×2796** (430×932 CSS @ 3x)
 - [x] 5.5" iPhone → `screenshots/store/ios-5.5/` — **1242×2208** (414×736 CSS @ 3x)
 - [x] iPad Pro 12.9" → `screenshots/store/ios-ipad/` — **2048×2732** (1024×1366 CSS @ 2x)
 - [x] Google Play phone → `screenshots/store/google-play/` — **1080×1920** (360×640 CSS @ 3x)

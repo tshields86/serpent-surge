@@ -34,7 +34,7 @@ const SCENES = [
 // CSS viewport + device-pixel-ratio combos. The output PNG dimensions are
 // width * dpr by height * dpr — exactly what each store wants.
 const DEVICES = [
-  { dir: 'ios-6.7',     width: 430,  height: 932,  dpr: 3, note: '1290x2796 — iPhone 14/15/16 Pro Max' },
+  { dir: 'ios-6.9',     width: 430,  height: 932,  dpr: 3, note: '1290x2796 — iPhone 15/16 Pro Max (App Store "6.9 inch Display" slot)' },
   { dir: 'ios-5.5',     width: 414,  height: 736,  dpr: 3, note: '1242x2208 — iPhone 8 Plus' },
   { dir: 'ios-ipad',    width: 1024, height: 1366, dpr: 2, note: '2048x2732 — iPad Pro 12.9"' },
   { dir: 'google-play', width: 360,  height: 640,  dpr: 3, note: '1080x1920 — Google Play phone' },
