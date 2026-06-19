@@ -29,6 +29,7 @@ export interface GameSettings {
   muted: boolean;
   reducedMotion: boolean;
   playerName: string;
+  leaderboardConsent: boolean;
 }
 
 const DEFAULT_SETTINGS: GameSettings = {
@@ -38,12 +39,13 @@ const DEFAULT_SETTINGS: GameSettings = {
   muted: false,
   reducedMotion: false,
   playerName: 'AAA',
+  leaderboardConsent: false,
 };
 
 const NAME_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-'.split('');
 const MAX_NAME_LENGTH = 10;
 
-type ToggleKey = 'crtEnabled' | 'muted' | 'reducedMotion';
+type ToggleKey = 'crtEnabled' | 'muted' | 'reducedMotion' | 'leaderboardConsent';
 type SliderKey = 'musicVolume' | 'sfxVolume';
 
 interface SliderRow { kind: 'slider'; label: string; key: SliderKey; }
@@ -56,7 +58,10 @@ const ROWS: Row[] = [
   { kind: 'toggle', label: 'CRT EFFECT',      key: 'crtEnabled' },
   { kind: 'toggle', label: 'MUTED',           key: 'muted' },
   { kind: 'toggle', label: 'REDUCED MOTION',  key: 'reducedMotion' },
+  { kind: 'toggle', label: 'LEADERBOARD',     key: 'leaderboardConsent' },
 ];
+
+const PRIVACY_URL = 'https://serpentsurge.vercel.app/privacy';
 
 export class SettingsScreen {
   private settings: GameSettings = { ...DEFAULT_SETTINGS };
@@ -67,6 +72,7 @@ export class SettingsScreen {
   private nameCharBounds: Bounds[] = [];
   private nameAddBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
   private nameDelBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
+  private privacyBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
 
   show(settings: GameSettings): void {
     this.settings = { ...settings };
@@ -126,8 +132,23 @@ export class SettingsScreen {
       }
     }
 
-    // ===== CLOSE =====
+    // ===== Privacy policy link =====
     const closeY = usableHeight - Math.max(36, 36 * scale);
+    const linkY = closeY - Math.max(34, 34 * scale);
+    const linkSize = Math.min(16 * scale, Math.floor(width / 26));
+    ctx.save();
+    ctx.font = displayFont(linkSize);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = COLOR.greenDim;
+    clearGlow(ctx);
+    const linkText = 'PRIVACY POLICY';
+    ctx.fillText(linkText, width / 2, linkY);
+    const linkW = ctx.measureText(linkText).width;
+    ctx.restore();
+    this.privacyBounds = { x: width / 2 - linkW / 2 - 12, y: linkY - linkSize, width: linkW + 24, height: linkSize * 2 };
+
+    // ===== CLOSE =====
     this.closeBounds = drawCloseButton(ctx, width / 2, closeY, scale);
 
     ctx.restore();
@@ -252,12 +273,16 @@ export class SettingsScreen {
     void LETTER_SPACING; // retain import for theme consistency
   }
 
-  /** Returns 'changed' if settings updated, 'close' if close tapped, false otherwise. */
-  handleClick(x: number, rawY: number, _width: number): 'changed' | 'close' | false {
+  /** Returns 'changed' if settings updated, 'close' if close tapped, 'privacy' to open the policy, false otherwise. */
+  handleClick(x: number, rawY: number, _width: number): 'changed' | 'close' | 'privacy' | false {
     if (!this.visible) return false;
     const y = rawY - safeAreaInsetTop;
 
     if (hitTest(this.closeBounds, x, y)) return 'close';
+    if (hitTest(this.privacyBounds, x, y)) {
+      window.open(PRIVACY_URL, '_blank');
+      return 'privacy';
+    }
 
     // Name cycle by tapping a letter (top half = next, bottom half = prev)
     if (hitTest(this.nameRowBounds, x, y)) {

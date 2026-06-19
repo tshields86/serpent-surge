@@ -8,6 +8,10 @@ export interface PersistedData {
   achievementIds: string[];
   selectedSkin: string;
   playerName: string;
+  // Consent for uploading scores to the global leaderboard. `null` = not yet
+  // asked (the one-time prompt fires on first run end). Apple 5.1.2 requires
+  // explicit opt-in before any personal data leaves the device.
+  leaderboardConsent: 'granted' | 'denied' | null;
   dailyBest: { seed: number; score: number } | null;
   settings: {
     muted: boolean;
@@ -28,6 +32,7 @@ const DEFAULT_DATA: PersistedData = {
   achievementIds: [],
   selectedSkin: 'default',
   playerName: 'AAA',
+  leaderboardConsent: null,
   dailyBest: null,
   settings: {
     muted: false,

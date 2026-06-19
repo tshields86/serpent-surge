@@ -15,6 +15,7 @@ import { TitleScreen } from '../screens/TitleScreen';
 import { PowerUpScreen } from '../screens/PowerUpScreen';
 import { SettingsScreen, GameSettings } from '../screens/SettingsScreen';
 import { LeaderboardScreen } from '../screens/LeaderboardScreen';
+import { ConsentScreen, type ConsentResult } from '../screens/ConsentScreen';
 import { CollectionScreen } from '../screens/CollectionScreen';
 import { HowToPlayScreen } from '../screens/HowToPlayScreen';
 import { PauseScreen } from '../screens/PauseScreen';
@@ -108,6 +109,10 @@ export class Game {
    *  `persistedData.settings.reducedMotion` should behave as if it were on. */
   private forcedReducedMotion = false;
   private leaderboard = new Leaderboard();
+  private consentScreen = new ConsentScreen();
+  /** Score awaiting an upload decision while the consent prompt is open. */
+  private pendingScore: Omit<LeaderboardEntry, 'id' | 'created_at'> | null = null;
+  private static readonly PRIVACY_URL = 'https://serpentsurge.vercel.app/privacy';
 
   // Run stats
   score = 0;
@@ -152,7 +157,10 @@ export class Game {
     canvas.addEventListener('touchend', (e) => this.onTap(e), { passive: false });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (this.howToPlayScreen.isVisible()) {
+        if (this.consentScreen.isVisible()) {
+          // Require an explicit choice — Escape must not silently opt in or out.
+          return;
+        } else if (this.howToPlayScreen.isVisible()) {
           this.howToPlayScreen.hide();
         } else if (this.settingsScreen.isVisible()) {
           this.settingsScreen.hide();
@@ -177,7 +185,7 @@ export class Game {
   }
 
   private onDirection(dir: Direction): void {
-    if (this.settingsScreen.isVisible() || this.leaderboardScreen.isVisible() || this.collectionScreen.isVisible() || this.howToPlayScreen.isVisible()) return;
+    if (this.consentScreen.isVisible() || this.settingsScreen.isVisible() || this.leaderboardScreen.isVisible() || this.collectionScreen.isVisible() || this.howToPlayScreen.isVisible()) return;
     if (this.state === GameState.TITLE) {
       this.startRun();
       return;
@@ -326,6 +334,13 @@ export class Game {
       }
       return;
     }
+    // Consent prompt takes priority — it gates the leaderboard upload.
+    if (this.consentScreen.isVisible()) {
+      this.handleConsentResult(
+        this.consentScreen.handleClick(e.offsetX, e.offsetY, this.renderer.canvas.width),
+      );
+      return;
+    }
     // Settings screen handles clicks when visible (from any state)
     if (this.settingsScreen.isVisible()) {
       const result = this.settingsScreen.handleClick(e.offsetX, e.offsetY, this.renderer.canvas.width);
@@ -413,6 +428,15 @@ export class Game {
       if (result === 'close') {
         this.leaderboardScreen.hide();
       }
+      return;
+    }
+    // Consent prompt takes priority — it gates the leaderboard upload.
+    if (this.consentScreen.isVisible()) {
+      const pos = this.getTapPos(e);
+      if (!pos) return;
+      this.handleConsentResult(
+        this.consentScreen.handleClick(pos.x, pos.y, this.renderer.canvas.width),
+      );
       return;
     }
     // Settings screen handles taps when visible
@@ -1388,6 +1412,10 @@ export class Game {
       if (this.leaderboardScreen.isVisible()) {
         this.leaderboardScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height, this.persistedData?.playerName ?? '');
       }
+      // Consent prompt sits on top of the death screen on the very first run.
+      if (this.consentScreen.isVisible()) {
+        this.consentScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+      }
     }
   }
 
@@ -1693,14 +1721,27 @@ export class Game {
 
     const wasDaily = this.isDailyChallenge;
     const seed = this.dailySeed;
-    this.leaderboard.submitScore({
+    const entry: Omit<LeaderboardEntry, 'id' | 'created_at'> = {
       player_name: this.persistedData?.playerName ?? 'AAA',
       score: this.score,
       arenas_cleared: this.arena.currentArena - 1,
       food_eaten: this.totalFoodEaten,
       is_daily: wasDaily,
       daily_seed: wasDaily ? seed : null,
-    }).catch(() => {});
+    };
+    // Apple 5.1.2: never upload without explicit consent. Only prompt/upload
+    // when online leaderboards actually exist in this build.
+    if (this.leaderboard.isConfigured) {
+      const consent = this.persistedData?.leaderboardConsent ?? null;
+      if (consent === 'granted') {
+        this.leaderboard.submitScore(entry).catch(() => {});
+      } else if (consent === null) {
+        // First run end: hold the score and ask before anything leaves the device.
+        this.pendingScore = entry;
+        this.consentScreen.show();
+      }
+      // 'denied' → drop it; the player opted out.
+    }
 
     this.isDailyChallenge = false;
 
@@ -1840,8 +1881,28 @@ export class Game {
       muted: this.persistedData?.settings?.muted ?? false,
       reducedMotion: this.forcedReducedMotion || (this.persistedData?.settings?.reducedMotion ?? false),
       playerName: this.persistedData?.playerName ?? 'AAA',
+      leaderboardConsent: this.persistedData?.leaderboardConsent === 'granted',
     };
     this.settingsScreen.show(settings);
+  }
+
+  /** Resolve the one-time leaderboard consent prompt. */
+  private handleConsentResult(result: ConsentResult): void {
+    if (result === 'privacy') {
+      window.open(Game.PRIVACY_URL, '_blank');
+      return;
+    }
+    if (result !== 'allow' && result !== 'deny') return;
+
+    if (this.persistedData) {
+      this.persistedData.leaderboardConsent = result === 'allow' ? 'granted' : 'denied';
+      saveData(this.persistedData);
+    }
+    if (result === 'allow' && this.pendingScore) {
+      this.leaderboard.submitScore(this.pendingScore).catch(() => {});
+    }
+    this.pendingScore = null;
+    this.consentScreen.hide();
   }
 
   private showLeaderboard(): void {
@@ -1931,6 +1992,10 @@ export class Game {
           break;
         case 'death':
           this.setupDeathScreenshot();
+          break;
+        case 'consent':
+          this.setupDeathScreenshot();
+          this.consentScreen.show();
           break;
         case 'collection':
           this.setupCollectionScreenshot();
@@ -2241,6 +2306,7 @@ export class Game {
       playerName: 'ACE',
       selectedSkin: 'default',
       achievementIds: [],
+      leaderboardConsent: 'granted',
       dailyBest: null,
     };
     this.highScore = 2450;
@@ -2260,6 +2326,7 @@ export class Game {
         settings: { muted: false, reducedMotion: false, musicVolume: 70, sfxVolume: 80, crtEnabled: true },
         selectedSkin: 'default',
         achievementIds: [],
+        leaderboardConsent: 'granted',
         dailyBest: null,
       }),
       playerName: 'YOU',
@@ -2323,6 +2390,15 @@ export class Game {
     // Persist
     if (this.persistedData) {
       this.persistedData.playerName = settings.playerName;
+      // Leaderboard consent via the Settings toggle. Turning it on is an
+      // explicit opt-in; turning it off only registers if they'd previously
+      // opted in — an untouched toggle leaves `null` intact so the one-time
+      // first-run prompt still fires.
+      if (settings.leaderboardConsent) {
+        this.persistedData.leaderboardConsent = 'granted';
+      } else if (this.persistedData.leaderboardConsent === 'granted') {
+        this.persistedData.leaderboardConsent = 'denied';
+      }
       this.persistedData.settings = {
         ...this.persistedData.settings,
         musicVolume: settings.musicVolume,

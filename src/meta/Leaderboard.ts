@@ -184,6 +184,11 @@ export class Leaderboard {
   get isAvailable(): boolean {
     return this.initialized && this.db !== null;
   }
+
+  /** Whether online leaderboards exist in this build (env-configured). */
+  get isConfigured(): boolean {
+    return firebaseConfigured;
+  }
 }
 
 // Keep one row per player (best score). Input must already be sorted score desc.
