@@ -19,7 +19,7 @@ import {
   type Bounds,
 } from '../theme';
 
-export type ConsentResult = 'allow' | 'deny' | 'privacy' | false;
+export type ConsentResult = 'allow' | 'deny' | 'privacy' | 'editName' | false;
 
 const BODY = [
   'Your display name and run stats',
@@ -27,7 +27,6 @@ const BODY = [
   'are uploaded to our online leaderboard.',
   '',
   'No email or real name is collected.',
-  'You can change this anytime in Settings.',
 ];
 
 export class ConsentScreen {
@@ -35,12 +34,13 @@ export class ConsentScreen {
   private allowBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
   private denyBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
   private privacyBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
+  private nameBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
 
   show(): void { this.visible = true; }
   hide(): void { this.visible = false; }
   isVisible(): boolean { return this.visible; }
 
-  draw(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+  draw(ctx: CanvasRenderingContext2D, width: number, height: number, playerName: string): void {
     if (!this.visible) return;
 
     ctx.save();
@@ -82,9 +82,48 @@ export class ConsentScreen {
     }
     ctx.restore();
 
+    // ===== "You'll appear as" callout (tappable → opens the name editor) =====
+    const captionSize = Math.min(18 * scale, Math.floor(width / 24));
+    const nameSize = Math.min(24 * scale, Math.floor(width / 13));
+    const captionY = bodyY + lineHeight * 1.1;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = bodyFont(captionSize);
+    ctx.fillStyle = COLOR.greenDim;
+    clearGlow(ctx);
+    ctx.fillText("You'll appear as", width / 2, captionY);
+
+    const nameY = captionY + nameSize * 0.95;
+    ctx.font = bodyFont(nameSize);
+    ctx.fillStyle = COLOR.gold;
+    applyScaledGlow(ctx, 'gold', scale);
+    const editHint = '  ✎';
+    const nameText = (playerName || 'AAA').toUpperCase();
+    const nameW = ctx.measureText(nameText).width;
+    ctx.font = bodyFont(captionSize);
+    const hintW = ctx.measureText(editHint).width;
+    const totalW = nameW + hintW;
+    // Draw name (gold) then the edit glyph (green) right after it.
+    ctx.textAlign = 'left';
+    ctx.font = bodyFont(nameSize);
+    ctx.fillStyle = COLOR.gold;
+    ctx.fillText(nameText, width / 2 - totalW / 2, nameY);
+    ctx.font = bodyFont(captionSize);
+    ctx.fillStyle = COLOR.green;
+    clearGlow(ctx);
+    ctx.fillText(editHint, width / 2 - totalW / 2 + nameW, nameY);
+    ctx.restore();
+    this.nameBounds = {
+      x: width / 2 - totalW / 2 - 16,
+      y: captionY - captionSize,
+      width: totalW + 32,
+      height: (nameY - captionY) + nameSize,
+    };
+
     // ===== Privacy policy link (green, tappable) =====
     const linkSize = Math.min(18 * scale, Math.floor(width / 24));
-    const linkY = bodyY + lineHeight * 0.6;
+    const linkY = nameY + nameSize * 0.9 + lineHeight * 0.4;
     ctx.save();
     ctx.font = bodyFont(linkSize);
     ctx.textAlign = 'center';
@@ -139,6 +178,7 @@ export class ConsentScreen {
     if (hitTest(this.allowBounds, x, y)) return 'allow';
     if (hitTest(this.denyBounds, x, y)) return 'deny';
     if (hitTest(this.privacyBounds, x, y)) return 'privacy';
+    if (hitTest(this.nameBounds, x, y)) return 'editName';
     return false;
   }
 }

@@ -1444,7 +1444,7 @@ export class Game {
       }
       // Consent prompt sits on top of the death screen on the very first run.
       if (this.consentScreen.isVisible()) {
-        this.consentScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+        this.consentScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height, this.persistedData?.playerName ?? 'AAA');
       }
     }
 
@@ -1947,6 +1947,10 @@ export class Game {
 
   /** Resolve the one-time leaderboard consent prompt. */
   private handleConsentResult(result: ConsentResult): void {
+    if (result === 'editName') {
+      this.openNameEditor('consent', this.persistedData?.playerName ?? 'AAA');
+      return;
+    }
     if (result === 'privacy') {
       window.open(Game.PRIVACY_URL, '_blank');
       return;
