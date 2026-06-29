@@ -16,6 +16,7 @@ import { PowerUpScreen } from '../screens/PowerUpScreen';
 import { SettingsScreen, GameSettings } from '../screens/SettingsScreen';
 import { LeaderboardScreen } from '../screens/LeaderboardScreen';
 import { ConsentScreen, type ConsentResult } from '../screens/ConsentScreen';
+import { NameEditorOverlay } from '../screens/NameEditorOverlay';
 import { CollectionScreen } from '../screens/CollectionScreen';
 import { HowToPlayScreen } from '../screens/HowToPlayScreen';
 import { PauseScreen } from '../screens/PauseScreen';
@@ -110,6 +111,9 @@ export class Game {
   private forcedReducedMotion = false;
   private leaderboard = new Leaderboard();
   private consentScreen = new ConsentScreen();
+  /** Enlarged name editor — opened from Settings or the consent prompt. */
+  private nameEditor = new NameEditorOverlay();
+  private nameEditorSource: 'settings' | 'consent' | null = null;
   /** Score awaiting an upload decision while the consent prompt is open. */
   private pendingScore: Omit<LeaderboardEntry, 'id' | 'created_at'> | null = null;
   private static readonly PRIVACY_URL = 'https://serpentsurge.vercel.app/privacy';
@@ -157,7 +161,10 @@ export class Game {
     canvas.addEventListener('touchend', (e) => this.onTap(e), { passive: false });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (this.consentScreen.isVisible()) {
+        if (this.nameEditor.isVisible()) {
+          // Escape commits the in-progress name and closes the editor.
+          this.closeNameEditor();
+        } else if (this.consentScreen.isVisible()) {
           // Require an explicit choice — Escape must not silently opt in or out.
           return;
         } else if (this.howToPlayScreen.isVisible()) {
@@ -185,7 +192,7 @@ export class Game {
   }
 
   private onDirection(dir: Direction): void {
-    if (this.consentScreen.isVisible() || this.settingsScreen.isVisible() || this.leaderboardScreen.isVisible() || this.collectionScreen.isVisible() || this.howToPlayScreen.isVisible()) return;
+    if (this.nameEditor.isVisible() || this.consentScreen.isVisible() || this.settingsScreen.isVisible() || this.leaderboardScreen.isVisible() || this.collectionScreen.isVisible() || this.howToPlayScreen.isVisible()) return;
     if (this.state === GameState.TITLE) {
       this.startRun();
       return;
@@ -313,6 +320,13 @@ export class Game {
 
   private onClick(e: MouseEvent): void {
     this.ensureAudioContext();
+    // Name editor overlay sits on top of everything (Settings / Consent).
+    if (this.nameEditor.isVisible()) {
+      if (this.nameEditor.handleClick(e.offsetX, e.offsetY, this.renderer.canvas.width) === 'done') {
+        this.closeNameEditor();
+      }
+      return;
+    }
     // How to play screen handles clicks when visible
     if (this.howToPlayScreen.isVisible()) {
       const result = this.howToPlayScreen.handleClick(e.offsetX, e.offsetY);
@@ -346,6 +360,8 @@ export class Game {
       const result = this.settingsScreen.handleClick(e.offsetX, e.offsetY, this.renderer.canvas.width);
       if (result === 'close') {
         this.settingsScreen.hide();
+      } else if (result === 'editName') {
+        this.openNameEditor('settings', this.settingsScreen.getSettings().playerName);
       } else if (result === 'changed') {
         this.applySettings(this.settingsScreen.getSettings());
       }
@@ -403,6 +419,15 @@ export class Game {
   private onTap(e: TouchEvent): void {
     e.preventDefault();
     this.ensureAudioContext();
+    // Name editor overlay sits on top of everything (Settings / Consent).
+    if (this.nameEditor.isVisible()) {
+      const pos = this.getTapPos(e);
+      if (!pos) return;
+      if (this.nameEditor.handleClick(pos.x, pos.y, this.renderer.canvas.width) === 'done') {
+        this.closeNameEditor();
+      }
+      return;
+    }
     // How to play screen handles taps when visible
     if (this.howToPlayScreen.isVisible()) {
       const pos = this.getTapPos(e);
@@ -446,6 +471,8 @@ export class Game {
       const result = this.settingsScreen.handleClick(pos.x, pos.y, this.renderer.canvas.width);
       if (result === 'close') {
         this.settingsScreen.hide();
+      } else if (result === 'editName') {
+        this.openNameEditor('settings', this.settingsScreen.getSettings().playerName);
       } else if (result === 'changed') {
         this.applySettings(this.settingsScreen.getSettings());
       }
@@ -1271,6 +1298,9 @@ export class Game {
           this.forcedReducedMotion || (this.persistedData?.settings?.reducedMotion ?? false),
         );
       }
+      if (this.nameEditor.isVisible()) {
+        this.nameEditor.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
+      }
       return;
     }
 
@@ -1416,6 +1446,11 @@ export class Game {
       if (this.consentScreen.isVisible()) {
         this.consentScreen.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
       }
+    }
+
+    // Name editor overlay sits on top of every screen.
+    if (this.nameEditor.isVisible()) {
+      this.nameEditor.draw(this.renderer.ctx, this.renderer.canvas.width, this.renderer.canvas.height);
     }
   }
 
@@ -1884,6 +1919,30 @@ export class Game {
       leaderboardConsent: this.persistedData?.leaderboardConsent === 'granted',
     };
     this.settingsScreen.show(settings);
+  }
+
+  private openNameEditor(source: 'settings' | 'consent', name: string): void {
+    this.nameEditorSource = source;
+    this.nameEditor.show(name);
+  }
+
+  /** Commit the edited name back to whichever screen opened the editor. */
+  private closeNameEditor(): void {
+    const name = this.nameEditor.getName();
+    if (this.nameEditorSource === 'settings') {
+      this.settingsScreen.setPlayerName(name);
+      this.applySettings(this.settingsScreen.getSettings());
+    } else if (this.nameEditorSource === 'consent') {
+      if (this.persistedData) {
+        this.persistedData.playerName = name;
+        saveData(this.persistedData);
+      }
+      // The held score was captured with the old name before consent; keep it
+      // in sync so the upload (if they Allow) uses the name they just chose.
+      if (this.pendingScore) this.pendingScore.player_name = name;
+    }
+    this.nameEditorSource = null;
+    this.nameEditor.hide();
   }
 
   /** Resolve the one-time leaderboard consent prompt. */

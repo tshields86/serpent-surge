@@ -17,7 +17,6 @@ import {
   drawScreenTitle,
   fillBackground,
   hitTest,
-  LETTER_SPACING,
   TEXT,
   type Bounds,
 } from '../theme';
@@ -41,9 +40,6 @@ const DEFAULT_SETTINGS: GameSettings = {
   playerName: 'AAA',
   leaderboardConsent: false,
 };
-
-const NAME_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-'.split('');
-const MAX_NAME_LENGTH = 10;
 
 type ToggleKey = 'crtEnabled' | 'muted' | 'reducedMotion' | 'leaderboardConsent';
 type SliderKey = 'musicVolume' | 'sfxVolume';
@@ -69,9 +65,6 @@ export class SettingsScreen {
   private closeBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
   private rowBounds: Bounds[] = [];
   private nameRowBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
-  private nameCharBounds: Bounds[] = [];
-  private nameAddBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
-  private nameDelBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
   private privacyBounds: Bounds = { x: 0, y: 0, width: 0, height: 0 };
 
   show(settings: GameSettings): void {
@@ -81,6 +74,9 @@ export class SettingsScreen {
   hide(): void { this.visible = false; }
   isVisible(): boolean { return this.visible; }
   getSettings(): GameSettings { return { ...this.settings }; }
+
+  /** Commit a name chosen in the enlarged name editor overlay. */
+  setPlayerName(name: string): void { this.settings.playerName = name; }
 
   draw(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     if (!this.visible) return;
@@ -211,70 +207,33 @@ export class SettingsScreen {
     ctx.fillText('NAME', rowX, midY);
     ctx.restore();
 
-    // Letters in gold + (+/-) controls on the right.
-    const name = this.settings.playerName;
-    const letterSize = Math.min(12 * scale, Math.floor(rowWidth / 22));
-    const letterAdvance = letterSize * 1.4;
-    const controlSize = Math.min(11 * scale, Math.floor(rowWidth / 24));
-    const controlAdvance = controlSize * 1.5;
-
-    const lettersWidth = name.length * letterAdvance;
-    const controlsWidth = controlAdvance * 2;
-    const lettersStartX = rowX + rowWidth - controlsWidth - lettersWidth + letterAdvance / 2;
-
+    // Tapping the row opens the enlarged name editor overlay. Here we just
+    // render the current name (gold) with a small EDIT hint on the right.
+    const hint = 'EDIT';
+    const hintSize = Math.min(9 * scale, Math.floor(rowWidth / 30));
     ctx.save();
-    ctx.font = displayFont(letterSize);
+    ctx.font = displayFont(hintSize);
     ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
-    applyScaledGlow(ctx, 'gold', scale);
-    ctx.fillStyle = COLOR.gold;
-    this.nameCharBounds = [];
-    for (let i = 0; i < name.length; i++) {
-      const cx = lettersStartX + i * letterAdvance;
-      ctx.fillText(name[i]!, cx, midY);
-      this.nameCharBounds.push({
-        x: cx - letterAdvance / 2,
-        y,
-        width: letterAdvance,
-        height: rowHeight,
-      });
-    }
+    ctx.textAlign = 'right';
+    ctx.fillStyle = COLOR.greenDim;
     clearGlow(ctx);
-
-    // + / - controls (drawn as path triangles so they line up vertically with letters)
-    const addX = lettersStartX + name.length * letterAdvance - letterAdvance / 2 + controlAdvance * 0.4;
-    const subX = addX + controlAdvance;
-    const ctrlSize = controlSize * 0.6;
-
-    ctx.font = displayFont(controlSize);
-    ctx.textAlign = 'center';
-    if (name.length < MAX_NAME_LENGTH) {
-      ctx.fillStyle = COLOR.green;
-      ctx.fillText('+', addX, midY);
-      this.nameAddBounds = { x: addX - controlAdvance / 2, y, width: controlAdvance, height: rowHeight };
-    } else {
-      this.nameAddBounds = { x: 0, y: 0, width: 0, height: 0 };
-    }
-    if (name.length > 1) {
-      // Minus rendered as a horizontal bar (avoids the hyphen ambiguity).
-      ctx.fillStyle = COLOR.coral;
-      const barW = ctrlSize * 1.4;
-      const barH = Math.max(2, ctrlSize * 0.22);
-      ctx.fillRect(subX - barW / 2, midY - barH / 2, barW, barH);
-      this.nameDelBounds = { x: subX - controlAdvance / 2, y, width: controlAdvance, height: rowHeight };
-    } else {
-      this.nameDelBounds = { x: 0, y: 0, width: 0, height: 0 };
-    }
+    ctx.fillText(hint, rowX + rowWidth, midY);
+    const hintW = ctx.measureText(hint).width;
     ctx.restore();
 
-    // Letter-stepper hint — tiny ▲/▼ marks above and below each letter would
-    // clutter the row at smaller sizes. Tap-top / tap-bottom semantics still apply
-    // for incrementing / decrementing each letter.
-    void LETTER_SPACING; // retain import for theme consistency
+    const nameSize = Math.min(12 * scale, Math.floor(rowWidth / 16));
+    ctx.save();
+    ctx.font = displayFont(nameSize);
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'right';
+    applyScaledGlow(ctx, 'gold', scale);
+    ctx.fillStyle = COLOR.gold;
+    ctx.fillText(this.settings.playerName, rowX + rowWidth - hintW - 14 * scale, midY);
+    ctx.restore();
   }
 
-  /** Returns 'changed' if settings updated, 'close' if close tapped, 'privacy' to open the policy, false otherwise. */
-  handleClick(x: number, rawY: number, _width: number): 'changed' | 'close' | 'privacy' | false {
+  /** Returns 'editName' to open the name editor, 'close' if close tapped, 'privacy' to open the policy, 'changed' if a row updated, false otherwise. */
+  handleClick(x: number, rawY: number, _width: number): 'changed' | 'close' | 'privacy' | 'editName' | false {
     if (!this.visible) return false;
     const y = rawY - safeAreaInsetTop;
 
@@ -284,32 +243,8 @@ export class SettingsScreen {
       return 'privacy';
     }
 
-    // Name cycle by tapping a letter (top half = next, bottom half = prev)
-    if (hitTest(this.nameRowBounds, x, y)) {
-      const name = this.settings.playerName;
-      for (let i = 0; i < this.nameCharBounds.length; i++) {
-        const b = this.nameCharBounds[i]!;
-        if (hitTest(b, x, y)) {
-          const ch = name[i]!;
-          const idx = NAME_CHARS.indexOf(ch.toUpperCase());
-          const midY = b.y + b.height / 2;
-          const nextIdx = y < midY
-            ? (idx + 1) % NAME_CHARS.length
-            : (idx - 1 + NAME_CHARS.length) % NAME_CHARS.length;
-          this.settings.playerName =
-            name.substring(0, i) + NAME_CHARS[nextIdx]! + name.substring(i + 1);
-          return 'changed';
-        }
-      }
-      if (this.nameAddBounds.width > 0 && hitTest(this.nameAddBounds, x, y)) {
-        this.settings.playerName += 'A';
-        return 'changed';
-      }
-      if (this.nameDelBounds.width > 0 && hitTest(this.nameDelBounds, x, y)) {
-        this.settings.playerName = this.settings.playerName.slice(0, -1);
-        return 'changed';
-      }
-    }
+    // Tapping the name row hands off to the enlarged editor overlay.
+    if (hitTest(this.nameRowBounds, x, y)) return 'editName';
 
     // Setting rows
     for (let i = 0; i < ROWS.length; i++) {
